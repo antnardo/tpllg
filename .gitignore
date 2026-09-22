@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
+.pytest_cache/
+*.command
+build/
+dist/
+*.egg-info/
+exemples/*.pdf
+doc/*.pdf
+exemples/*.txt
