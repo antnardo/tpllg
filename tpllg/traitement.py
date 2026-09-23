@@ -144,9 +144,9 @@ def choix_echantillonnage(freq, temin, Npmin, permin, Nmax, Tmax):
     if techant == 0:
         techant = temin
     n = min(Nmax, int(Tmax/techant))
-    per = 1/(freq*techant)  # nb de périodes
-    if per < permin:
-        print(f'[WARNING] : nb de périodes faible {per:.1f}<{permin}')
-    if n < Npmin:
-        print(f"[WARNING] : nb de points d'acquisition faible {n}")
+    periodes = n*techant*freq  # nb de périodes acquises
+    if periodes < permin:
+        print(f'[WARNING] : nb de périodes faible {periodes:.1f}<{permin}')
+    if 1/(freq*techant) < Npmin:
+        print(f"[WARNING] : nb de points par période faible {1/(freq*techant):.1f}<{Npmin}")
     return techant, n

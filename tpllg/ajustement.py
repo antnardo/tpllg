@@ -85,7 +85,7 @@ def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, fun
     # vectorizable function
     try:
         function(datax, *p0)
-    except ValueError:
+    except (ValueError, TypeError):
         base_func = function
 
         def function_vectorized(x, *p):
@@ -189,7 +189,9 @@ def formater(valeur, sigma=None, unite=""):
     unite = f" {unite}" if unite else ""
     if sigma is None or not np.isfinite(sigma) or sigma <= 0:
         return f"{valeur:.4g}{unite}"
-    decimales = max(0, 1 - int(np.floor(np.log10(sigma))))
+    decimales = 1 - int(np.floor(np.log10(sigma)))    # négatif au-delà de 100
+    valeur, sigma = round(valeur, decimales), round(sigma, decimales)
+    decimales = max(0, decimales)
     return f"{valeur:.{decimales}f} ± {sigma:.{decimales}f}{unite}"
 
 

@@ -101,7 +101,7 @@ class Sysam(pycan.Sysam):
         """
         modules = [0]*len(cls.MODULES_ANALOG)
         for v in voies:
-            for k, EA in cls.MODULES_ANALOG:
+            for k, EA in cls.MODULES_ANALOG.items():
                 if v in EA:
                     modules[k] += 1
         return cls.TE_MIN_DIRECT if max(modules) <= 1 else cls.TE_MIN_MULTIPLEX

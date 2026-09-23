@@ -3,8 +3,10 @@
 Sysam factice : la même interface que pycanum.main, sans centrale.
 
 tpllg.sysam s'y rabat quand pycanum n'est pas installé — sur un Mac, sur un
-poste sans carte — et le dit à l'ouverture. Les acquisitions rendent du bruit
-de quantification ; les fonctions de configuration ne font qu'imprimer.
+poste sans carte — et le dit à l'ouverture. Les fonctions de configuration ne
+font qu'imprimer ce qu'elles reçoivent ; les acquisitions attendent la durée
+demandée et rendent, dans la forme exacte de pycanum (tableaux 2D de double,
+une ligne par voie, temps en secondes), un bruit de quantification.
 
 Écrit d'après pycanum de Frédéric Legrand :
 https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/interpy/interpy.html
@@ -60,7 +62,7 @@ class Sysam:
     def config_entrees(self, voies, calibres, diff=[]):
         # sysam.can_config_entrees(voies, calibres, diff)
         if self.verbose:
-            print(f"[SYSAM] Configuration entrées {voies} : {calibres=}, {diff=}")
+            print("[SYSAM] Configuration entrées %s : calibres=%s, diff=%s" % (voies, calibres, diff))
         self.voies = voies
         self.calibres = calibres
         self.diff = diff
@@ -68,7 +70,7 @@ class Sysam:
     def config_echantillon(self, techant, nbpoints):
         # sysam.can_config_echantillon(techant, nbpoints)
         if self.verbose:
-            print(f"[SYSAM] Configuration échantillonnage {techant=:.1e}µs, {nbpoints=}")
+            print("[SYSAM] Configuration échantillonnage techant=%.1eµs, nbpoints=%d" % (techant, nbpoints))
         self.techant = techant
         self.nbpoints = nbpoints
 
@@ -78,7 +80,8 @@ class Sysam:
 
     def config_quantification(self, quantification):
         # sysam.can_config_quantification(quantification)
-        NotImplemented
+        if self.verbose:
+            print(f"[SYSAM] Quantification sur {quantification} bits")
 
     def config_trigger(
         self, voie, seuil, montant=1, pretrigger=1, pretriggerSouple=0, hysteresis=0
@@ -86,11 +89,20 @@ class Sysam:
         # sysam.can_config_trigger(
         #    0, voie, seuil, montant, pretrigger, pretriggerSouple, hysteresis
         #)
-        NotImplemented
+        if self.verbose:
+            if voie < 0:
+                print("[SYSAM] Déclenchement désactivé")
+            else:
+                print(f"[SYSAM] Déclenchement sur EA{voie}, seuil {seuil} V, front "
+                      f"{'montant' if montant else 'descendant'}, {pretrigger} points avant"
+                      f"{', souple' if pretriggerSouple else ''}"
+                      f"{', hystérésis' if hysteresis else ''}")
 
     def config_trigger_externe(self, pretrigger=1, pretriggerSouple=0):
         # sysam.can_config_trigger(1, 0, 0, 1, pretrigger, pretriggerSouple, 0)
-        NotImplemented
+        if self.verbose:
+            print(f"[SYSAM] Déclenchement externe, {pretrigger} points avant"
+                  f"{', souple' if pretriggerSouple else ''}")
 
     def acquerir(self):
         if self.verbose:
@@ -118,18 +130,21 @@ class Sysam:
 
     def temps(self, reduction=1):
         # return sysam.can_temps(reduction)
-        t = numpy.linspace(0, self.techant*self.nbpoints, self.nbpoints)
-        return [t for _ in range(len(self.voies))]
+        # comme pycanum : un tableau 2D de double, une ligne par voie, en secondes
+        # (techant est en microsecondes), un point sur `reduction`
+        t = numpy.arange(self.nbpoints)*self.techant*1e-6
+        return numpy.tile(t[::reduction], (len(self.voies), 1))
 
     def entrees(self, reduction=1):
         # return sysam.can_entrees(reduction)
-        entrees = []
-        for c in self.calibres:
-            sigma = c/2**12
-            EA = numpy.random.default_rng().normal(0, sigma, self.nbpoints).astype(numpy.float16)
-            entrees.append(EA)
-        # numpy.zeros((len(self.voies), self.nbpoints), dtype=numpy.float16)
-        return entrees
+        # comme pycanum : un tableau 2D de double, une ligne par voie, en volts ;
+        # ici un bruit gaussien d'un pas de quantification, arrondi au pas
+        entrees = numpy.zeros((len(self.voies), self.nbpoints))
+        for i, c in enumerate(self.calibres):
+            pas = 2*c/2**12
+            bruit = numpy.random.normal(0, pas, self.nbpoints)
+            entrees[i] = numpy.round(bruit/pas)*pas
+        return entrees[:, ::reduction]
 
     def entrees_filtrees(self, reduction=1):
         # return sysam.can_entrees_filtrees(reduction)
@@ -170,8 +185,9 @@ class Sysam:
             valeurs1 = numpy.zeros(0)
         if type(valeurs2) != numpy.ndarray:
             valeurs2 = numpy.zeros(0)
-        print("[SYSAM] Génération des sorties...")
-        print("[SYSAM] Acquisition synchrone...")
+        if self.verbose:
+            print("[SYSAM] Génération des sorties...")
+            print("[SYSAM] Acquisition synchrone...")
         time.sleep(self.techant*self.nbpoints/1e6)
         # sysam.can_acquerir_avec_sorties(valeurs1, valeurs2)
         if self.verbose:
@@ -261,8 +277,8 @@ class Sysam:
 
     def afficher_calibrage(self):
         # sysam.can_afficher_calibrage()
-        print(f"[SYSAM] Voies : {self.voies=}")
-        print(f"[SYSAM] Calibres : {self.calibres=}, {self.diff=}")
+        print("[SYSAM] Voies : %s" % (self.voies,))
+        print("[SYSAM] Calibres : %s, diff=%s" % (self.calibres, self.diff))
 
 
 # def audio_table_start(ch1, ch2, f1, f2, fs=44000, fpb=256):

@@ -65,7 +65,7 @@ def incertitudes(liste, sigma=1, advanced=False, debug=False):
     N = len(L)
     assert N > 1, "La liste doit contenir plus d'un élément"
     m = L.mean()
-    sigma_estim = L.std(ddof=1)*np.sqrt(N/(N-1))  # estimateur de l'écart type
+    sigma_estim = L.std(ddof=1)  # estimateur sans biais de l'écart-type, sqrt(sum (x-m)^2/(N-1))
     if not advanced:
         delta = sigma_estim/np.sqrt(N)
         return m, delta, sigma_estim

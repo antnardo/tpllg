@@ -4,21 +4,21 @@ from scipy.signal.windows import blackman
 
 
 def calcule_DFT(temps, valeurs):
+    """Le spectre d'amplitude d'un signal régulièrement échantillonné : les
+    fréquences positives, de 0 à fe/2 exclu par pas de 1/T, et pour chacune
+    l'amplitude en volts — une sinusoïde d'amplitude A donne un pic de
+    hauteur A, la composante continue vaut la moyenne.
+
+    La FFT rend N complexes ; la moitié positive du spectre est ramenée en
+    amplitude par 2/N (sauf la composante continue, par 1/N). Le calcul
+    revient à fourier[k] = sum(valeurs * exp(-2j pi k n/N)).
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.fft.fft.html
     """
-    le temps doit évidemment être régulièrement espacé
-
-    la fonction fft renvoie des complexes permettant de calculer la partie cosinus et sinus ou amplitude/phase
-    L'amplitude est à redimensionnée par 2*tau, sauf pour la composante continue !
-    https://docs.scipy.org/doc/scipy/reference/generated/scipy.fft.fft.html#scipy.fft.fft
-
-    pour les temps k allant de 0 à N-1, les fréquences renvoyées sont de 0 à N//2+1 pour rfft
-
-    le calcul (optimisé) revient à :
-        fourier[k] = np.sum(valeurs * np.exp(-2j * np.pi * k * np.arange(N)/N))
-    """
+    temps = np.asarray(temps, dtype=float)
+    valeurs = np.asarray(valeurs, dtype=float)
     tau = temps[1] - temps[0]
     N = len(temps)
-    fourier = np.abs(fft(valeurs)) * 2 * tau
+    fourier = np.abs(fft(valeurs)) * 2 / N
     fourier[0] *= 0.5
     if N % 2 == 0:
         nmax = N//2
@@ -29,7 +29,12 @@ def calcule_DFT(temps, valeurs):
 
 
 def spectre(temps, valeurs, p=6):
-    """ calcul du spectre par TFD"""
+    """Le spectre d'amplitude avec une fenêtre de Blackman et p*N zéros
+    ajoutés : les fréquences de 0 à fe exclu, par pas de fe/((p+1)N), et
+    l'amplitude en volts normalisée par la fenêtre. Seule la moitié
+    inférieure à fe/2 a un sens, l'autre en est le miroir."""
+    temps = np.asarray(temps, dtype=float)
+    valeurs = np.asarray(valeurs, dtype=float)
     N = len(valeurs)
     te = temps[1] - temps[0]
     zeros = np.zeros(p * N)

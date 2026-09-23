@@ -37,3 +37,17 @@ def test_formater_arrondit_sur_l_incertitude():
     assert formater(-5.0823, 0.0631) == "-5.082 ± 0.063"
     assert formater(6.609, 0.156) == "6.61 ± 0.16"
     assert resume_parametres(("a",), [2.0], sigmas=[0.1]) == "a = 2.00 ± 0.10"
+
+
+def test_formater_au_dela_de_cent_et_sans_incertitude():
+    assert formater(1234567.0, 5432.0, "Hz") == "1234600 ± 5400 Hz"
+    assert formater(12345.6, 234.0) == "12350 ± 230"
+    assert formater(2.5, None, "V") == "2.5 V"
+
+
+def test_curvefit_accepte_une_fonction_non_vectorisee():
+    import math
+    x = np.linspace(0, 5, 20)
+    y = 2*np.exp(-x/1.5)
+    pfit, err, chi2 = curvefit(lambda x, a, tau: a*math.exp(-x/tau), x, y, p0=[1, 1], verbose=False)
+    assert abs(pfit[0] - 2) < 1e-6 and abs(pfit[1] - 1.5) < 1e-6

@@ -74,7 +74,7 @@ def import_regressi(filename, colonnes=2, delimiter="\t"):
     for i, col in enumerate(npcols):
         if np.isnan(col).any():
             print(f"WARNING: la colonne {i+1} contient des valeurs non numériques")
-    return np.array(t), (np.array(col) for col in cols)
+    return t, npcols
 
 
 def readcsv(filename, encoding='utf8', entete=1, dtypes=None):
