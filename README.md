@@ -249,10 +249,8 @@ pip install -e .
 python -m pytest tests
 ```
 
-Les tests n'ont pas besoin de la centrale : ils passent par le simulateur. Une
-fonction générique va dans le module qui lui correspond ; ce qui est propre à un
-TP donné, une simulation de son montage, une aide à l'énoncé, reste dans les
-scripts de ce TP ou dans un module posé à côté, pas dans le paquet.
+Les tests n'ont pas besoin de la centrale : ils passent par le simulateur. La
+description des tests est dans la documentation [doc/tests.md](doc/tests.md)
 
 ## Licence
 
@@ -265,10 +263,11 @@ PyPI, et n'est jamais redistribué ici. Et `exemples/Acquisition.py` et
 `exemples/Bode.py` dérivent de ses exemples, publiés sur son site sous
 [CC BY-NC-SA 2.0 FR](http://creativecommons.org/licenses/by-nc-sa/2.0/fr) —
 [Enregistrement d'un signal](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pyacquis/pyacquis.html)
-et [Diagramme de Bode](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html) :
-ces deux fichiers-là restent sous cette licence, ce que leur en-tête rappelle.
-Quatre fonctions du paquet lui sont dues aussi, réécrites ici et créditées
-dans leur docstring : la mesure du gain `gain_std`, `interpolation_fft` et
-`choix_echantillonnage` (`tpllg.traitement`), venues du même « Diagramme de
-Bode », et le spectre fenêtré `spectre` (`tpllg.fft`), venu de
+et
+[Diagramme de Bode](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html)
+: ces deux fichiers-là restent sous cette licence, ce que leur en-tête rappelle.
+Quatre fonctions du paquet lui sont dues aussi, réécrites ici et créditées dans
+leur docstring : la mesure du gain `gain_std`, `interpolation_fft` et
+`choix_echantillonnage` (`tpllg.traitement`), venues du même « Diagramme de Bode
+», et le spectre fenêtré `spectre` (`tpllg.fft`), venu de
 [Mesure de déphasage](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/dephasage/dephasage.html).
