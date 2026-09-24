@@ -170,7 +170,9 @@ La phase vient de la moyenne du produit `s(t) (e(t) - j e(t - T/4))` : pour
 `e = E cos(ωt)` et `s = GE cos(ωt + φ)`, `e(t) - j e(t - T/4)` vaut
 `E e^{-jωt}`, et la moyenne du produit vaut `½ G E² e^{jφ}`, dont l'argument
 est la phase. D'où `Np`, qui donne le quart de période en points. La méthode
-est due à Frédéric Legrand.
+est due à Frédéric Legrand, comme `interpolation_fft` et
+`choix_echantillonnage` : les trois reprennent la fonction `mesure()` de son
+exemple [Diagramme de Bode](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html).
 
 Il faut un grand nombre de périodes, entières de préférence, pour que les
 moyennes soient bonnes, et un `Np` juste : la fréquence d'échantillonnage
@@ -235,8 +237,9 @@ for freq in (10, 1000, 1e5):
 La centrale génère elle-même la sinusoïde sur sa sortie SA1, la relit sur
 EA0 (un câble entre les deux) et lit la sortie du filtre sur EA1, fréquence
 par fréquence, et trace le diagramme de Bode sans toucher au GBF. C'est
-`exemples/Bode.py`, script dérivé d'un exemple de Frédéric Legrand et sous
-sa licence, dont voici l'ossature :
+`exemples/Bode.py`, script dérivé de l'exemple
+[Diagramme de Bode](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html) de
+Frédéric Legrand et sous sa licence, dont voici l'ossature :
 
 ```python
 import numpy as np

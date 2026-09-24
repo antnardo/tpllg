@@ -4,15 +4,21 @@ Created on Mon Mar  6 13:35:03 2023
 
 @author: a. marchand, f. legrand
 
-Ce script dérive d'un exemple de Frédéric Legrand (f-legrand.fr,
+Ce script dérive de deux exemples de Frédéric Legrand (f-legrand.fr,
 CC BY-NC-SA 2.0 FR) : il est diffusé sous cette même licence, et non sous la
 licence MIT du reste du dépôt.
+- l'acquisition suit « Enregistrement d'un signal » :
+  https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pyacquis/pyacquis.html
+- le spectre (tpllg.fft.spectre) reprend la fonction frequence() de
+  « Mesure de déphasage » :
+  https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/dephasage/dephasage.html
+L'interface pycanum qu'ils emploient est documentée ici :
+https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/interpy/interpy.html
 
 Acquisition temporelles via Sysam SP5 des entrées analogiques EA
 + Analyse spectrale
 
 CAN 12 bits
-Cf https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/interpy/interpy.html
 """
 from tpllg.sysam import Sysam
 from tpllg.fft import spectre

@@ -66,9 +66,14 @@ def valeurs_correspondantes(indexes1, indexes2, delta_indices):
 
 
 def interpolation_fft(x, n_interpolation):
-    """
+    """Interpolation par FFT.
+
     on fait la fft du signal, on rajoute N*n_interpolation zéros aux hautes fréquences
     on fait la fft inverse, qui contient donc le signal avec N*(ninter+1) points
+
+    Fonction interpol() de Frédéric Legrand, « Diagramme de Bode »
+    (f-legrand.fr, CC BY-NC-SA 2.0 FR), reprise ici :
+    https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html
     """
     N = len(x)
     tfd = np.fft.fft(x)
@@ -93,8 +98,9 @@ def gain(t, e, s, freq, Np, method, **kwargs):
 def gain_std(t, e, s, Np=0, ninter=0):
     """Mesure du gain complexe H entre e et s
 
-    Méthode due à Frédéric Legrand (f-legrand.fr, analyse fréquentielle à la
-    Sysam), réécrite ici.
+    Méthode due à Frédéric Legrand — la fonction mesure() de son exemple
+    « Diagramme de Bode » (f-legrand.fr, CC BY-NC-SA 2.0 FR), réécrite ici :
+    https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html
 
     Méthode : on mesure les valeurs efficaces et le déphasage par moyennage entre
     les deux signaux puisque
@@ -127,7 +133,12 @@ def gain_std(t, e, s, Np=0, ninter=0):
     return G, phi
 
 def choix_echantillonnage(freq, temin, Npmin, permin, Nmax, Tmax):
-    """
+    """Le pas et le nombre de points pour acquérir une fréquence donnée.
+
+    Reprend le calcul de la fonction mesure() de Frédéric Legrand, « Diagramme
+    de Bode » (f-legrand.fr, CC BY-NC-SA 2.0 FR) :
+    https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html
+
     On veut
     un nombre minimal de points par période Npmin
     que techant ne soit pas en-dessous de temin

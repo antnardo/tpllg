@@ -93,7 +93,9 @@ signal qui ne fait pas un nombre entier de périodes ; les zéros
 **interpolent** le spectre, dont le pas devient `fe/((p + 1)N)`, sept fois
 plus fin par défaut, sans rien ajouter à la résolution vraie. L'amplitude
 est normalisée par la fenêtre : une sinusoïde d'amplitude `A` donne encore
-un pic de hauteur `A`.
+un pic de hauteur `A`. La fonction reprend `frequence()` de Frédéric Legrand,
+dans [Mesure de déphasage](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/dephasage/dephasage.html)
+(f-legrand.fr, CC BY-NC-SA 2.0 FR).
 
 Les fréquences rendues vont de 0 à `fe` exclu : seule la moitié inférieure à
 `fe/2` a un sens, l'autre en est le miroir, et l'on trace `freq[:len(freq)//2]`.

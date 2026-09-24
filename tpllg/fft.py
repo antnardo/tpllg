@@ -32,7 +32,12 @@ def spectre(temps, valeurs, p=6):
     """Le spectre d'amplitude avec une fenêtre de Blackman et p*N zéros
     ajoutés : les fréquences de 0 à fe exclu, par pas de fe/((p+1)N), et
     l'amplitude en volts normalisée par la fenêtre. Seule la moitié
-    inférieure à fe/2 a un sens, l'autre en est le miroir."""
+    inférieure à fe/2 a un sens, l'autre en est le miroir.
+
+    Fonction frequence() de Frédéric Legrand, « Mesure de déphasage »
+    (f-legrand.fr, CC BY-NC-SA 2.0 FR), reprise ici :
+    https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/dephasage/dephasage.html
+    """
     temps = np.asarray(temps, dtype=float)
     valeurs = np.asarray(valeurs, dtype=float)
     N = len(valeurs)

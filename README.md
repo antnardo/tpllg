@@ -198,16 +198,16 @@ données comme la centrale les rendrait, et `False` acquiert pour de bon. Ils
 s'exécutent depuis n'importe quel dossier ayant accès à `tpllg`, y écrivent
 leurs fichiers et leurs figures, et sont les mêmes que ceux des fiches.
 
-| Script                       | Ce qu'il fait                                                                                                                                         |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `acquisition_simple.py`      | acquiert deux voies, enregistre un fichier par voie, trace                                                                                            |
-| `regime_libre.py`            | un créneau attaque un filtre ; repère un front, découpe le régime libre qui le suit, l'ajuste, trace acquisition, ajustement et résidus               |
-| `bode_ajustement.py`         | des mesures point par point d'un diagramme de Bode, l'ajustement simultané du gain et de la phase, les résidus, la figure                             |
-| `spectre_harmoniques.py`     | le spectre d'un créneau, ses harmoniques, le gain d'un filtre mesuré sur chaque harmonique et ajusté                                                  |
-| `lecture_fichiers.py`        | écrit puis relit un CSV de tableur, un export Latis Pro, un export Regressi, un fichier de `sauvegarder`                                              |
-| `ajustement_incertitudes.py` | une droite ajustée sans incertitudes, avec celles de y, avec celles de x et y, à bruit constant puis variable                                         |
-| `montecarlo.py`              | g par un pendule, un quotient à loi dissymétrique, une droite ajustée sur cent mille tirages face à `curvefit`, une exponentielle ajustée par tirages |
-| `Acquisition.py`, `Bode.py`  | deux scripts dérivés des exemples de Frédéric Legrand, sous leur licence (voir plus bas) : l'acquisition avec spectre, le Bode automatique            |
+| Script                       | Ce qu'il fait                                                                                                                                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `acquisition_simple.py`      | acquiert deux voies, enregistre un fichier par voie, trace                                                                                                                                          |
+| `regime_libre.py`            | un créneau attaque un filtre ; repère un front, découpe le régime libre qui le suit, l'ajuste, trace acquisition, ajustement et résidus                                                             |
+| `bode_ajustement.py`         | des mesures point par point d'un diagramme de Bode, l'ajustement simultané du gain et de la phase, les résidus, la figure                                                                           |
+| `spectre_harmoniques.py`     | le spectre d'un créneau, ses harmoniques, le gain d'un filtre mesuré sur chaque harmonique et ajusté                                                                                                |
+| `lecture_fichiers.py`        | écrit puis relit un CSV de tableur, un export Latis Pro, un export Regressi, un fichier de `sauvegarder`                                                                                            |
+| `ajustement_incertitudes.py` | une droite ajustée sans incertitudes, avec celles de y, avec celles de x et y, à bruit constant puis variable                                                                                       |
+| `montecarlo.py`              | g par un pendule, un quotient à loi dissymétrique, une droite ajustée sur cent mille tirages face à `curvefit`, une exponentielle ajustée par tirages                                               |
+| `Acquisition.py`, `Bode.py`  | deux scripts dérivés des exemples de Frédéric Legrand, « Enregistrement d'un signal » et « Diagramme de Bode », sous leur licence (voir plus bas) : l'acquisition avec spectre, le Bode automatique |
 
 ## Erreurs courantes
 
@@ -262,7 +262,13 @@ Louis-le-Grand.
 Deux choses n'en relèvent pas. `pycanum` est une dépendance, pas une partie du
 dépôt : il appartient à Frédéric Legrand, est publié sous licence CeCILL sur
 PyPI, et n'est jamais redistribué ici. Et `exemples/Acquisition.py` et
-`exemples/Bode.py` dérivent de ses exemples, publiés sur son site sous CC
-BY-NC-SA 2.0 FR : ces deux fichiers-là restent sous cette licence, ce que leur
-en-tête rappelle. La méthode de mesure du gain de `tpllg.traitement`
-(`gain_std`) lui est due aussi, réécrite ici.
+`exemples/Bode.py` dérivent de ses exemples, publiés sur son site sous
+[CC BY-NC-SA 2.0 FR](http://creativecommons.org/licenses/by-nc-sa/2.0/fr) —
+[Enregistrement d'un signal](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pyacquis/pyacquis.html)
+et [Diagramme de Bode](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html) :
+ces deux fichiers-là restent sous cette licence, ce que leur en-tête rappelle.
+Quatre fonctions du paquet lui sont dues aussi, réécrites ici et créditées
+dans leur docstring : la mesure du gain `gain_std`, `interpolation_fft` et
+`choix_echantillonnage` (`tpllg.traitement`), venues du même « Diagramme de
+Bode », et le spectre fenêtré `spectre` (`tpllg.fft`), venu de
+[Mesure de déphasage](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/dephasage/dephasage.html).
