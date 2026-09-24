@@ -16,7 +16,7 @@ def loi_normale(x, m=0, s=1):
     - m=0 moyenne (centrage)
     - s=1 écart-type (largeur) - variance = s**2
     '''
-    return 1/np.sqrt(2*np.pi*s)*np.exp(-(x-m)**2/(2*s**2))
+    return 1/(s*np.sqrt(2*np.pi))*np.exp(-(x-m)**2/(2*s**2))
 
 
 def loi_normale_cumulee(t):

@@ -1,6 +1,10 @@
-import numpy as np
+import math
 
-from tpllg.ajustement import curve_fit_complex, curvefit, formater, residus_complexes, resume_parametres
+import numpy as np
+import pytest
+
+from tpllg.ajustement import (curve_fit_complex, curvefit, ecarts_types, formater, residus_complexes,
+                              resume_parametres)
 
 
 def gain(f, H0, f0, Q):
@@ -21,6 +25,13 @@ def test_curve_fit_complex_retrouve_les_parametres():
     assert res_norm.std() < 0.02 and res_phase.std() < 1
 
 
+def test_residus_complexes_nuls_sur_le_modele():
+    f = np.geomspace(100, 10000, 20)
+    H = gain(f, -5, 2000, 6)
+    res_norm, res_phase = residus_complexes(gain, f, np.abs(H), np.angle(H), [-5, 2000, 6])
+    assert np.abs(res_norm).max() < 1e-12 and np.abs(res_phase).max() < 1e-9
+
+
 def test_curvefit_affine_avec_incertitudes():
     rng = np.random.RandomState(1)
     x = np.linspace(0, 1, 20)
@@ -30,6 +41,54 @@ def test_curvefit_affine_avec_incertitudes():
     assert abs(pfit[0] - 2) < 3*err[0]
     assert abs(pfit[1] + 1) < 3*err[1]
     assert 0.3 < chi2 < 3
+
+
+def test_curvefit_sans_incertitudes_retrouve_les_formules_des_moindres_carres():
+    rng = np.random.RandomState(4)
+    x = np.linspace(0, 2, 25)
+    y = 3*x + 0.5 + rng.normal(0, 0.1, x.size)
+    pfit, err, _ = curvefit(lambda x, a, b: a*x + b, x, y, p0=[1, 0], verbose=False)
+    a, b = np.polyfit(x, y, 1)
+    s2 = ((y - (a*x + b))**2).sum()/(x.size - 2)          # la variance des résidus
+    sxx = ((x - x.mean())**2).sum()
+    assert np.allclose(pfit, [a, b], rtol=1e-8)
+    assert abs(err[0] - np.sqrt(s2/sxx)) < 1e-8
+    assert abs(err[1] - np.sqrt(s2*(1/x.size + x.mean()**2/sxx))) < 1e-8
+
+
+def test_curvefit_variance_effective():
+    rng = np.random.RandomState(5)
+    a0, b0, sx, sy = 2.0, -1.0, 0.03, 0.05
+    x_vrai = np.linspace(0, 1, 30)
+    x = x_vrai + rng.normal(0, sx, x_vrai.size)
+    y = a0*x_vrai + b0 + rng.normal(0, sy, x_vrai.size)
+    modele = lambda x, a, b: a*x + b                    # noqa: E731
+    derivee = lambda x, a, b: a*np.ones_like(x)         # noqa: E731
+    pfit_y, err_y, _ = curvefit(modele, x, y, p0=[1, 0], datayerrors=sy*np.ones(x.size), verbose=False)
+    pfit, err, chi2 = curvefit(modele, x, y, p0=[1, 0], datayerrors=sy*np.ones(x.size),
+                               dataxerrors=sx*np.ones(x.size), function_derivate=derivee, verbose=False)
+    # à incertitudes constantes, les paramètres sont ceux des moindres carrés ordinaires ;
+    # seules les incertitudes changent, dans le rapport des sigmas effectifs
+    assert np.allclose(pfit, pfit_y, rtol=1e-6)
+    facteur = np.sqrt(sy**2 + pfit[0]**2*sx**2)/sy
+    assert np.allclose(err, err_y*facteur, rtol=1e-4)
+    assert abs(pfit[0] - a0) < 3*err[0] and abs(pfit[1] - b0) < 3*err[1]
+    assert 0.4 < chi2 < 2.5
+
+
+def test_curvefit_refuse_les_erreurs_en_x_incompletes():
+    x = np.linspace(0, 1, 5)
+    with pytest.raises(NotImplementedError):
+        curvefit(lambda x, a: a*x, x, 2*x, p0=[1], datayerrors=np.ones(5), dataxerrors=np.ones(5))
+    with pytest.raises(NotImplementedError):
+        curvefit(lambda x, a: a*x, x, 2*x, p0=[1], dataxerrors=np.ones(5), function_derivate=lambda x, a: a)
+
+
+def test_curvefit_accepte_une_fonction_non_vectorisee():
+    x = np.linspace(0, 5, 20)
+    y = 2*np.exp(-x/1.5)
+    pfit, err, chi2 = curvefit(lambda x, a, tau: a*math.exp(-x/tau), x, y, p0=[1, 1], verbose=False)
+    assert abs(pfit[0] - 2) < 1e-6 and abs(pfit[1] - 1.5) < 1e-6
 
 
 def test_formater_arrondit_sur_l_incertitude():
@@ -45,9 +104,7 @@ def test_formater_au_dela_de_cent_et_sans_incertitude():
     assert formater(2.5, None, "V") == "2.5 V"
 
 
-def test_curvefit_accepte_une_fonction_non_vectorisee():
-    import math
-    x = np.linspace(0, 5, 20)
-    y = 2*np.exp(-x/1.5)
-    pfit, err, chi2 = curvefit(lambda x, a, tau: a*math.exp(-x/tau), x, y, p0=[1, 1], verbose=False)
-    assert abs(pfit[0] - 2) < 1e-6 and abs(pfit[1] - 1.5) < 1e-6
+def test_ecarts_types_et_resume_depuis_pcov():
+    assert np.array_equal(ecarts_types([[4.0, 1.0], [1.0, 9.0]]), [2.0, 3.0])
+    texte = resume_parametres(("a", "b"), [2.0, -1.0], pcov=np.diag([0.01, 0.04]), unites=("V", ""))
+    assert texte == "a = 2.00 ± 0.10 V\nb = -1.00 ± 0.20"
