@@ -207,7 +207,7 @@ leurs fichiers et leurs figures, et sont les mêmes que ceux des fiches.
 | `lecture_fichiers.py`        | écrit puis relit un CSV de tableur, un export Latis Pro, un export Regressi, un fichier de `sauvegarder`                                                                                            |
 | `ajustement_incertitudes.py` | une droite ajustée sans incertitudes, avec celles de y, avec celles de x et y, à bruit constant puis variable                                                                                       |
 | `montecarlo.py`              | g par un pendule, un quotient à loi dissymétrique, une droite ajustée sur cent mille tirages face à `curvefit`, une exponentielle ajustée par tirages                                               |
-| `Acquisition.py`, `Bode.py`  | deux scripts dérivés des exemples de Frédéric Legrand, « Enregistrement d'un signal » et « Diagramme de Bode », sous leur licence (voir plus bas) : l'acquisition avec spectre, le Bode automatique |
+| `Acquisition.py`, `Bode.py`  | deux scripts dérivés des exemples de Frédéric Legrand, « Enregistrement d'un signal » et « Diagramme de Bode » (voir [Licence](#licence)) : l'acquisition avec spectre, le Bode automatique         |
 
 ## Erreurs courantes
 
@@ -254,20 +254,28 @@ description des tests est dans la documentation [doc/tests.md](doc/tests.md)
 
 ## Licence
 
-Le code est sous [licence MIT](LICENSE). Auteur : Antonin Marchand, lycée
-Louis-le-Grand.
+Le dépôt est sous licence
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.fr),
+dont le texte intégral est dans [LICENSE](LICENSE) : réutilisation et
+modification libres hors usage commercial, en citant l'auteur et en partageant
+les versions modifiées sous la même licence. Auteur : Antonin Marchand, lycée
+Louis-le-Grand. Jusqu'au 26 septembre 2026, le code était sous licence MIT, à
+l'exception des deux exemples dérivés de Frédéric Legrand.
 
-Deux choses n'en relèvent pas. `pycanum` est une dépendance, pas une partie du
-dépôt : il appartient à Frédéric Legrand, est publié sous licence CeCILL sur
-PyPI, et n'est jamais redistribué ici. Et `exemples/Acquisition.py` et
-`exemples/Bode.py` dérivent de ses exemples, publiés sur son site sous
-[CC BY-NC-SA 2.0 FR](http://creativecommons.org/licenses/by-nc-sa/2.0/fr) —
+Une partie du code revient en effet à Frédéric Legrand. `exemples/Acquisition.py`
+et `exemples/Bode.py` dérivent de ses exemples, publiés sur son site sous
+[CC BY-NC-SA 2.0 FR](https://creativecommons.org/licenses/by-nc-sa/2.0/fr/) —
 [Enregistrement d'un signal](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pyacquis/pyacquis.html)
 et
-[Diagramme de Bode](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html)
-: ces deux fichiers-là restent sous cette licence, ce que leur en-tête rappelle.
+[Diagramme de Bode](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html).
 Quatre fonctions du paquet lui sont dues aussi, réécrites ici et créditées dans
 leur docstring : la mesure du gain `gain_std`, `interpolation_fft` et
 `choix_echantillonnage` (`tpllg.traitement`), venues du même « Diagramme de Bode
 », et le spectre fenêtré `spectre` (`tpllg.fft`), venu de
 [Mesure de déphasage](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/dephasage/dephasage.html).
+La 2.0 FR permet de diffuser une adaptation sous une version ultérieure aux
+mêmes options : ces emprunts sont donc sous CC BY-NC-SA 4.0, comme le reste.
+
+`pycanum` n'en relève pas : c'est une dépendance, pas une partie du dépôt. Il
+appartient à Frédéric Legrand, est publié sous licence CeCILL sur PyPI, et n'est
+jamais redistribué ici.

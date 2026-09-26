@@ -307,9 +307,8 @@ précède :
 
 Ces méthodes-là sont celles de pycanum, et prennent leurs temps en
 **microsecondes**. Les exemples du site de Frédéric Legrand les emploient
-directement, sans passer par `tpllg` ; ils ne sont pas reproduits ici, leur
-licence (CC BY-NC-SA) n'étant pas celle du dépôt. La documentation complète
-est celle de pycanum,
+directement, sans passer par `tpllg` ; ils ne sont pas reproduits ici. La
+documentation complète est celle de pycanum,
 [interpy](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/interpy/interpy.html),
 et les registres de la carte sont décrits dans la notice de programmation
 d'Eurosmart.

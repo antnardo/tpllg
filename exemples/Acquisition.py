@@ -5,8 +5,8 @@ Created on Mon Mar  6 13:35:03 2023
 @author: a. marchand, f. legrand
 
 Ce script dérive de deux exemples de Frédéric Legrand (f-legrand.fr,
-CC BY-NC-SA 2.0 FR) : il est diffusé sous cette même licence, et non sous la
-licence MIT du reste du dépôt.
+CC BY-NC-SA 2.0 FR) : il est diffusé, comme le reste du dépôt, sous
+CC BY-NC-SA 4.0, version ultérieure que la 2.0 FR autorise pour une adaptation.
 - l'acquisition suit « Enregistrement d'un signal » :
   https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pyacquis/pyacquis.html
 - le spectre (tpllg.fft.spectre) reprend la fonction frequence() de

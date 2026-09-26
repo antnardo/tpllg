@@ -243,7 +243,7 @@ EA0 (un câble entre les deux) et lit la sortie du filtre sur EA1, fréquence
 par fréquence, et trace le diagramme de Bode sans toucher au GBF. C'est
 `exemples/Bode.py`, script dérivé de l'exemple
 [Diagramme de Bode](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html) de
-Frédéric Legrand et sous sa licence, dont voici l'ossature :
+Frédéric Legrand, dont voici l'ossature :
 
 ```python
 import numpy as np

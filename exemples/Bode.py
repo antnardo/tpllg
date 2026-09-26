@@ -5,8 +5,9 @@ Created on Mon Mar  6 13:35:03 2023
 @author: a. marchand, f. legrand
 
 Ce script dérive de l'exemple « Diagramme de Bode » de Frédéric Legrand
-(f-legrand.fr, CC BY-NC-SA 2.0 FR) : il est diffusé sous cette même licence,
-et non sous la licence MIT du reste du dépôt.
+(f-legrand.fr, CC BY-NC-SA 2.0 FR) : il est diffusé, comme le reste du dépôt,
+sous CC BY-NC-SA 4.0, version ultérieure que la 2.0 FR autorise pour une
+adaptation.
 https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html
 La mesure du gain (gain_std), l'interpolation par FFT et le choix de
 l'échantillonnage, dans tpllg.traitement, en viennent aussi.
