@@ -343,6 +343,8 @@ La suite du script fait la figure ; la voici en entier dans
 passe-bande inverseur, la sortie part vers le bas après un front montant, et
 le premier extremum, qui donne la valeur de départ, est négatif.
 
+![L'acquisition brute avec les fronts et la fenêtre ajustée, le régime libre ajusté avec son enveloppe, et les résidus](images/regime_libre.png)
+
 Pour comparer au diagramme de Bode du même filtre, voir
 [bode.md](bode.md) ; pour ce que valent les incertitudes rendues par
 `curve_fit`, [ajustement.md](ajustement.md#ce-que-curve_fit-fait).

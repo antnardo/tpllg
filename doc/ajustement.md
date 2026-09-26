@@ -93,7 +93,11 @@ Pour une droite avec des incertitudes constantes, les paramètres ne changent
 pas d'une méthode à l'autre ; seules leurs incertitudes et le χ² bougent.
 Avec des incertitudes variables d'un point à l'autre, les paramètres changent
 aussi, sauf si les incertitudes en `x` sont proportionnelles à celles en `y`.
-`exemples/ajustement_incertitudes.py` montre les deux cas.
+`exemples/ajustement_incertitudes.py` montre les deux cas :
+
+![Bruit constant : les trois ajustements donnent la même droite, seules les incertitudes rendues et le chi2 changent](images/ajustement_incertitudes_1.png)
+
+![Bruit variable d'un point à l'autre : les points précis pèsent plus, et les paramètres changent d'une méthode à l'autre](images/ajustement_incertitudes_2.png)
 
 Deux erreurs sont refusées, avec un message : des incertitudes sur `x` sans
 la dérivée (`NotImplementedError: Pour utiliser des erreurs en x, il faut

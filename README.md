@@ -152,10 +152,13 @@ tracer_bode(f, H, phi, passe_bande, pfit, err, noms=("$H_0$", "$f_0$", "$Q$"),
 ```
 
 ```text
-H0 = -5.14 ± 0.10
-f0 = 1988.4 ± 3.0 Hz
-Q = 6.65 ± 0.28
+Least square method
+H0 = -5.216 ± 0.063
+f0 = 1991.4 ± 1.8 Hz
+Q = 6.86 ± 0.15
 ```
+
+![Le diagramme de Bode que tracer_bode écrit : module et phase, les huit mesures et le modèle ajusté](doc/images/bode.png)
 
 ## La documentation
 

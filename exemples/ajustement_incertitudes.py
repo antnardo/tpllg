@@ -12,6 +12,8 @@ from tpllg.ajustement import curvefit
 import numpy as np
 import matplotlib.pyplot as plt
 
+np.random.seed(0)          # les mêmes mesures d'une exécution à l'autre
+
 
 def modele(x, a, b):
     return a*x + b
@@ -68,7 +70,8 @@ plt.plot(x_fit, modele(x_fit, *pfit),
          f"a={pfit[0]:.3f}±{errs[0]:.3f} "
          f"b={pfit[1]:.3f}±{errs[1]:.3f} X²={chi2:.1e}")
 
-plt.legend()
+plt.legend(loc="lower right")
+plt.savefig("ajustement_incertitudes_1.pdf")
 plt.show(block=False)
 
 plt.figure()
@@ -96,7 +99,8 @@ plt.plot(x_fit, modele(x_fit, *pfit),
          f"a={pfit[0]:.3f}±{errs[0]:.3f} "
          f"b={pfit[1]:.3f}±{errs[1]:.3f} X²={chi2:.1e}")
 
-plt.legend()
+plt.legend(loc="lower right")
+plt.savefig("ajustement_incertitudes_2.pdf")
 plt.show(block=False)
 
 plt.show()

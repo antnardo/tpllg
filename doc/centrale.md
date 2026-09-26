@@ -420,6 +420,12 @@ plt.show()
 acquis : (2, 5000) points par voie, de 0.0 à 0.04999 s
 ```
 
+![Les deux voies acquises sans centrale : le bruit du simulateur, arrondi au pas de quantification](images/acquisition_simple.png)
+
+Sans centrale, c'est le simulateur qui répond, et la figure ne montre que
+son bruit, arrondi au pas de quantification — `2 × 5/4096 = 2,4 mV` au
+calibre 5 V ; avec la centrale, ce sont les deux signaux branchés.
+
 ### Un créneau et la réponse d'un filtre, déclenchés sur le front
 
 Le GBF envoie un créneau sur EA0 et sur l'entrée du filtre, la sortie du

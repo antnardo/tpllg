@@ -295,3 +295,5 @@ Pour ajuster le module et la phase ensemble, on relève aussi la phase de
 chaque harmonique, `np.angle` de la transformée complexe aux mêmes indices,
 différence sortie moins entrée, et l'on passe le tout à
 `curve_fit_complex`, [ajustement.md](ajustement.md#curve_fit_complex-module-et-phase-ensemble).
+
+![Les deux signaux, les deux spectres avec les harmoniques retenues et le spectre fenêtré de l'entrée, le gain mesuré sur chaque harmonique et le passe-bas ajusté](images/spectre_harmoniques.png)

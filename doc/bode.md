@@ -134,6 +134,8 @@ résidus relatifs sur |H| : écart-type 3.5 %, maximum 11.1 %
 résidus sur phi          : écart-type 2.7°, maximum 5.6°
 ```
 
+![Le diagramme de Bode ajusté : le module en haut, la phase en bas, les vingt-trois mesures et la courbe du modèle avec ses paramètres en légende](images/bode_ajustement.png)
+
 Ces mesures ont été fabriquées avec 3 % de bruit sur les amplitudes et 3°
 sur les phases, autour de `H0 = −5`, `f0 = 1994,6 Hz`, `Q = 6,27`. Ce sont
 ces incertitudes-là qu'on a données à l'ajustement, et les résidus les

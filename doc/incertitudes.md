@@ -204,6 +204,8 @@ g.show()
 9.801 ± 0.099 m/s² (100000 tirages)
 ```
 
+![L'histogramme des cent mille tirages de g, la moyenne, ± l'écart-type et la loi normale de mêmes paramètres : ce que g.show() trace](images/montecarlo_g.png)
+
 La formule de propagation linéaire, `u_g/g = sqrt((u_L/L)² + (2 u_T/T)²)`,
 donne `9.801 ± 0.100 m/s²` : ici les incertitudes relatives sont petites et
 les deux méthodes coïncident, ce qui est la règle. Monte-Carlo apporte
@@ -286,6 +288,8 @@ Les deux méthodes s'accordent ; `curvefit` rend en plus le χ² réduit,
 `SerieLineaire` n'a rien à savoir de la dérivée du modèle. `np.polyfit(x, y,
 1)` sur les valeurs mesurées donne les mêmes `a` et `b` que la moyenne des
 tirages, aux fluctuations près.
+
+![Les dix points avec leurs barres d'incertitude en x et en y, la droite de Monte-Carlo et celle de curvefit, confondues](images/montecarlo_droite.png)
 
 ## Un modèle quelconque par tirages
 
