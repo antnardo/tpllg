@@ -115,8 +115,8 @@ def modele(x, a, b):
 
 x = np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9])
 y = np.array([-0.85, -0.42, 0.11, 0.35, 0.84, 1.15, 1.70, 1.95, 2.36, 2.85])
-pfit, err, chi2 = curvefit(modele, x, y, p0=[1, 0], datayerrors=0.15*np.ones(x.size))
-print(resume_parametres(("a", "b"), pfit, sigmas=err))
+pfit, err, chi2 = curvefit(modele, x, y, p0=[1, 0], datayerrors=0.15)
+print(resume_parametres(("a", "b"), pfit, err))
 ```
 
 La fonction `curvefit` est bavarde (comme beaucoup de fonctions ici), elle
@@ -145,9 +145,9 @@ f = np.array([500, 1000, 1500, 1800, 2000, 2200, 2700, 5000.])       # Hz
 H = np.array([0.21, 0.53, 1.33, 3.06, 5.13, 3.16, 1.24, 0.39])      # |Vs/Ve|
 phi = np.radians([-95, -97, -106, -122, 176, 126, 104, 96])         # radians
 
-pfit, pcov = curve_fit_complex(passe_bande, f, norm=H, phase=phi, p0=[-5, 2000, 6])
-print(resume_parametres(("H0", "f0", "Q"), pfit, pcov, unites=("", "Hz", "")))
-tracer_bode(f, H, phi, passe_bande, pfit, pcov, noms=("$H_0$", "$f_0$", "$Q$"),
+pfit, err, chi2 = curve_fit_complex(passe_bande, f, norm=H, phase=phi, p0=[-5, 2000, 6])
+print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
+tracer_bode(f, H, phi, passe_bande, pfit, err, noms=("$H_0$", "$f_0$", "$Q$"),
             unites=("", "Hz", ""), fichier="bode.pdf")
 ```
 

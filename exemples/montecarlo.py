@@ -40,13 +40,13 @@ x_mes = x + np.random.normal(0, 0.2, x.size)
 y_mes = 2*x + 1 + np.random.normal(0, 0.5, x.size)
 debut = time.perf_counter()
 serie = SerieLineaire(x_mes, 0.2, y_mes, 0.5)
-pa, pb = serie.ajuste()
+pa, pb = serie.ajuster()
 duree = time.perf_counter() - debut
 print("Monte-Carlo : a =", formater(pa.val, pa.u), " b =", formater(pb.val, pb.u),
       " (%d tirages en %.2f s)" % (serie.N, duree))
 pfit, err, chi2 = curvefit(lambda x, a, b: a*x + b, x_mes, y_mes, p0=[1, 0],
-                           datayerrors=0.5*np.ones(x.size), dataxerrors=0.2*np.ones(x.size),
-                           function_derivate=lambda x, a, b: a*np.ones_like(x), verbose=False)
+                           datayerrors=0.5, dataxerrors=0.2,
+                           function_derivate=lambda x, a, b: a, verbose=False)
 print("curvefit    : a =", formater(pfit[0], err[0]), " b =", formater(pfit[1], err[1]),
       " chi2 réduit = %.2f" % chi2)
 plt.figure()

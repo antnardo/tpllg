@@ -33,27 +33,55 @@ m, delta, s = incertitudes(liste, sigma=1, advanced=False)
 | `advanced` | `True` pour multiplier l'incertitude par le coefficient de Student, ce qui compte quand les mesures sont peu nombreuses |
 
 Retour : la **moyenne** `m`, l'**incertitude** `delta` sur cette moyenne, et
-l'**écart-type estimé** `s` de la série, `sqrt(somme (x - m)²/(N - 1))`.
-Sans `advanced`, `delta` est l'incertitude-type de la moyenne, `s/sqrt(N)` ;
-avec, elle est multipliée par le coefficient de Student au niveau `sigma`.
+l'**écart-type estimé** `s` de la série. Ce sont les trois estimateurs d'une
+incertitude de **type A**, sur `N` mesures indépendantes `x_i` :
+
+```text
+m     = (1/N) somme des x_i                       la moyenne
+s     = sqrt( somme des (x_i - m)² / (N - 1) )    l'écart-type de la série, estimé sans biais
+delta = s / sqrt(N)                               l'incertitude-type sur la moyenne
+```
+
+Rien qu'on ne puisse écrire soi-même en numpy, et c'est exactement ce que la
+fonction fait :
 
 ```python
+m = np.mean(mesures)
+s = np.std(mesures, ddof=1)          # ddof=1 : la division par N - 1
+delta = s/np.sqrt(len(mesures))
+```
+
+Avec `advanced`, `delta` est multipliée par le coefficient de Student au
+niveau `sigma` (section suivante).
+
+```python
+import numpy as np
+from tpllg.ajustement import formater, resume_parametres
+from tpllg.incertitudes import incertitudes
+
 mesures = [9.78, 9.81, 9.85, 9.79, 9.83]           # g, en m/s², cinq fois
-print(incertitudes(mesures))
-print(incertitudes(mesures, sigma=1, advanced=True))
-print(incertitudes(mesures, sigma=2, advanced=True))
+m, delta, s = incertitudes(mesures)
+print(m, delta, s)
+print(formater(m, delta, "m/s²"))
+m2, delta2, s2 = incertitudes(mesures, sigma=2, advanced=True)
+print(formater(m2, delta2, "m/s²"), "à 95 %, avec Student")
+print(resume_parametres(("g",), [m], [delta], ("m/s²",)))
 ```
 
 ```text
-(9.812, 0.012806248474865799, 0.028635642126552934)
-(9.812, 0.014619954277662212, 0.028635642126552934)
-(9.812, 0.0367450893150085, 0.028635642126552934)
+9.812 0.012806248474865799 0.028635642126552934
+9.812 ± 0.013 m/s²
+9.812 ± 0.037 m/s² à 95 %, avec Student
+g = 9.812 ± 0.013 m/s²
 ```
 
-Soit `g = 9.812 ± 0.013 m/s²` en incertitude-type, `9.812 ± 0.037` à 95 % avec
-Student. `s` est la dispersion d'**une** mesure ; `delta` est ce qu'on gagne à
-en faire `N`, et c'est `delta` qu'on écrit derrière le `±`. `formater(m,
-delta, "m/s²")` de `tpllg.ajustement` met le résultat en forme.
+`s` est la dispersion d'**une** mesure ; `delta` est ce qu'on gagne à en
+faire `N`, et c'est `delta` qu'on écrit derrière le `±`. Deux fonctions de
+`tpllg.ajustement` mettent en forme, avec deux chiffres significatifs sur
+l'incertitude et la valeur arrondie au même rang : `formater` pour une
+grandeur, `resume_parametres` pour plusieurs grandeurs nommées, une ligne
+chacune — c'est la même mise en forme, la seconde appelle la première
+(voir [ajustement.md](ajustement.md#présenter-un-résultat)).
 
 ## Le coefficient de Student
 
@@ -63,11 +91,15 @@ from tpllg.incertitudes import student_coef
 t = student_coef(sigma, n)
 ```
 
-Le facteur par lequel multiplier `s/sqrt(N)` pour avoir un intervalle de
-confiance au niveau que `sigma` écarts-types donneraient pour une loi
-normale (68 % pour 1, 95 % pour 2), quand l'écart-type est lui-même estimé
-sur les `N` mesures ; `k = N - 1` degrés de liberté. Il tend vers `sigma`
-quand `N` grandit :
+La règle : une incertitude de **type A**, estimée sur `N` mesures répétées,
+s'écrit `delta = t × s/sqrt(N)`, où `t` est le coefficient de Student au
+niveau de confiance voulu, à `k = N - 1` degrés de liberté. Le coefficient
+ne corrige pas `s` — l'écart-type de la série reste `np.std(mesures,
+ddof=1)` — il élargit l'intervalle de confiance sur la **moyenne**, parce que
+`s` est lui-même estimé sur ces mêmes `N` mesures, et d'autant moins bien
+connu que `N` est petit. `sigma` dit le niveau, en nombre d'écarts-types
+d'une loi normale : 1 pour 68 %, 2 pour 95 %. `t` tend vers `sigma` quand
+`N` grandit :
 
 | `N` | à 68 % (`sigma=1`) | à 95 % (`sigma=2`) |
 | --- | --- | --- |
@@ -78,9 +110,12 @@ quand `N` grandit :
 | 30 | 1,02 | 2,09 |
 | 100 | 1,005 | 2,03 |
 
-Deux mesures ne disent presque rien de l'écart-type : à 95 % le facteur est
-14. À partir d'une dizaine de mesures, la correction est de quelques pour
-cent à 68 %, et l'on peut s'en passer en incertitude-type.
+Sur les cinq mesures de `g` ci-dessus, à 95 % : `t = 2.87`, et
+`delta = 2.87 × 0.0286/sqrt(5) = 0.037 m/s²`, ce que `incertitudes(mesures,
+sigma=2, advanced=True)` rend. Deux mesures ne disent presque rien de
+l'écart-type : à 95 % le facteur est 14. À partir d'une dizaine de mesures,
+la correction est de quelques pour cent à 68 %, et l'on peut s'en passer en
+incertitude-type.
 
 ## La loi normale
 
@@ -101,7 +136,7 @@ sert aux tracés, pour superposer la gaussienne à un histogramme.
 
 ## Monte-Carlo : un Point
 
-La méthode, telle que la fiche de méthodologie la donne : on suppose chaque
+La méthode : on suppose chaque
 grandeur mesurée gaussienne, centrée sur sa valeur avec son incertitude-type
 pour écart-type ; on en tire `N` valeurs ; on refait le calcul sur chaque
 tirage ; la moyenne et l'écart-type des résultats sont la valeur et
@@ -130,19 +165,20 @@ X = Point(val, u, N=None)
 | --- | --- |
 | `val` | la valeur |
 | `u` | l'incertitude-type |
-| `N` | le nombre de tirages, 100 000 par défaut (`Point.NN`) ; un tirage de plus ne coûte rien, et la fiche en prend 10 000 |
+| `N` | le nombre de tirages, 100 000 par défaut (`Point.NN`) ; cent mille tirages coûtent quelques millisecondes |
 
 Un `Point` porte une valeur, une incertitude-type et, dès qu'on en a besoin,
 un **tirage** de `N` valeurs gaussiennes. Toute opération, entre `Point` ou
 avec un nombre, se fait terme à terme sur les tirages ; le résultat est un
 `Point` dont `val` est la moyenne des tirages et `u` leur écart-type,
-estimateur sans biais (`ddof=1`, comme la fiche).
+estimateur sans biais (`ddof=1`).
 
 | Écriture | Ce qui est fait |
 | --- | --- |
 | `X + Y`, `X - Y`, `X*Y`, `X/Y`, `X**Y` | terme à terme sur les tirages, `Y` un `Point` ou un nombre ; `2*X`, `3 - X`, `2/X`, `2**X` aussi |
 | `-X`, `abs(X)` | idem |
-| `X.apply_func(np.exp)` | n'importe quelle fonction numpy appliquée aux tirages ; les arguments qui suivent lui sont passés |
+| `np.exp(X)`, `np.sqrt(X)`, `np.sin(X)`, `np.arctan2(Y, X)`… | toute fonction numpy élémentaire appliquée aux tirages : le résultat est un `Point` |
+| `X.apply_func(f, *args)` | une fonction qui n'est pas une fonction numpy élémentaire, appliquée aux tirages avec ses arguments |
 | `X.val`, `X.u`, `X.N` | la valeur, l'incertitude-type, le nombre de tirages |
 | `X.tirage` | le tableau des tirages, pour un histogramme ou des quantiles |
 | `X.quantiles(niveau=0.6827)` | l'intervalle `(bas, haut)` qui contient `niveau` des tirages ; à 68,27 % c'est l'équivalent de ± un écart-type |
@@ -211,18 +247,18 @@ l'intervalle est dissymétrique. `q.show()` le montre.
 
 ## Une droite sur tous les tirages, sans boucle
 
-La fiche de méthodologie ajuste une droite sur chaque tirage des `P` points
-de mesure dans une boucle de `polyfit`, ce qui prend 7 s pour 100 000
-tirages de dix points. La régression affine a une solution analytique,
-`a = Cov(x, y)/V(x)` et `b = <y> − a<x>`, qui se calcule sur les `N` tirages
-d'un coup, en tableaux `(N, P)`, sans boucle : 0,2 s. C'est ce que fait
+Ajuster une droite sur chaque tirage des `P` points de mesure, dans une
+boucle de `polyfit`, prend 7 s pour 100 000 tirages de dix points. La
+régression affine a une solution analytique, `a = Cov(x, y)/V(x)` et
+`b = <y> − a<x>`, qui se calcule sur les `N` tirages d'un coup, en tableaux
+`(N, P)`, sans boucle : quelques centièmes de seconde. C'est ce que fait
 `SerieLineaire`.
 
 ```python
 from tpllg.montecarlo import SerieLineaire
 
 serie = SerieLineaire(x, u_x, y, u_y, N=100000)
-a, b = serie.ajuste()
+a, b = serie.ajuster()
 ```
 
 | Argument | Sens |
@@ -233,7 +269,7 @@ a, b = serie.ajuste()
 
 Les tirages sont faits à la construction, dans `serie.x_tirages` et
 `serie.y_tirages`, deux tableaux `(N, P)` ; `serie.xi`, `serie.yi` en donnent
-un, pour tracer un jeu de mesures comme on aurait pu l'avoir. `ajuste()`
+un, pour tracer un jeu de mesures comme on aurait pu l'avoir. `ajuster()`
 rend la pente et l'ordonnée à l'origine en deux `Point`, dont les tirages
 sont les `N` régressions. Les incertitudes sur `x` sont ainsi prises en
 compte sans dérivée ni itération.
@@ -242,7 +278,7 @@ Face à `curvefit` avec la variance effective, sur dix points de `y = 2x + 1`
 bruités à 0,2 en `x` et 0,5 en `y` :
 
 ```text
-Monte-Carlo : a = 1.953 ± 0.063  b = 1.66 ± 0.37  (100000 tirages en 0.18 s)
+Monte-Carlo : a = 1.953 ± 0.063  b = 1.66 ± 0.37  (100000 tirages en 0.03 s)
 curvefit    : a = 1.959 ± 0.063  b = 1.63 ± 0.37  chi2 réduit = 1.35
 ```
 
@@ -282,7 +318,7 @@ print("A =", formater(A.val, A.u), " tau =", formater(tau.val, tau.u, "s"))
 ```
 
 ```text
-A = 2.000 ± 0.019  tau = 1.528 ± 0.022 s  (2000 tirages en 0.7 s)
+A = 2.000 ± 0.019  tau = 1.528 ± 0.022 s  (2000 tirages en 0.1 s)
 ```
 
 Un ajustement qui échoue sur un tirage arrête tout (`RuntimeError`) : de

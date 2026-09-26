@@ -5,15 +5,16 @@ aléatoires gaussiens sur chaque grandeur mesurée, le calcul refait sur chaque
 tirage, et la moyenne et l'écart-type du résultat.
 
 - Point : une valeur, une incertitude-type et un tirage ; les opérations
-  entre Point, et avec des nombres, se font sur les tirages ;
+  entre Point, et avec des nombres, se font sur les tirages, et les
+  fonctions numpy (np.exp, np.sqrt, np.sin…) aussi ;
 - SerieLineaire : une série de mesures (x ± u_x, y ± u_y) et l'ajustement
   y = ax + b refait sur chaque tirage, sans boucle — la régression affine a
   une solution analytique, calculée sur tous les tirages à la fois ;
 - ajuster_modele : la même chose pour un modèle quelconque, par une boucle
   de curve_fit, donc bien plus lent.
 
-L'écart-type des tirages est l'estimateur sans biais (ddof=1), comme dans la
-fiche de méthodologie. Le module montecarlo de dataanalysis (2018), refondu.
+L'écart-type des tirages est l'estimateur sans biais (ddof=1). Le module
+montecarlo de dataanalysis (2018), refondu.
 
 @author: a. marchand
 """
@@ -168,9 +169,26 @@ class Point:
     def __abs__(self):
         return Point(tirage=np.abs(self.tirage))
 
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        """np.exp(X), np.sqrt(X), np.arctan2(Y, X)… : une fonction numpy
+        appliquée à un Point rend un Point, calculé sur les tirages."""
+        if method != "__call__" or kwargs.get("out") is not None:
+            return NotImplemented
+        tirages = []
+        for entree in inputs:
+            autre = self._tirage_de(entree)
+            if autre is None:
+                return NotImplemented
+            tirages.append(autre)
+        resultat = ufunc(*tirages, **kwargs)
+        if isinstance(resultat, tuple):            # np.modf, np.divmod : plusieurs sorties
+            return tuple(Point(tirage=r) for r in resultat)
+        return Point(tirage=resultat)
+
     def apply_func(self, func, *args, **kwargs):
-        """Un Point dont le tirage est func(tirage, *args, **kwargs) : n'importe
-        quelle fonction numpy, np.exp, np.log, np.sin…"""
+        """Un Point dont le tirage est func(tirage, *args, **kwargs), pour une
+        fonction qui n'est pas une fonction numpy élémentaire — np.exp(X),
+        np.log(X), np.sin(X) s'écrivent directement."""
         return Point(tirage=func(self.tirage, *args, **kwargs))
 
 
@@ -191,7 +209,7 @@ class SerieLineaire:
 
     `u_x` et `u_y` sont un nombre, la même incertitude pour tous les points,
     ou une liste, une par point. Les tirages sont faits à la construction,
-    dans deux tableaux (N, P) ; `ajuste()` ne fait aucune boucle."""
+    dans deux tableaux (N, P) ; `ajuster()` ne fait aucune boucle."""
 
     def __init__(self, x, u_x, y, u_y, N=Point.NN):
         self.x, self.u_x, self.y, self.u_y = _tableaux(x, u_x, y, u_y)
@@ -224,7 +242,7 @@ class SerieLineaire:
         b = ym - a*xm
         return a, b
 
-    def ajuste(self):
+    def ajuster(self):
         """Rend (a, b), deux Point dont les tirages sont les N régressions."""
         a, b = self.coefs(self.x_tirages, self.y_tirages)
         return Point(tirage=a), Point(tirage=b)

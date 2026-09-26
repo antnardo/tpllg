@@ -20,14 +20,16 @@ def phase_0_360(phase):
     return np.degrees(phase) % 360
 
 
-def tracer_bode(f, norm, phase, modele=None, pfit=None, pcov=None, noms=None,
+def tracer_bode(f, norm, phase, modele=None, pfit=None, err=None, noms=None,
                 unites=None, fichier=None, gain_log=True):
     """Les points (f, |H|, phi) et, si `modele` et `pfit` sont donnés, la
     courbe ajustée avec les valeurs des paramètres dans la légende.
 
-    modele(f, *pfit) rend la fonction de transfert complexe ; `noms` et
-    `unites` servent à la légende (par ex. ("$H_0$", "$f_0$", "$Q$") et
-    ("", "Hz", "")). Écrit la figure dans `fichier` s'il est donné.
+    modele(f, *pfit) rend la fonction de transfert complexe ; `err` les
+    incertitudes-types des paramètres, ce que curve_fit_complex rend (une
+    matrice de covariance de curve_fit convient aussi) ; `noms` et `unites`
+    servent à la légende (par ex. ("$H_0$", "$f_0$", "$Q$") et ("", "Hz", "")).
+    Écrit la figure dans `fichier` s'il est donné.
     """
     f = np.asarray(f, dtype=float)
     fig, (ax1, ax2) = plt.subplots(2, sharex=True)
@@ -43,7 +45,7 @@ def tracer_bode(f, norm, phase, modele=None, pfit=None, pcov=None, noms=None,
     ax2.grid(which="both")
     if modele is not None and pfit is not None:
         noms = noms if noms is not None else [f"p{i}" for i in range(len(pfit))]
-        texte = resume_parametres(noms, pfit, pcov, unites)
+        texte = resume_parametres(noms, pfit, err, unites)
         freq = np.geomspace(f.min(), f.max(), num=2000)
         H_ajuste = modele(freq, *pfit)
         ax1.plot(freq, np.abs(H_ajuste), "r", label="ajustement\n" + texte)

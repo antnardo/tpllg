@@ -12,11 +12,26 @@ def test_operations_entre_points():
     assert abs((a - b).val + 1) < 0.01 and abs((a - b).u - np.hypot(0.1, 0.3)) < 0.01
     assert abs((3 - a).val - 2) < 0.01 and abs((a - 1).val) < 0.01
     assert abs((a*b).u - 2*np.hypot(0.1, 0.15)) < 0.01
-    assert abs(a.apply_func(np.exp).u - np.e*0.1) < 0.01
     assert abs((-a).val + 1) < 0.01 and abs(abs(-a).val - 1) < 0.01 and (+a) is a
     assert (Point(1.0, 0.1, N=1000) + Point(2.0, 0.1, N=5000)).N == 5000
     with pytest.raises(TypeError):
         a + "x"
+
+
+def test_les_fonctions_numpy_rendent_un_point():
+    np.random.seed(7)
+    a, b = Point(1.0, 0.1), Point(2.0, 0.3)
+    e = np.exp(a)
+    assert isinstance(e, Point) and abs(e.u - np.e*0.1) < 0.01
+    assert abs(e.val - np.e*np.exp(0.1**2/2)) < 0.005              # E[exp X] = exp(m + u²/2), loi log-normale
+    assert abs(np.log(b).u - 0.3/2) < 0.005                       # u(ln b) = u_b/b
+    assert abs(np.sqrt(b).u - 0.3/(2*np.sqrt(2))) < 0.005          # u(sqrt b) = u_b/(2 sqrt b)
+    assert isinstance(np.sqrt(a*b), Point) and isinstance(np.arctan2(b, a), Point)
+    assert abs((np.float64(3.0) - a).val - 2) < 0.01 and abs(np.add(a, 1).val - 2) < 0.01
+    assert abs(a.apply_func(np.exp).u - e.u) < 0.01
+    assert abs((np.exp(a) - np.exp(a)).u) < 1e-9                   # le même tirage des deux côtés
+    frac, ent = np.modf(b)
+    assert isinstance(frac, Point) and isinstance(ent, Point)
 
 
 def test_point_depuis_un_tirage():
@@ -35,7 +50,7 @@ def test_serie_lineaire_retrouve_polyfit():
     x = np.linspace(0, 10, 10)
     y = 2*x + 1 + np.random.normal(0, 0.5, 10)
     serie = SerieLineaire(x, 0.2, y, 0.5, N=20000)
-    a, b = serie.ajuste()
+    a, b = serie.ajuster()
     a_ref, b_ref = np.polyfit(x, y, 1)
     assert abs(a.val - a_ref) < 0.02 and abs(b.val - b_ref) < 0.1
     assert 0.03 < a.u < 0.1
@@ -48,7 +63,7 @@ def test_serie_lineaire_retrouve_les_incertitudes_des_moindres_carres():
     np.random.seed(6)
     x = np.linspace(0, 10, 11)
     serie = SerieLineaire(x, 0.0, 2*x + 1, 0.3, N=200000)   # x exacts, y à 0,3 près
-    a, b = serie.ajuste()
+    a, b = serie.ajuster()
     sxx = ((x - x.mean())**2).sum()
     assert abs(a.val - 2) < 1e-3 and abs(b.val - 1) < 5e-3
     assert abs(a.u/(0.3/np.sqrt(sxx)) - 1) < 0.02                      # sigma_a = sigma/sqrt(Sxx)

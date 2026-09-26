@@ -17,9 +17,9 @@ def test_phase_0_360():
 def test_tracer_bode_ecrit_la_figure_et_la_legende(tmp_path):
     f = np.geomspace(100, 10000, 15)
     H = gain(f, -5, 2000, 6)
-    pfit, pcov = [-5.0, 2000.0, 6.0], np.diag([0.01, 4.0, 0.04])
+    pfit, err = [-5.0, 2000.0, 6.0], [0.1, 2.0, 0.2]
     fichier = tmp_path/"bode.png"
-    fig = tracer_bode(f, np.abs(H), np.angle(H), gain, pfit, pcov, noms=("H0", "f0", "Q"),
+    fig = tracer_bode(f, np.abs(H), np.angle(H), gain, pfit, err, noms=("H0", "f0", "Q"),
                       unites=("", "Hz", ""), fichier=str(fichier))
     ax1, ax2 = fig.axes
     assert fichier.exists() and fichier.stat().st_size > 0
@@ -30,6 +30,9 @@ def test_tracer_bode_ecrit_la_figure_et_la_legende(tmp_path):
     assert np.allclose(y_ajuste, np.abs(gain(x_ajuste, *pfit)))
     _, phase_tracee = ax2.get_lines()[0].get_data()
     assert np.allclose(phase_tracee, np.degrees(np.angle(H)) % 360)
+    plt.close(fig)
+    fig = tracer_bode(f, np.abs(H), np.angle(H), gain, pfit, np.diag(np.square(err)), noms=("H0", "f0", "Q"))
+    assert any("f0 = " + formater(2000.0, 2.0) in t.get_text() for t in fig.axes[0].get_legend().get_texts())
     plt.close(fig)
     fig = tracer_bode(f, np.abs(H), np.angle(H), gain_log=False)
     assert fig.axes[0].get_yscale() == "linear" and [len(ax.get_lines()) for ax in fig.axes] == [1, 1]

@@ -68,9 +68,9 @@ pfit, err, chi2 = curvefit(function, datax, datay, p0,
 | `function` | le modèle, `function(x, a, b, …)`, un paramètre par argument après `x`. Vectorisé en `x` de préférence ; s'il ne l'est pas (un `math.exp`), `curvefit` s'en aperçoit et l'appelle point par point |
 | `datax`, `datay` | les mesures, tableaux ou listes de même longueur |
 | `p0` | les valeurs de départ, une par paramètre, dans l'ordre de `function` |
-| `datayerrors` | les incertitudes-types sur `y`, un tableau de même longueur, strictement positif. Sans elles, tous les points pèsent pareil, `pcov` est mise à l'échelle des résidus comme le fait `curve_fit`, et le χ² réduit rendu n'a pas de sens |
-| `dataxerrors` | les incertitudes-types sur `x` ; demande `datayerrors` et `function_derivate` |
-| `function_derivate` | la dérivée du modèle par rapport à `x`, `function_derivate(x, a, b, …)`, mêmes arguments que `function` |
+| `datayerrors` | les incertitudes-types sur `y` : un nombre, la même pour tous les points, ou un tableau de même longueur ; strictement positives. Sans elles, tous les points pèsent pareil, `pcov` est mise à l'échelle des résidus comme le fait `curve_fit`, et le χ² réduit rendu n'a pas de sens |
+| `dataxerrors` | les incertitudes-types sur `x`, un nombre ou un tableau de même façon ; demande `datayerrors` et `function_derivate` |
+| `function_derivate` | la dérivée du modèle par rapport à `x`, `function_derivate(x, a, b, …)`, mêmes arguments que `function`. Elle peut rendre un nombre quand elle est constante — `return a` pour une droite — et n'a pas besoin d'être vectorisée non plus |
 | `n_var_method_max`, `chi_limit` | la boucle de la variance effective : au plus tant d'itérations, arrêt quand le χ² réduit ne baisse plus que de tant |
 | `verbose` | `False` pour taire la ligne qui annonce la méthode employée |
 | `**kwargs` | transmis à `curve_fit` : `maxfev` (nombre d'évaluations, si l'ajustement s'arrête faute d'itérations), `bounds` (des bornes sur les paramètres) |
@@ -110,24 +110,24 @@ from tpllg.ajustement import curvefit, resume_parametres
 def modele(x, a, b):
     return a*x + b
 
-def modele_derivee(x, a, b):     # dérivée par rapport à x
-    return a*np.ones_like(x)
+def modele_derivee(x, a, b):     # dérivée par rapport à x : constante, un nombre suffit
+    return a
 
 x = np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9])
 y = np.array([-0.85, -0.42, 0.11, 0.35, 0.84, 1.15, 1.70, 1.95, 2.36, 2.85])
-sigma_x = 0.05*np.ones(x.size)
-sigma_y = 0.15*np.ones(x.size)
+sigma_x = 0.05                   # la même pour tous les points ; un tableau, une par point, sinon
+sigma_y = 0.15
 
 # 1. tous les points pèsent pareil ; pcov est mise à l'échelle des résidus, chi2 sans objet
 pfit, err, chi2 = curvefit(modele, x, y, p0=[1, 0], verbose=False)
-print("sans incertitudes      ", resume_parametres(("a", "b"), pfit, sigmas=err).replace("\n", "   "))
+print("sans incertitudes      ", resume_parametres(("a", "b"), pfit, err).replace("\n", "   "))
 # 2. les incertitudes sur y pèsent les points ; chi2 dit si elles sont justes
 pfit, err, chi2 = curvefit(modele, x, y, p0=[1, 0], datayerrors=sigma_y, verbose=False)
-print("incertitudes sur y     ", resume_parametres(("a", "b"), pfit, sigmas=err).replace("\n", "   "), "chi2 réduit = %.2f" % chi2)
+print("incertitudes sur y     ", resume_parametres(("a", "b"), pfit, err).replace("\n", "   "), "chi2 réduit = %.2f" % chi2)
 # 3. incertitudes sur x et y : variance effective, il faut la dérivée
 pfit, err, chi2 = curvefit(modele, x, y, p0=[1, 0], datayerrors=sigma_y,
                            dataxerrors=sigma_x, function_derivate=modele_derivee, verbose=False)
-print("incertitudes sur x et y", resume_parametres(("a", "b"), pfit, sigmas=err).replace("\n", "   "), "chi2 réduit = %.2f" % chi2)
+print("incertitudes sur x et y", resume_parametres(("a", "b"), pfit, err).replace("\n", "   "), "chi2 réduit = %.2f" % chi2)
 ```
 
 ```text
@@ -156,8 +156,8 @@ rng = np.random.RandomState(4)
 y = 2*np.exp(-x/1.5) + rng.normal(0, 0.02, x.size)      # le vrai bruit : 0,02
 for sigma in (0.02, 0.005, 0.08):
     pfit, err, chi2 = curvefit(lambda x, a, tau: a*np.exp(-x/tau), x, y, p0=[1, 1],
-                               datayerrors=sigma*np.ones(x.size), verbose=False)
-    print("sigma = %g" % sigma, resume_parametres(("a", "tau"), pfit, sigmas=err).replace("\n", "   "),
+                               datayerrors=sigma, verbose=False)
+    print("sigma = %g" % sigma, resume_parametres(("a", "tau"), pfit, err).replace("\n", "   "),
           "chi2 réduit = %.2f" % chi2)
 ```
 
@@ -197,21 +197,27 @@ modèle complexe dessus, en un seul jeu de paramètres :
 ```python
 from tpllg.ajustement import curve_fit_complex
 
-pfit, pcov = curve_fit_complex(complex_func, x_data, norm, phase, **kwargs)
+pfit, err, chi2 = curve_fit_complex(complex_func, datax, norm, phase, p0,
+                                    datayerrors=None, dataxerrors=None,
+                                    function_derivate=None, **kwargs)
 ```
 
 | Argument | Sens |
 | --- | --- |
 | `complex_func` | le modèle, `complex_func(x, *params)`, qui rend un tableau **complexe** ; s'écrit avec `1j` |
-| `x_data` | les abscisses, la fréquence en général |
+| `datax` | les abscisses, la fréquence en général |
 | `norm` | les modules mesurés, `Vs/Ve` |
 | `phase` | les phases mesurées, en **radians**. Le tour complet ne pose aucun problème : +175° et −175° sont presque le même nombre complexe, et un saut de 360° dans les mesures est invisible |
-| `**kwargs` | transmis à `curve_fit` : `p0`, indispensable ; `maxfev`, `bounds` |
+| `p0` | les valeurs de départ, indispensables |
+| `datayerrors` | les incertitudes-types sur les mesures, **un couple** `(u_norm, u_phase)` : celle du module et celle de la phase, en radians, chacune un nombre ou un tableau. Elles sont propagées aux parties réelle et imaginaire |
+| `dataxerrors`, `function_derivate` | comme pour `curvefit` ; la dérivée du modèle est complexe, comme lui |
+| `**kwargs` | transmis à `curvefit` : `verbose`, et pour `curve_fit` `maxfev`, `bounds` |
 
-Retour : `pfit`, `pcov`, comme `curve_fit`. Sans incertitudes fournies,
-`pcov` est à l'échelle des résidus ; `sigma` peut se passer par `kwargs`,
-sous la forme d'un tableau de `2N` valeurs (parties réelles puis
-imaginaires), avec `absolute_sigma=True`.
+Retour : `pfit`, `err`, `chi2`, exactement comme `curvefit`, dont
+`curve_fit_complex` est l'interface — il empile les mesures et l'appelle. Le
+χ² réduit compte `2N` mesures, les parties réelles et les imaginaires. Sans
+`datayerrors`, `err` vient de la dispersion des résidus et `chi2` n'a pas de
+sens, comme pour `curvefit`.
 
 Sur un passe-bande du second ordre, vingt-trois mesures :
 
@@ -229,15 +235,37 @@ H = np.array([0.09, 0.12, 0.21, 0.30, 0.53, 0.88, 1.33, 2.18, 3.06, 4.21, 4.62, 
 phi = np.radians([-90, -94, -95, -92, -97, -103, -106, -114, -122, -152, -166, 176,
                   154, 144, 126, 117, 104, 94, 96, 92, 87, 89, 89])
 
-pfit, pcov = curve_fit_complex(passe_bande, f, H, phi, p0=[-5, 2000, 6])
-print(resume_parametres(("H0", "f0", "Q"), pfit, pcov, unites=("", "Hz", "")))
+pfit, err, chi2 = curve_fit_complex(passe_bande, f, H, phi, p0=[-5, 2000, 6])
+print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
 ```
 
 ```text
+Least square method
 H0 = -5.101 ± 0.056
 f0 = 1988.3 ± 1.7 Hz
 Q = 6.62 ± 0.14
 ```
+
+Les mêmes mesures avec leurs incertitudes, 3 % sur le module et 3° sur la
+phase, ce qu'on lit à l'oscilloscope :
+
+```python
+pfit, err, chi2 = curve_fit_complex(passe_bande, f, H, phi, p0=[-5, 2000, 6],
+                                    datayerrors=(0.03*H, np.radians(3)), verbose=False)
+print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
+print("chi2 réduit = %.2f" % chi2)
+```
+
+```text
+H0 = -5.075 ± 0.081
+f0 = 1991.0 ± 2.7 Hz
+Q = 6.43 ± 0.12
+chi2 réduit = 1.20
+```
+
+Les points ne pèsent plus pareil — un point à 0,09 V à 3 % près compte moins
+qu'un point à 5 V —, les incertitudes rendues sont celles que les mesures
+impliquent, et le χ² réduit de 1,2 dit qu'elles rendent compte des écarts.
 
 Le même module ajusté seul, par `curve_fit` sur `|H0|/sqrt(1 + Q²(f/f0 -
 f0/f)²)`, donne `|H0| = 5.06`, `f0 = 2003.7 Hz`, `Q = 6.40` : un autre jeu de
@@ -308,11 +336,10 @@ ajustement réel, on calcule `y - modele(x, *pfit)` de la même façon.
 ## Présenter un résultat
 
 ```python
-from tpllg.ajustement import ecarts_types, formater, resume_parametres
+from tpllg.ajustement import formater, resume_parametres
 
-sigmas = ecarts_types(pcov)              # les incertitudes-types, racines de la diagonale
 texte = formater(valeur, sigma=None, unite="")
-texte = resume_parametres(noms, pfit, pcov=None, unites=None, sigmas=None)
+texte = resume_parametres(noms, pfit, err=None, unites=None)
 ```
 
 `formater` écrit « valeur ± incertitude unité » avec **deux chiffres
@@ -334,18 +361,20 @@ nulle, quatre chiffres significatifs.
 ```
 
 `resume_parametres` fait une ligne par paramètre, « nom = valeur ±
-incertitude unité ». Les incertitudes viennent de `pcov` (ce que
-`curve_fit` et `curve_fit_complex` rendent), ou directement de `sigmas` (le
-`err` de `curvefit`) ; sans l'un ni l'autre, les valeurs seules. `unites`
-est facultatif, une chaîne par paramètre, vide pour une grandeur sans
-dimension.
+incertitude unité », par `formater` : une seule mise en forme, `formater`
+pour une grandeur, `resume_parametres` pour plusieurs, nommées. `err` est ce
+que `curvefit` et `curve_fit_complex` rendent, une incertitude-type par
+paramètre ; la matrice de covariance de `scipy.optimize.curve_fit` est
+acceptée aussi, on en prend la racine de la diagonale (c'est `ecarts_types`).
+Sans, les valeurs seules. `unites` est facultatif, une chaîne par paramètre,
+vide pour une grandeur sans dimension.
 
 ```python
->>> print(resume_parametres(("H0", "f0", "Q"), pfit, pcov, unites=("", "Hz", "")))
+>>> print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
 H0 = -5.101 ± 0.056
 f0 = 1988.3 ± 1.7 Hz
 Q = 6.62 ± 0.14
->>> print(resume_parametres(("a", "b"), pfit, sigmas=err))
+>>> print(resume_parametres(("a", "b"), pfit, pcov))       # pcov de scipy.optimize.curve_fit
 a = 2.010 ± 0.083
 b = -1.006 ± 0.095
 ```
@@ -373,8 +402,8 @@ def decharge(t, U0, tau, u_inf):
     return u_inf + (U0 - u_inf)*np.exp(-t/tau)
 
 p0 = [u[0], t[np.argmin(abs(u - u[0]/np.e))], u[-1]]    # lus sur les données
-pfit, err, chi2 = curvefit(decharge, t, u, p0, datayerrors=0.005*np.ones(u.size))
-print(resume_parametres(("U0", "tau", "u_inf"), pfit, sigmas=err, unites=("V", "s", "V")))
+pfit, err, chi2 = curvefit(decharge, t, u, p0, datayerrors=0.005)
+print(resume_parametres(("U0", "tau", "u_inf"), pfit, err, unites=("V", "s", "V")))
 print("chi2 réduit = %.2f" % chi2)
 ```
 
@@ -394,7 +423,7 @@ def sinus(t, A, f, phi, offset):
 
 te = t[1] - t[0]
 p0 = [np.sqrt(2)*u.std(), frequence_pic(u, te), 0, u.mean()]
-pfit, err, chi2 = curvefit(sinus, t, u, p0, datayerrors=0.005*np.ones(u.size), verbose=False)
+pfit, err, chi2 = curvefit(sinus, t, u, p0, datayerrors=0.005, verbose=False)
 ```
 
 La phase de départ à zéro suffit en général, la fréquence étant bonne ; si
@@ -413,8 +442,9 @@ Le cas complet, mesures, ajustement, résidus, figure, est dans
 | `RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev` | pas convergé : valeurs de départ à revoir, ou `maxfev=20000` si elles sont bonnes et le modèle raide |
 | les paramètres sont absurdes, sans erreur | un minimum local : valeurs de départ lues sur un tracé ; vérifier les unités (Hz et non kHz, radians et non degrés) |
 | `pcov` pleine de `inf`, incertitudes infinies | un paramètre n'est pas déterminé par les données (deux paramètres redondants, une amplitude nulle), ou moins de points que de paramètres |
-| `TypeError: … only 0-dimensional arrays can be converted` | le modèle n'est pas vectorisé ; `curvefit` s'en accommode, `curve_fit` non : écrire `np.exp` plutôt que `math.exp` |
+| `TypeError: … only 0-dimensional arrays can be converted` | le modèle n'est pas vectorisé ; `curvefit` et `curve_fit_complex` s'en accommodent, `curve_fit` non : écrire `np.exp` plutôt que `math.exp` |
 | `NotImplementedError: Pour utiliser des erreurs en x…` | `dataxerrors` sans `function_derivate`, ou sans `datayerrors` |
+| `ValueError: datayerrors : le couple (u_norm, u_phase)…` | `curve_fit_complex` attend deux incertitudes, celle du module et celle de la phase, pas une seule |
 | χ² réduit très grand | modèle faux, ou incertitudes sous-estimées : regarder les résidus |
 | χ² réduit très petit | incertitudes surestimées |
 | `curve_fit_complex` rend `Q` négatif ou `f0` hors de la plage mesurée | phase en degrés, ou signe de la phase inversé (entrée moins sortie au lieu de sortie moins entrée), ou `p0` loin |

@@ -36,8 +36,10 @@ PARAM_INIT = [-5, 2000, 6]     # H0 : |H| au maximum, signe donné par la phase 
                                # f0 : la fréquence du maximum ; Q : f0 sur la largeur à -3 dB
 
 # 3. l'ajustement simultané du gain et de la phase
-pfit, pcov = curve_fit_complex(passe_bande, f, norm=H, phase=phi, p0=PARAM_INIT)
-print(resume_parametres(("H0", "f0", "Q"), pfit, pcov, unites=("", "Hz", "")))
+pfit, err, chi2 = curve_fit_complex(passe_bande, f, norm=H, phase=phi, p0=PARAM_INIT,
+                                    datayerrors=(0.03*H, np.radians(3)))   # 3 % sur |H|, 3° sur la phase
+print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
+print("chi2 réduit = %.2f" % chi2)
 
 # 4. les résidus : l'écart de chaque point à la courbe, sur le module et sur la phase
 res_H, res_phi = residus_complexes(passe_bande, f, H, phi, pfit)
@@ -47,6 +49,6 @@ print("résidus sur phi          : écart-type %.1f°, maximum %.1f°"
       % (res_phi.std(), abs(res_phi).max()))
 
 # 5. la figure, gain au-dessus et phase au-dessous, l'ajustement en légende
-tracer_bode(f, H, phi, passe_bande, pfit, pcov, noms=("$H_0$", "$f_0$", "$Q$"),
+tracer_bode(f, H, phi, passe_bande, pfit, err, noms=("$H_0$", "$f_0$", "$Q$"),
             unites=("", "Hz", ""), fichier="bode_ajustement.pdf")
 plt.show()

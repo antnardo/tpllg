@@ -6,7 +6,8 @@ Ajustements de courbes : outils génériques autour de scipy.optimize.curve_fit.
   la variance effective), et le chi2 réduit — le curvefit de dataanalysis
   (2018), fusionné ici ;
 - curve_fit_complex : ajuster une grandeur complexe mesurée par son module et
-  sa phase, parties réelle et imaginaire ajustées ensemble ;
+  sa phase, parties réelle et imaginaire ajustées ensemble par curvefit,
+  mêmes arguments et même retour ;
 - ecarts_types : les incertitudes-types tirées de la matrice de covariance ;
 - formater, resume_parametres : « valeur ± incertitude », arrondies comme il
   faut (deux chiffres significatifs sur l'incertitude) ;
@@ -16,10 +17,33 @@ Ajustements de courbes : outils génériques autour de scipy.optimize.curve_fit.
 """
 import numpy as np
 from scipy import optimize
-from scipy.optimize import curve_fit
 
 __all__ = ["curvefit", "curve_fit_complex", "ecarts_types", "formater", "resume_parametres",
            "residus_complexes"]
+
+
+def _tableau(valeur, forme):
+    """Une incertitude ramenée à la forme des données : un nombre vaut pour
+    tous les points, un tableau est rendu tel quel."""
+    return np.broadcast_to(np.asarray(valeur, dtype=float), forme)
+
+
+def _vectorisee(f, datax, p0, dtype=float):
+    """f(x, *p) rendue en tableau de la forme de x, quoi que f fasse d'un
+    tableau : une fonction écrite avec math.exp est appelée point par point,
+    une dérivée constante (`return a`) est étendue à tous les points."""
+    def etendue(g):
+        def h(x, *p):
+            return np.broadcast_to(np.asarray(g(x, *p), dtype=dtype), np.shape(x))
+        return h
+
+    try:
+        essai = np.asarray(f(datax, *p0), dtype=dtype)
+    except (ValueError, TypeError):
+        return etendue(np.vectorize(f, otypes=[dtype]))
+    if essai.shape in ((), np.shape(datax)):
+        return etendue(f)
+    return etendue(np.vectorize(f, otypes=[dtype]))
 
 
 def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, function_derivate=None,  # noqa C901
@@ -27,16 +51,20 @@ def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, fun
     """ Curve fitting wrapped up around scipy.optimize.curve_fit with better error management
 
     Arguments:
-        - function must be called as function(datax, a, b) where p0 = [a, b]
-            should be vectorizable in respect to datax, otherwise result non guaranteed
+        - function must be called as function(datax, a, b) where p0 = [a, b].
+            Vectorized in datax or not : a function written with math.exp is
+            called point by point.
         - datax : array of data
         - datay : array of data, should be same length as datax
         - p0 : array of first guess parameters to be passed to function in which respect the fitting is done
-        - datayerrors : sigma values for y. array of same length as data.
-            Should be only positive values. If None, considered 1.
-        - dataxerrors : sigma values for x. array of same length as data. Should be only positive values.
-            If None, considered 0.
-        - function_derivate : same arguments as function, returns derivate
+        - datayerrors : sigma values for y : a number, the same for every point,
+            or an array of same length as data. Should be only positive values.
+            If None, considered 1.
+        - dataxerrors : sigma values for x, a number or an array of same length
+            as data. Should be only positive values. If None, considered 0.
+        - function_derivate : same arguments as function, returns the derivative
+            with respect to x ; may return a number when it is constant
+            (`return a` for a straight line)
         - n_var_method_max : max number of loops (default 10). For management of dataxerrors only
         - chi_limit : if a loop doesnot improves the chi squre reduced by more than chi_limit,
             it stops looping (default 0.01).
@@ -70,10 +98,9 @@ def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, fun
             and of course it will affect the errors and chi_squared values
 
     """
-    if type(datax) is list:
-        datax = np.array(datax)
-    if type(datay) is list:
-        datay = np.array(datay)
+    datax = np.asarray(datax, dtype=float)
+    datay = np.asarray(datay, dtype=float)
+    p0 = np.asarray(p0, dtype=float)
     if dataxerrors is not None and function_derivate is None:
         raise NotImplementedError('Pour utiliser des erreurs en x, il faut indiquer '
                                   'la dérivée de la fonction par rapport à x '
@@ -82,19 +109,13 @@ def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, fun
         raise NotImplementedError("Mettre les erreurs en y lorsqu'il n'y en a qu'un type")
     assert type(n_var_method_max) is int and n_var_method_max > 0
 
-    # vectorizable function
-    try:
-        function(datax, *p0)
-    except (ValueError, TypeError):
-        base_func = function
-
-        def function_vectorized(x, *p):
-            try:
-                return np.array([base_func(item, *p) for item in x])
-            except TypeError:
-                return base_func(x, *p)
-
-        function = function_vectorized
+    # le modèle, la dérivée et les incertitudes ramenés à la forme des données
+    function = _vectorisee(function, datax, p0)
+    if datayerrors is not None:
+        datayerrors = _tableau(datayerrors, datax.shape)
+    if dataxerrors is not None:
+        dataxerrors = _tableau(dataxerrors, datax.shape)
+        function_derivate = _vectorisee(function_derivate, datax, p0)
 
     # intermediate calculus functions
     def errfunc(p, x, y):
@@ -155,27 +176,51 @@ def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, fun
     return pfit, err, chi_sq_reduced
 
 
-def curve_fit_complex(complex_func, x_data, norm, phase, **kwargs):
+def curve_fit_complex(complex_func, datax, norm, phase, p0, datayerrors=None, dataxerrors=None,
+                      function_derivate=None, **kwargs):
     """Ajuste un modèle complexe à des mesures données par leur module `norm`
     et leur phase `phase` (radians) : les parties réelle et imaginaire sont
-    empilées bout à bout et ajustées d'un seul coup par curve_fit.
+    empilées bout à bout et ajustées d'un seul coup par curvefit, dont c'est
+    l'interface — mêmes arguments, même retour (pfit, err, chi2 réduit).
 
-    complex_func(x, *params) doit rendre un tableau complexe.
-    Même retour que curve_fit : (pfit, pcov). Les mots-clés (p0, maxfev…)
-    sont transmis à curve_fit.
+    complex_func(x, *params) doit rendre un tableau complexe ;
+    function_derivate, sa dérivée par rapport à x, complexe aussi.
+    datayerrors est le couple (u_norm, u_phase) des incertitudes-types sur le
+    module et sur la phase (radians), chacune un nombre ou un tableau : elles
+    sont propagées aux parties réelle et imaginaire. Les autres mots-clés
+    (verbose, maxfev…) vont à curvefit.
     """
-    x_data = np.asarray(x_data, dtype=float)
+    datax = np.asarray(datax, dtype=float)
     norm = np.asarray(norm, dtype=float)
     phase = np.asarray(phase, dtype=float)
-    n = len(x_data)
-    x_stacked = np.hstack((x_data, x_data))
-    data_stacked = np.hstack((norm*np.cos(phase), norm*np.sin(phase)))
+    p0 = np.asarray(p0, dtype=float)
+    n = datax.size
+    x_empile = np.hstack((datax, datax))
+    y_empile = np.hstack((norm*np.cos(phase), norm*np.sin(phase)))
 
-    def fit_func_stacked(x, *args):
-        y = complex_func(x[n:], *args)
-        return np.hstack((np.real(y), np.imag(y)))
+    def empile(f):
+        f = _vectorisee(f, datax, p0, dtype=complex)
 
-    return curve_fit(fit_func_stacked, x_stacked, data_stacked, **kwargs)
+        def g(x, *p):
+            y = f(x[:n], *p)
+            return np.hstack((np.real(y), np.imag(y)))
+        return g
+
+    erreurs = None
+    if datayerrors is not None:
+        try:
+            u_norm, u_phase = (_tableau(u, norm.shape) for u in datayerrors)
+        except (TypeError, ValueError):
+            raise ValueError("datayerrors : le couple (u_norm, u_phase) des incertitudes sur le "
+                             "module et sur la phase, chacune un nombre ou un tableau")
+        u_re = np.hypot(np.cos(phase)*u_norm, norm*np.sin(phase)*u_phase)
+        u_im = np.hypot(np.sin(phase)*u_norm, norm*np.cos(phase)*u_phase)
+        erreurs = np.hstack((u_re, u_im))
+    if dataxerrors is not None:
+        dataxerrors = np.hstack([_tableau(dataxerrors, datax.shape)]*2)
+    derivee = empile(function_derivate) if function_derivate is not None else None
+    return curvefit(empile(complex_func), x_empile, y_empile, p0, datayerrors=erreurs,
+                    dataxerrors=dataxerrors, function_derivate=derivee, **kwargs)
 
 
 def ecarts_types(pcov):
@@ -195,12 +240,16 @@ def formater(valeur, sigma=None, unite=""):
     return f"{valeur:.{decimales}f} ± {sigma:.{decimales}f}{unite}"
 
 
-def resume_parametres(noms, pfit, pcov=None, unites=None, sigmas=None):
-    """Une ligne par paramètre, « nom = valeur ± incertitude unité ». Les
-    incertitudes viennent de `pcov`, ou directement de `sigmas` (le `err`
-    rendu par curvefit)."""
-    if sigmas is None:
-        sigmas = ecarts_types(pcov) if pcov is not None else [None]*len(pfit)
+def resume_parametres(noms, pfit, err=None, unites=None):
+    """Une ligne par paramètre, « nom = valeur ± incertitude unité », par
+    formater. `err` : les incertitudes-types, une par paramètre (le `err` de
+    curvefit), ou la matrice de covariance que rend scipy.optimize.curve_fit,
+    dont on prend la racine de la diagonale ; sans, les valeurs seules."""
+    if err is None:
+        sigmas = [None]*len(pfit)
+    else:
+        err = np.asarray(err, dtype=float)
+        sigmas = ecarts_types(err) if err.ndim == 2 else err
     unites = unites if unites is not None else [""]*len(pfit)
     return "\n".join(f"{nom} = {formater(v, s, u)}"
                      for nom, v, s, u in zip(noms, pfit, sigmas, unites))

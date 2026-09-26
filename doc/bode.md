@@ -20,7 +20,7 @@ automatique.
 ```python
 from tpllg.bode import tracer_bode
 
-fig = tracer_bode(f, norm, phase, modele=None, pfit=None, pcov=None, noms=None,
+fig = tracer_bode(f, norm, phase, modele=None, pfit=None, err=None, noms=None,
                   unites=None, fichier=None, gain_log=True)
 ```
 
@@ -30,7 +30,7 @@ fig = tracer_bode(f, norm, phase, modele=None, pfit=None, pcov=None, noms=None,
 | `norm` | le module de la fonction de transfert à chaque fréquence, `Vs/Ve` |
 | `phase` | la phase, en **radians** |
 | `modele` | facultatif : la fonction de transfert complexe, `modele(f, *pfit)`, celle qu'on a ajustée |
-| `pfit`, `pcov` | les paramètres ajustés et leur matrice de covariance, ce que `curve_fit_complex` rend ; `pcov` est facultatif, il ajoute les incertitudes à la légende |
+| `pfit`, `err` | les paramètres ajustés et leurs incertitudes-types, ce que `curve_fit_complex` rend ; `err` est facultatif, il ajoute les incertitudes à la légende (la matrice de covariance de `curve_fit` convient aussi) |
 | `noms`, `unites` | les noms des paramètres pour la légende, en LaTeX si l'on veut, `("$H_0$", "$f_0$", "$Q$")`, et leurs unités, `("", "Hz", "")` |
 | `fichier` | facultatif : le nom du fichier où enregistrer la figure, `.pdf` ou `.png` |
 | `gain_log` | `True` pour un module en échelle logarithmique (un vrai Bode), `False` pour une échelle linéaire |
@@ -106,8 +106,10 @@ PARAM_INIT = [-5, 2000, 6]     # H0 : |H| au maximum, signe donné par la phase 
                                # f0 : la fréquence du maximum ; Q : f0 sur la largeur à -3 dB
 
 # 3. l'ajustement simultané du gain et de la phase
-pfit, pcov = curve_fit_complex(passe_bande, f, norm=H, phase=phi, p0=PARAM_INIT)
-print(resume_parametres(("H0", "f0", "Q"), pfit, pcov, unites=("", "Hz", "")))
+pfit, err, chi2 = curve_fit_complex(passe_bande, f, norm=H, phase=phi, p0=PARAM_INIT,
+                                    datayerrors=(0.03*H, np.radians(3)))   # 3 % sur |H|, 3° sur la phase
+print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
+print("chi2 réduit = %.2f" % chi2)
 
 # 4. les résidus : l'écart de chaque point à la courbe, sur le module et sur la phase
 res_H, res_phi = residus_complexes(passe_bande, f, H, phi, pfit)
@@ -117,28 +119,30 @@ print("résidus sur phi          : écart-type %.1f°, maximum %.1f°"
       % (res_phi.std(), abs(res_phi).max()))
 
 # 5. la figure, gain au-dessus et phase au-dessous, l'ajustement en légende
-tracer_bode(f, H, phi, passe_bande, pfit, pcov, noms=("$H_0$", "$f_0$", "$Q$"),
+tracer_bode(f, H, phi, passe_bande, pfit, err, noms=("$H_0$", "$f_0$", "$Q$"),
             unites=("", "Hz", ""), fichier="bode_ajustement.pdf")
 plt.show()
 ```
 
 ```text
-H0 = -5.101 ± 0.056
-f0 = 1988.3 ± 1.7 Hz
-Q = 6.62 ± 0.14
-résidus relatifs sur |H| : écart-type 3.9 %, maximum 13.0 %
-résidus sur phi          : écart-type 2.6°, maximum 5.2°
+Least square method
+H0 = -5.075 ± 0.081
+f0 = 1991.0 ± 2.7 Hz
+Q = 6.43 ± 0.12
+chi2 réduit = 1.20
+résidus relatifs sur |H| : écart-type 3.5 %, maximum 11.1 %
+résidus sur phi          : écart-type 2.7°, maximum 5.6°
 ```
 
 Ces mesures ont été fabriquées avec 3 % de bruit sur les amplitudes et 3°
-sur les phases, autour de `H0 = −5`, `f0 = 1994,6 Hz`, `Q = 6,27`. Les
-résidus retrouvent ce bruit ; le maximum de 13 % sur le module est un point
-à 0,09 V lu à 0,01 V près. `f0` sort à 6 Hz de la vraie valeur pour une
-incertitude annoncée de 1,7 Hz : avec vingt-trois points et des
-incertitudes de mesure que l'on n'a pas données, `curve_fit` estime
-l'incertitude sur la dispersion des résidus, et un écart de trois
-écarts-types n'a rien d'anormal. La fiche [ajustement.md](ajustement.md) dit
-ce que valent ces incertitudes, et ce qu'il advient quand `PARAM_INIT` est
+sur les phases, autour de `H0 = −5`, `f0 = 1994,6 Hz`, `Q = 6,27`. Ce sont
+ces incertitudes-là qu'on a données à l'ajustement, et les résidus les
+retrouvent ; le maximum de 11 % sur le module est un point à 0,09 V lu à
+0,01 V près. Le χ² réduit de 1,2 dit que les incertitudes déclarées rendent
+compte des écarts, donc que les incertitudes rendues sont crédibles : `f0`
+sort à 3,6 Hz de la vraie valeur pour 2,7 Hz annoncés. La fiche
+[ajustement.md](ajustement.md) dit ce que valent ces incertitudes, ce qui se
+passe quand on ne les donne pas, et ce qu'il advient quand `PARAM_INIT` est
 loin.
 
 Sur une vraie mesure, `Ve` n'est pas constant : le GBF a une impédance de
