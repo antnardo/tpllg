@@ -83,6 +83,30 @@ grandeur, `resume_parametres` pour plusieurs grandeurs nommées, une ligne
 chacune — c'est la même mise en forme, la seconde appelle la première
 (voir [ajustement.md](ajustement.md#présenter-un-résultat)).
 
+`exemples/incertitudes_serie.py` trace les trois estimateurs sur deux
+séries : les cinq mesures ci-dessus, puis cinquante de même dispersion — les
+cinq mêmes et quarante-cinq autres, simulées. D'abord sur l'histogramme des
+mesures, où `m ± s` et `m ± delta` sont deux bandes verticales autour de la
+moyenne :
+
+![L'histogramme de cinq mesures puis de cinquante, la loi normale de mêmes moyenne et écart-type, la moyenne en trait, m ± s en bande orange et m ± delta en bande rouge](images/incertitudes_serie_histogramme.png)
+
+Puis sur les mesures dans l'ordre où elles ont été faites, les mêmes bandes
+à l'horizontale :
+
+![Les mesures en fonction de leur numéro, cinq puis cinquante, la moyenne en trait horizontal, m ± s en bande orange et m ± delta en bande rouge](images/incertitudes_serie_indices.png)
+
+```text
+5 mesures  : m = 9.8120  s = 0.0286  delta = 0.0128  soit g = 9.812 ± 0.013 m/s²
+50 mesures : m = 9.8156  s = 0.0339  delta = 0.0048  soit g = 9.8156 ± 0.0048 m/s²
+```
+
+De cinq à cinquante mesures, la bande `m ± s` garde sa largeur : c'est là
+que tombe une mesure, deux fois sur trois si la loi est normale, et en faire
+davantage n'y change rien. La bande `m ± delta` rétrécit, de 0,013 à
+0,005 m/s² : elle ne dit pas où tombent les mesures — sur les cinquante, six
+seulement y sont — mais où est la moyenne, et c'est elle le résultat.
+
 ## Le coefficient de Student
 
 ```python
@@ -110,6 +134,11 @@ d'une loi normale : 1 pour 68 %, 2 pour 95 %. `t` tend vers `sigma` quand
 | 30 | 1,02 | 2,09 |
 | 100 | 1,005 | 2,03 |
 
+`exemples/incertitudes_student.py` trace `t` en fonction de `N` aux deux
+niveaux, avec les valeurs du tableau :
+
+![Le coefficient de Student en fonction du nombre de mesures, de 2 à 100, à 68 % et à 95 % : deux courbes qui descendent vers 1 et 2, leurs valeurs pour la loi normale](images/incertitudes_student.png)
+
 Sur les cinq mesures de `g` ci-dessus, à 95 % : `t = 2.87`, et
 `delta = 2.87 × 0.0286/sqrt(5) = 0.037 m/s²`, ce que `incertitudes(mesures,
 sigma=2, advanced=True)` rend. Deux mesures ne disent presque rien de
@@ -133,6 +162,11 @@ p = loi_normale_cumulee(t)           # la probabilité d'un tirage dans [-t s, +
 
 Les 68 %, 95 % et 99,7 % à un, deux et trois écarts-types. `loi_normale`
 sert aux tracés, pour superposer la gaussienne à un histogramme.
+
+`exemples/incertitudes_loi_normale.py` trace les deux sur le même graphe.
+La valeur du cumul en `t` est l'aire sous la densité entre `-t` et `+t` :
+
+![La densité de la loi normale, son aire coloriée entre -1 et 1, -2 et 2, -3 et 3 écarts-types, et le cumul qui monte de 0 à 1 en passant par 68,27 %, 95,45 % et 99,73 %](images/incertitudes_loi_normale.png)
 
 ## Monte-Carlo : un Point
 
@@ -188,6 +222,7 @@ estimateur sans biais (`ddof=1`).
 `g` par un pendule, `L = 1,000 ± 0,002 m`, `T = 2,007 ± 0,010 s` :
 
 ```python
+import matplotlib.pyplot as plt
 import numpy as np
 from tpllg.ajustement import formater
 from tpllg.montecarlo import Point
@@ -197,14 +232,20 @@ L = Point(1.000, 0.002)
 T = Point(2.007, 0.010)
 g = 4*np.pi**2*L/T**2
 print(formater(g.val, g.u, "m/s²"), "(%d tirages)" % g.N)
-g.show()
+fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
+for ax, point in zip(axes, (L, T, g)):
+    point.show(ax, nbins=200)            # l'histogramme d'un Point, dans le repère donné
 ```
 
 ```text
 9.801 ± 0.099 m/s² (100000 tirages)
 ```
 
-![L'histogramme des cent mille tirages de g, la moyenne, ± l'écart-type et la loi normale de mêmes paramètres : ce que g.show() trace](images/montecarlo_g.png)
+![Les histogrammes des cent mille tirages de L, de T et de g, chacun avec sa moyenne, ± son écart-type et la loi normale de mêmes paramètres : ce que show() trace](images/montecarlo_g.png)
+
+Deux gaussiennes en entrée, le calcul refait sur chaque tirage, et
+l'histogramme du résultat. `g.show()` seul trace le sien dans une figure
+neuve.
 
 La formule de propagation linéaire, `u_g/g = sqrt((u_L/L)² + (2 u_T/T)²)`,
 donne `9.801 ± 0.100 m/s²` : ici les incertitudes relatives sont petites et
@@ -245,7 +286,16 @@ La moyenne est décalée de 0,500 à 0,513, la loi est plus longue à droite
 tout : des tirages de `b` passent près de zéro, quelques quotients énormes
 le font exploser, alors que les quantiles restent raisonnables. Dans ce
 cas-là, ce sont les **quantiles** qu'on reporte, et l'on dit que
-l'intervalle est dissymétrique. `q.show()` le montre.
+l'intervalle est dissymétrique.
+
+Les histogrammes de `a`, de `b` et de leur quotient, par `show` :
+
+![Les histogrammes de a et de b, deux gaussiennes, et celui de leur quotient, dissymétrique : la loi normale de mêmes moyenne et écart-type ne le suit pas, la médiane est à gauche de la moyenne, et la bande des 68 % des tirages n'est pas centrée](images/montecarlo_quotient.png)
+
+Deux gaussiennes, et une loi qui ne l'est plus : la loi normale de mêmes
+moyenne et écart-type passe à côté de l'histogramme, la médiane est à gauche
+de la moyenne, et l'intervalle qui contient 68 % des tirages va de 0,081
+sous la médiane à 0,103 au-dessus.
 
 ## Une droite sur tous les tirages, sans boucle
 
@@ -291,6 +341,17 @@ tirages, aux fluctuations près.
 
 ![Les dix points avec leurs barres d'incertitude en x et en y, la droite de Monte-Carlo et celle de curvefit, confondues](images/montecarlo_droite.png)
 
+Et ce que les tirages contiennent : cent des cent mille droites autour des
+mesures, un tirage des mesures (`serie.xi`, `serie.yi`) avec sa droite, puis
+les histogrammes de la pente et de l'ordonnée à l'origine, par `a.show()` et
+`b.show()` :
+
+![Les mesures et cent droites, une par tirage, qui s'ouvrent en éventail aux deux bouts ; l'histogramme des cent mille pentes ; celui des cent mille ordonnées à l'origine](images/montecarlo_droite_tirages.png)
+
+Le faisceau des droites est le plus serré au milieu des points et s'ouvre
+aux deux bouts : l'ordonnée à l'origine, lue en `x = 0`, au bord des
+mesures, est relativement bien moins connue que la pente.
+
 ## Un modèle quelconque par tirages
 
 ```python
@@ -325,6 +386,12 @@ print("A =", formater(A.val, A.u), " tau =", formater(tau.val, tau.u, "s"))
 A = 2.000 ± 0.019  tau = 1.528 ± 0.022 s  (2000 tirages en 0.1 s)
 ```
 
+![Les douze mesures et cent exponentielles ajustées, une par tirage, presque confondues ; l'histogramme des deux mille valeurs de A ; celui des deux mille valeurs de tau](images/montecarlo_modele.png)
+
+Avec deux mille tirages au lieu de cent mille, les histogrammes sont plus
+heurtés ; l'écart-type, lui, est déjà connu à 2 % près, ce qui suffit pour
+ses deux chiffres significatifs.
+
 Un ajustement qui échoue sur un tirage arrête tout (`RuntimeError`) : de
 bonnes valeurs de départ, et `maxfev` si besoin, comme pour `curve_fit`.
 Pour une droite, `SerieLineaire` fait la même chose cent fois plus vite et
@@ -332,15 +399,20 @@ sans risque d'échec.
 
 ## Cas complets
 
-`exemples/montecarlo.py` réunit les quatre cas ci-dessus, avec les figures.
-Une résistance par la loi d'Ohm, avec les incertitudes des multimètres, en
-quatre lignes :
+`exemples/montecarlo.py` réunit les quatre cas ci-dessus et les deux qui
+suivent, et trace toutes les figures des sections Monte-Carlo de cette
+fiche. Une résistance par la loi d'Ohm, avec les incertitudes des
+multimètres, en quatre lignes :
 
 ```python
 U = Point(4.87, 0.5*0.01*4.87 + 0.005)    # 0,5 % + 5 mV : ce que la notice dit
 I = Point(0.0213, 0.008*0.0213 + 0.0001)
 R = U/I
 print(formater(R.val, R.u, "Ω"))
+```
+
+```text
+228.7 ± 3.2 Ω
 ```
 
 Et l'incertitude d'une fonction non dérivable, la valeur absolue d'une
@@ -358,3 +430,9 @@ print(formater(d.val, d.u), " médiane %.3f" % np.median(d.tirage))
 Ici la formule linéaire ne s'applique pas, la valeur moyenne des tirages
 n'est pas `|1,02 − 1,00| = 0,02`, et seul le tirage dit à quoi s'attendre :
 une différence nulle à ±0,07 près a une valeur absolue autour de 0,05.
+
+![L'histogramme de R, une gaussienne, et celui de la valeur absolue de la différence, une loi repliée sur zéro que la loi normale de mêmes moyenne et écart-type ne décrit pas ; la médiane à 0,050 et la valeur 0,02 calculée sans incertitudes](images/montecarlo_cas.png)
+
+`R` reste gaussienne, et son écart-type est une incertitude au sens
+habituel. La valeur absolue replie la loi sur zéro : `R.show()` et
+`d.show()` montrent d'un coup d'œil lequel des deux cas on a.
