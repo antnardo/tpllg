@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Ce qu'un ajustement minimise, et comment : le chi2, somme des carrés des
 écarts entre mesures et modèle rapportés aux incertitudes ; sa vallée dans
@@ -59,22 +58,25 @@ pfit, err, chi2_reduit = curvefit(droite, x, y, p0, datayerrors=sigma_y, verbose
 chi2_min = chi2(droite, x, y, sigma_y, *pfit)
 print("droite : a =", formater(pfit[0], err[0]), " b =", formater(pfit[1], err[1]))
 print(
-    "chi2 = %.1f aux valeurs de départ, %.2f au minimum, soit %.2f par degré de liberté"
-    % (chi2(droite, x, y, sigma_y, *p0), chi2_min, chi2_reduit)
+    f"chi2 = {chi2(droite, x, y, sigma_y, *p0):.1f} aux valeurs de départ, {chi2_min:.2f} au minimum, "
+    f"soit {chi2_reduit:.2f} par degré de liberté"
 )
 
 # 1. ce que le chi2 additionne : les écarts, aux valeurs de départ puis au minimum
 fig, axes = plt.subplots(2, 2, figsize=(11, 6.5), sharex=True, gridspec_kw={"height_ratios": [3, 2]})
 x_fin = np.linspace(0, 2, 50)
 for colonne, (titre, p) in enumerate(
-    (("aux valeurs de départ, a = 1, b = 0", p0), ("au minimum, a = %.3f, b = %.3f" % tuple(pfit), pfit))
+    (
+        ("aux valeurs de départ, a = 1, b = 0", p0),
+        ("au minimum, a = {:.3f}, b = {:.3f}".format(*tuple(pfit)), pfit),
+    )
 ):
     haut, bas = axes[0, colonne], axes[1, colonne]
     ecarts = (y - droite(x, *p)) / sigma_y
     haut.plot(x_fin, droite(x_fin, *p), color="tab:orange", label="le modèle")
     haut.vlines(x, droite(x, *p), y, color="tab:red", linewidth=2, label="les écarts")
     haut.errorbar(x, y, yerr=sigma_y, fmt="o", color="tab:blue", markersize=4, capsize=3, label="les mesures")
-    haut.set_title("%s : chi2 = %.1f" % (titre, np.sum(ecarts**2)), fontsize=10)
+    haut.set_title(f"{titre} : chi2 = {np.sum(ecarts**2):.1f}", fontsize=10)
     haut.set_ylabel("y")
     haut.legend(fontsize=8, loc="upper left")
     bas.bar(x, ecarts**2, width=0.12, color="tab:red")
@@ -98,7 +100,9 @@ for valeur in (pfit[0] - err[0], pfit[0] + err[0]):
     ax.axvline(valeur, color="tab:red", linestyle="--", linewidth=1)
 for valeur in (pfit[1] - err[1], pfit[1] + err[1]):
     ax.axhline(valeur, color="tab:red", linestyle="--", linewidth=1)
-ax.plot([], [], color="tab:red", linestyle="--", linewidth=1, label="a ± %.3f et b ± %.3f" % tuple(err))
+ax.plot(
+    [], [], color="tab:red", linestyle="--", linewidth=1, label="a ± {:.3f} et b ± {:.3f}".format(*tuple(err))
+)
 ax.set_xlabel("a")
 ax.set_ylabel("b")
 ax.legend(fontsize=9, loc="upper right")
@@ -107,7 +111,7 @@ plt.savefig("ajustement_chi2_vallee.pdf")
 
 # 3. le chemin des itérations : un pas pour la droite, plusieurs pour l'exponentielle
 xe = np.linspace(0, 5, 20)
-rng = np.random.RandomState(4)
+rng = np.random.default_rng(4)
 ye = 2 * np.exp(-xe / 1.5) + rng.normal(0, 0.02, xe.size)
 sigma_e = 0.02
 cas = (
@@ -149,17 +153,10 @@ for ax, (titre, modele, jacobienne, xd, yd, sigma, p1, p2, departs, noms) in zip
             "o-",
             color=couleur,
             markersize=4,
-            label="depuis (%g, %g) : %d pas" % (depart[0], depart[1], len(etapes) - 1),
+            label=f"depuis ({depart[0]:g}, {depart[1]:g}) : {len(etapes) - 1} pas",
         )
-        print(
-            "%s, depuis %s : %d pas, chi2 = %s"
-            % (
-                titre,
-                depart,
-                len(etapes) - 1,
-                " → ".join("%.1f" % chi2(modele, xd, yd, sigma, *p) for p in etapes),
-            )
-        )
+        suite = " → ".join(f"{chi2(modele, xd, yd, sigma, *p):.1f}" for p in etapes)
+        print(f"{titre}, depuis {depart} : {len(etapes) - 1} pas, chi2 = {suite}")
     ax.plot(etapes[-1, 0], etapes[-1, 1], "k+", markersize=12, label="le minimum")
     ax.set_title(titre, fontsize=10)
     ax.set_xlabel(noms[0])

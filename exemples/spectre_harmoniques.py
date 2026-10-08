@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Le spectre d'un créneau, ses harmoniques, et le gain d'un filtre mesuré sur
 chaque harmonique — la méthode « FFT » de mesure d'une fonction de transfert.
@@ -15,6 +14,7 @@ from scipy.optimize import curve_fit
 from tpllg.acquisition import acquerir
 from tpllg.ajustement import resume_parametres
 from tpllg.fft import calcule_DFT, spectre
+from tpllg.harmoniques import Signal, passe_bas_1, spectre_carre
 from tpllg.traitement import detecte_maxima_secondaires, indices_plages, valeurs_correspondantes
 
 SIMULATION = True
@@ -25,19 +25,16 @@ T = 0.1  # 20 périodes du créneau
 te, N = 1 / fe, int(fe * T)
 
 
-def acquisition_simulee(te, N, E=2.0, f1=200.0, fc=510.0, n_harmoniques=200, bruit=0.01, graine=2):
+def acquisition_simulee(te, N, E=2.0, f1=200.0, fc=510.0, bruit=0.01):
     """Un créneau ±E à f1 sur EA0, sa réponse par un passe-bas du premier ordre
-    sur EA1 — harmonique par harmonique, 4E/(n pi) sur les impairs."""
-    rng = np.random.RandomState(graine)
+    sur EA1, calculées harmonique par harmonique (tpllg.harmoniques) jusqu'à
+    40 kHz, sous fe/2."""
+    rng = np.random.default_rng(2)
     t = np.arange(N) * te
-    ve = np.zeros(N)
-    vs = np.zeros(N)
-    for n in range(1, n_harmoniques + 1, 2):
-        H = 1 / (1 + 1j * n * f1 / fc)
-        ve += 4 * E / (n * np.pi) * np.sin(2 * np.pi * n * f1 * t)
-        vs += 4 * E / (n * np.pi) * abs(H) * np.sin(2 * np.pi * n * f1 * t + np.angle(H))
-    ve += rng.normal(0, bruit, N)
-    vs += rng.normal(0, bruit, N)
+    creneau = Signal(f0=f1, spectre=spectre_carre, amplitude=E, nmax=int(40e3 / f1))
+    sortie = creneau.filtre(passe_bas_1(fc))
+    ve = creneau(t) + rng.normal(0, bruit, N)
+    vs = sortie(t) + rng.normal(0, bruit, N)
     return np.array([t, t]), np.array([ve, vs])
 
 
@@ -53,25 +50,24 @@ freq, S_vs = calcule_DFT(t, vs)
 df = freq[1] - freq[0]
 fondamental = freq[np.argmax(S_ve)]
 print(
-    "résolution %.1f Hz, fondamental à %.0f Hz, %.1f périodes acquises"
-    % (df, fondamental, t[-1] * fondamental)
+    f"résolution {df:.1f} Hz, fondamental à {fondamental:.0f} Hz, {t[-1] * fondamental:.1f} périodes acquises"
 )
 
 # 2. les harmoniques : un maximum par plage autour de chaque multiple du fondamental
 plages = indices_plages(freq, fondamental, delta_freq=0.3 * fondamental)
 i_ve = detecte_maxima_secondaires(S_ve, plages, seuil=0.1)  # V : les harmoniques au-dessus du bruit
 i_vs = detecte_maxima_secondaires(S_vs, plages, seuil=0.02)
-print("%d harmoniques détectées sur l'entrée, %d sur la sortie" % (len(i_ve), len(i_vs)))
+print(f"{len(i_ve)} harmoniques détectées sur l'entrée, {len(i_vs)} sur la sortie")
 amplitude = np.mean(ve[ve > 0])  # E, lu sur le créneau
 for i in i_ve[:5]:
-    n = int(round(freq[i] / fondamental))
-    print("   n = %2d : %.3f V mesuré, 4E/(n pi) = %.3f V" % (n, S_ve[i], 4 * amplitude / (n * np.pi)))
+    n = round(freq[i] / fondamental)
+    print(f"   n = {n:2d} : {S_ve[i]:.3f} V mesuré, 4E/(n pi) = {4 * amplitude / (n * np.pi):.3f} V")
 
 # 3. le gain, harmonique par harmonique, sur celles présentes des deux côtés
 i_ve, i_vs = valeurs_correspondantes(i_ve, i_vs, delta_indices=int(0.1 * fondamental / df) + 1)
 f_gain = freq[i_ve]
 gain = S_vs[i_vs] / S_ve[i_ve]
-print("%d points de gain, de %.0f à %.0f Hz" % (len(f_gain), f_gain[0], f_gain[-1]))
+print(f"{len(f_gain)} points de gain, de {f_gain[0]:.0f} à {f_gain[-1]:.0f} Hz")
 
 
 # 4. un passe-bas du premier ordre ajusté sur ces points

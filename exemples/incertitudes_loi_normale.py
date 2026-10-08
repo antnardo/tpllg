@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 La loi normale et son cumul sur le même graphe : la densité, et la
 probabilité qu'un tirage tombe à moins de t écarts-types de la moyenne.
@@ -32,14 +31,14 @@ for k, opacite in ((3, 0.15), (2, 0.3), (1, 0.5)):
     ax.plot([k, k], [loi_normale(k), p], color="tab:red", linestyle=":", linewidth=0.8)
     ax.plot(k, p, "o", color="tab:red")
     ax.annotate(
-        ("%.2f %%" % (100 * p)).replace(".", ","),
+        f"{100 * p:.2f} %".replace(".", ","),
         (k, p),
         textcoords="offset points",
         xytext=(6, -12),
         fontsize=9,
         color="tab:red",
     )
-    print("à %d écart(s)-type(s) : %.4f" % (k, p))
+    print(f"à {k} écart(s)-type(s) : {p:.4f}")
 ax.set_xlabel("écart à la moyenne, en écarts-types")
 ax.set_xticks(np.arange(-4, 5))
 ax.set_ylim(0, 1.05)

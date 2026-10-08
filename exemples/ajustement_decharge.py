@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Une constante de temps : la décharge d'un condensateur acquise sur EA0,
 déclenchée sur le passage par 2 V en descendant, puis ajustée par une
@@ -12,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from tpllg.acquisition import acquerir
-from tpllg.ajustement import curvefit, resume_parametres
+from tpllg.ajustement import curvefit, formater, resume_parametres
 
 SIMULATION = True
 VOIE, CALIBRE = 0, 5
@@ -24,7 +23,7 @@ BRUIT = 0.005  # l'incertitude-type sur une tension : bruit et quantification, e
 def acquisition_simulee(te, N, tau=8.3e-3, u_inf=0.04, bruit=BRUIT, graine=2):
     """La décharge telle que la centrale la rendrait : elle passe par SEUIL au
     point PRETRIGGER. Deux tableaux (1, N), temps en secondes."""
-    rng = np.random.RandomState(graine)
+    rng = np.random.default_rng(graine)
     t = np.arange(N) * te
     u = u_inf + (SEUIL - u_inf) * np.exp(-(t - PRETRIGGER * te) / tau) + rng.normal(0, bruit, N)
     return np.array([t]), np.array([u])
@@ -54,17 +53,17 @@ print(
 # 3. l'ajustement, avec l'incertitude sur la tension
 pfit, err, chi2 = curvefit(decharge, t, u, p0, datayerrors=BRUIT)
 print(resume_parametres(("U0", "tau", "u_inf"), pfit, err, unites=("V", "s", "V")))
-print("chi2 réduit = %.2f" % chi2)
+print(f"chi2 réduit = {chi2:.2f}")
 
 # 4. la figure : l'acquisition et l'ajustement, puis les résidus
 fig, (haut, bas) = plt.subplots(2, 1, figsize=(8, 6), sharex=True, gridspec_kw={"height_ratios": [3, 2]})
-haut.plot(1e3 * t, u, ".", markersize=1, color="tab:blue", label="l'acquisition, %d points" % N)
+haut.plot(1e3 * t, u, ".", markersize=1, color="tab:blue", label=f"l'acquisition, {N} points")
 haut.plot(1e3 * t, decharge(t, *p0), "--", color="gray", label="le modèle aux valeurs de départ")
 haut.plot(
     1e3 * t,
     decharge(t, *pfit),
     color="tab:orange",
-    label="l'ajustement : tau = %.3f ± %.3f ms" % (1e3 * pfit[1], 1e3 * err[1]),
+    label="l'ajustement : tau = " + formater(1e3 * pfit[1], 1e3 * err[1], "ms"),
 )
 haut.set_ylabel("u (V)")
 haut.legend(fontsize=9)

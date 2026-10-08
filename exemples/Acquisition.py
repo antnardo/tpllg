@@ -1,8 +1,10 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Mar  6 13:35:03 2023
+Acquérir les entrées analogiques à la Sysam SP5, enregistrer chaque voie, et
+tracer son signal et son spectre.
 
-@author: a. marchand, f. legrand
+Sans centrale (pycanum absent), le simulateur prend le relais et le script
+tourne jusqu'au bout : les tracés ne montrent alors qu'un bruit de
+quantification. Voir doc/centrale.md et doc/spectres.md.
 
 Ce script dérive de deux exemples de Frédéric Legrand (f-legrand.fr,
 CC BY-NC-SA 2.0 FR) : il est diffusé, comme le reste du dépôt, sous
@@ -15,76 +17,56 @@ CC BY-NC-SA 4.0, version ultérieure que la 2.0 FR autorise pour une adaptation.
 L'interface pycanum qu'ils emploient est documentée ici :
 https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/interpy/interpy.html
 
-Acquisition temporelles via Sysam SP5 des entrées analogiques EA
-+ Analyse spectrale
-
-CAN 12 bits
+@author: a. marchand, f. legrand
 """
-
-from tpllg.sysam import Sysam
-from tpllg.fft import spectre
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-# préfixe pour les noms des fichiers de sauvegarde
-FILE_PREFIX = "signaltest"
-# ENTREES ANALOGIQUES (EA)
-ENTREES = [0]
-# CALIBRE (0.2, 1, 5, 10)
-# On peut aussi donner des valeurs différents si plusieurs voies, par ex. [10, 1, 1]
-CALIBRE = 1
+from tpllg.acquisition import sauvegarder
+from tpllg.fft import spectre
+from tpllg.sysam import Sysam
 
-## PARAMETRES D'ÉCHANTILLONNAGE
-# Fréquence d'échantillonnage en Hz (max 10 MHz)
-fe = 20000.0
+PREFIXE = "signaltest"  # signaltest_EA0.txt, signaltest_EA0.pdf, signaltest_EA0_spectre.pdf
+ENTREES = [0]  # les entrées analogiques, par ex. [0, 1, 2]
+CALIBRE = 1  # V : 0.2, 1, 5 ou 10 ; un par voie si plusieurs, par ex. [10, 1, 1]
+
+# L'échantillonnage
+fe = 20000.0  # Hz (10 MHz au plus sur EA0 à EA3 seules)
 te = 1 / fe
-# durée de l'acquisition en s
-T = 1.0
-# nombre d'échantillons (max 130000 environ)
-N = int(fe * T)
+T = 1.0  # s, la durée de l'acquisition
+N = int(fe * T)  # au plus Sysam.n_max(len(ENTREES)) : 261 888 points pour une voie
 
-print(f"{fe=:.1e}Hz fréquence d'échantillonnage")
-print(f"{te=:.1e}s pas de temps d'échantillonnage")
-print(f"{N=:d} points d'acquisition")
-print(f"Durée totale {T=:.1e}s")
+print(f"{fe=:.1e} Hz, fréquence d'échantillonnage")
+print(f"{te=:.1e} s, période d'échantillonnage")
+print(f"{N=:d} points")
+print(f"{T=:.1e} s, durée totale")
 
-
-# ACQUISITION SysamSP5
 with Sysam(ENTREES, CALIBRE) as can:
-    # configuration du CAN
     can.config_echantillon(te, N)
-    # acquisition et récupération des données
-    t, u = can.acquerir()
+    temps, tensions = can.acquerir()
+    calibres = can.calibres  # un par voie, ceux que la centrale a pris
 
-# BOUCLE sur les entrées pour exporter les résultats
-for i in range(len(ENTREES)):
-    # enregistrement dans un fichier texte des données
-    t0 = t[i]
-    u0 = u[i]
-    np.savetxt(f"{FILE_PREFIX:s}_{i:02d}.txt", [t0, u0])
+sauvegarder(PREFIXE, ENTREES, temps, tensions)
 
-    # tracé et enregistrement de la figure
+for ea, calibre, t, u in zip(ENTREES, calibres, temps, tensions):
     plt.figure()
-    plt.plot(t0, u0, "b")
+    plt.plot(t, u, "b")
     plt.xlabel("t (s)")
-    plt.ylabel("u0 (V)")
-    plt.axis([t0[0], t0[-1], -CALIBRE, CALIBRE])
+    plt.ylabel(f"EA{ea} (V)")
+    plt.axis([t[0], t[-1], -calibre, calibre])
     plt.grid()
-    plt.savefig(f"{FILE_PREFIX:s}_{i:02d}.pdf")
+    plt.savefig(f"{PREFIXE}_EA{ea}.pdf")
 
-    # il peut y avoir une différence avec les valeurs spécifiées au départ :
-    fe = 1 / (t0[1] - t0[0])
-
-    # calcul des spectres
-    f0, a0 = spectre(t0, u0)
-
-    # tracé et enregistrement de la figure
+    # le spectre, jusqu'à fe/2 : au-delà, ce n'est que son miroir
+    fe_reelle = 1 / (t[1] - t[0])  # la centrale arrondit te au dixième de microseconde
+    f, a = spectre(t, u)
     plt.figure()
-    plt.plot(f0, a0)
+    plt.plot(f, a)
     plt.xlabel("f (Hz)")
-    plt.ylabel("Amplitude")
-    plt.axis([0, fe, 0, CALIBRE])
+    plt.ylabel(f"amplitude sur EA{ea} (V)")
+    plt.axis([0, fe_reelle / 2, 0, max(a.max() * 1.1, np.finfo(float).eps)])
     plt.grid()
-    plt.savefig(f"{FILE_PREFIX:s}_{i:02d}_spectre.pdf")
-    plt.show()
+    plt.savefig(f"{PREFIXE}_EA{ea}_spectre.pdf")
+
+plt.show()

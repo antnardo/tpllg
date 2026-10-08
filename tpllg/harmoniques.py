@@ -132,7 +132,7 @@ def _gain_continu(fonction_transfert, f0):
         h = complex(np.asarray(fonction_transfert(np.array([0.0])), dtype=complex).ravel()[0])
         if not np.isfinite(h):
             h = complex(np.asarray(fonction_transfert(np.array([1e-9 * f0])), dtype=complex).ravel()[0])
-    return h.real
+    return h.real + 0.0  # + 0.0 : pas de -0.0
 
 
 def spectre_carre(n):

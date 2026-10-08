@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 La variance effective : une incertitude sur x ramenée en y par la pente
 locale du modèle, sigma² = sigma_y² + (f'(x) sigma_x)². Sur un modèle courbe,
@@ -14,7 +13,7 @@ import numpy as np
 
 from tpllg.ajustement import curvefit, resume_parametres
 
-np.random.seed(3)  # les mêmes mesures d'une exécution à l'autre
+rng = np.random.default_rng(3)  # les mêmes mesures d'une exécution à l'autre
 
 
 def modele(t, A, tau):
@@ -27,14 +26,14 @@ def modele_derivee(t, A, tau):  # la dérivée par rapport à t
 
 sigma_t, sigma_u = 0.15, 0.03
 t_vrai = np.linspace(0.3, 5, 10)
-t = t_vrai + np.random.normal(0, sigma_t, t_vrai.size)
-u = modele(t_vrai, 2, 1.5) + np.random.normal(0, sigma_u, t_vrai.size)
+t = t_vrai + rng.normal(0, sigma_t, t_vrai.size)
+u = modele(t_vrai, 2, 1.5) + rng.normal(0, sigma_u, t_vrai.size)
 
 pfit_y, err_y, chi2_y = curvefit(modele, t, u, p0=[1, 1], datayerrors=sigma_u, verbose=False)
 print(
     "incertitudes sur u seules  ",
     resume_parametres(("A", "tau"), pfit_y, err_y, ("V", "s")).replace("\n", "   "),
-    "  chi2 réduit = %.2f" % chi2_y,
+    f"  chi2 réduit = {chi2_y:.2f}",
 )
 pfit, err, chi2 = curvefit(
     modele,
@@ -49,50 +48,55 @@ pfit, err, chi2 = curvefit(
 print(
     "incertitudes sur t et sur u",
     resume_parametres(("A", "tau"), pfit, err, ("V", "s")).replace("\n", "   "),
-    "  chi2 réduit = %.2f" % chi2,
+    f"  chi2 réduit = {chi2:.2f}",
 )
 # ce que curvefit calcule pour peser chaque point
 pente = modele_derivee(t, *pfit)
 sigma_effectif = np.sqrt(sigma_u**2 + (pente * sigma_t) ** 2)
-print("sigma effectif, du premier point au dernier :", " ".join("%.3f" % s for s in sigma_effectif))
+print("sigma effectif, du premier point au dernier :", " ".join(f"{s:.3f}" for s in sigma_effectif))
 
 fig, axes = plt.subplots(1, 2, figsize=(12, 4.6))
 
 # 1. sur un point : la barre en t, la tangente, et ce qu'elle vaut en u
 ax = axes[0]
 k = 1  # le deuxième point, là où la courbe est raide
-t0, u0, p0 = t[k], modele(t[k], *pfit), pente[k]
+t0, u0, pente0 = t[k], modele(t[k], *pfit), pente[k]  # pente0 : la pente du modèle en t0
 voisinage = np.linspace(t0 - 2.2 * sigma_t, t0 + 2.2 * sigma_t, 50)
 ax.plot(voisinage, modele(voisinage, *pfit), color="tab:orange", label="le modèle")
 ax.plot(
-    voisinage, u0 + p0 * (voisinage - t0), color="gray", linestyle="--", linewidth=0.8, label="sa tangente"
+    voisinage,
+    u0 + pente0 * (voisinage - t0),
+    color="gray",
+    linestyle="--",
+    linewidth=0.8,
+    label="sa tangente",
 )
 ax.plot(
     [t0 - sigma_t, t0 + sigma_t],
     [u0, u0],
     color="tab:blue",
     linewidth=3,
-    label="± sigma_t = %.2f s" % sigma_t,
+    label=f"± sigma_t = {sigma_t:.2f} s",
 )
 for signe in (-1, 1):  # des bouts de la barre en t à la tangente
     ax.plot(
         [t0 + signe * sigma_t] * 2,
-        [u0, u0 + signe * p0 * sigma_t],
+        [u0, u0 + signe * pente0 * sigma_t],
         color="gray",
         linestyle=":",
         linewidth=0.8,
     )
     ax.plot(
         [t0 + signe * sigma_t, t0 + 2.6 * sigma_t],
-        [u0 + signe * p0 * sigma_t] * 2,
+        [u0 + signe * pente0 * sigma_t] * 2,
         color="gray",
         linestyle=":",
         linewidth=0.8,
     )
 barres = (
-    ("± |f'| sigma_t = %.3f V" % abs(p0 * sigma_t), abs(p0 * sigma_t), "tab:green", 2.6),
-    ("± sigma_u = %.3f V" % sigma_u, sigma_u, "tab:purple", 2.9),
-    ("± sigma effectif = %.3f V" % sigma_effectif[k], sigma_effectif[k], "tab:red", 3.2),
+    (f"± |f'| sigma_t = {abs(pente0 * sigma_t):.3f} V", abs(pente0 * sigma_t), "tab:green", 2.6),
+    (f"± sigma_u = {sigma_u:.3f} V", sigma_u, "tab:purple", 2.9),
+    (f"± sigma effectif = {sigma_effectif[k]:.3f} V", sigma_effectif[k], "tab:red", 3.2),
 )
 for nom, demi, couleur, place in barres:  # les trois barres en u, côte à côte
     ax.plot([t0 + place * sigma_t] * 2, [u0 - demi, u0 + demi], color=couleur, linewidth=3, label=nom)

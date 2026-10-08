@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Le régime libre d'un filtre après un front du créneau qui l'attaque : repérage
 du front, fenêtre, valeurs de départ, ajustement, figure.
@@ -16,14 +15,7 @@ from scipy.optimize import curve_fit
 
 from tpllg.acquisition import acquerir
 from tpllg.ajustement import ecarts_types, formater, resume_parametres
-from tpllg.signaux import (
-    decrement_logarithmique,
-    extremums,
-    fenetre,
-    frequence_pic,
-    front_utile,
-    fronts_montants,
-)
+from tpllg.signaux import extremums, fenetre, frequence_pic, front_utile, fronts_montants, taux_amortissement
 
 SIMULATION = True
 ENTREES = [0, 1]
@@ -33,13 +25,11 @@ T = 0.03  # trois périodes du créneau : au moins un front montant complet
 te, N = 1 / fe, int(fe * T)
 
 
-def acquisition_simulee(
-    te, N, E=1.0, f_creneau=100.0, f0=1994.6, Q=6.27, H0=-5.0, bruit=0.01, offset=0.02, graine=1
-):
+def acquisition_simulee(te, N, E=1.0, f_creneau=100.0, f0=1994.6, Q=6.27, H0=-5.0, bruit=0.01, offset=0.02):
     """Un créneau ±E de phase quelconque sur EA0, et sur EA1 la sortie du
     filtre, qui sonne après chaque front. Même forme que la centrale : deux
     tableaux (2, N), temps en secondes."""
-    rng = np.random.RandomState(graine)
+    rng = np.random.default_rng(1)
     t = np.arange(N) * te
     w0 = 2 * np.pi * f0
     wp = w0 * np.sqrt(1 - 1 / (4 * Q**2))
@@ -67,25 +57,29 @@ t, ve, vs = temps[0], tensions[0], tensions[1]
 t_fronts, (v_bas, v_haut) = fronts_montants(t, ve)
 if v_haut - v_bas < 0.2:
     raise SystemExit(
-        "pas de créneau sur EA0 (niveaux %.2f et %.2f V) : le GBF est-il branché ?" % (v_bas, v_haut)
+        f"pas de créneau sur EA0 (niveaux {v_bas:.2f} et {v_haut:.2f} V) : le GBF est-il branché ?"
     )
 t0, periode = front_utile(t, t_fronts, fraction=0.45)
-print(
-    "créneau : niveaux %.2f et %.2f V, fronts montants à %s ms" % (v_bas, v_haut, np.round(t_fronts * 1e3, 2))
-)
-print("front retenu : t0 = %.5f s, période du créneau %.2f ms" % (t0, periode * 1e3))
+print(f"créneau : niveaux {v_bas:.2f} et {v_haut:.2f} V, fronts montants à {np.round(t_fronts * 1e3, 2)} ms")
+print(f"front retenu : t0 = {t0:.5f} s, période du créneau {periode * 1e3:.2f} ms")
 
 # 3. la fenêtre du régime libre et les valeurs de départ
 t_demi, v_demi = fenetre(t, vs, t0, 0.45 * periode)  # jusqu'au front suivant
-f_pic = frequence_pic(v_demi, te)  # le pic de la FFT
+f_pic = frequence_pic(t_demi, v_demi)  # le pic de la FFT
 t_lib, v_lib = fenetre(t, vs, t0, min(0.45 * periode, 10 / f_pic))  # dix pseudo-périodes au plus
-offset = v_lib[-len(v_lib) // 5 :].mean()  # la fin de fenêtre, où tout est amorti
-pics = extremums(v_lib, fe, f_pic, offset)  # les indices des extremums
-alpha = decrement_logarithmique(t_lib[pics], v_lib[pics], offset)
-Q_estime = np.pi * f_pic / alpha
-print("pseudo-fréquence (pic de la FFT) : %.0f Hz" % f_pic)
-print("offset : %.3f V ; %d extremums, le premier à %.2f V" % (offset, len(pics), v_lib[pics[0]]))
-print("décrément : alpha = %.0f 1/s, soit Q ≈ %.1f" % (alpha, Q_estime))
+fin = v_lib[-len(v_lib) // 5 :]  # la fin de fenêtre, où tout est amorti
+offset, bruit = fin.mean(), fin.std()
+# les extremums nettement au-dessus du bruit : ceux qui s'y noient aplatiraient l'enveloppe
+pics = extremums(t_lib, v_lib, f_pic, offset, seuil=10 * bruit)
+alpha = taux_amortissement(t_lib[pics], v_lib[pics], offset)
+delta = alpha / f_pic  # le décrément logarithmique, sur une pseudo-période
+Q_estime = np.pi / delta
+print(f"pseudo-fréquence (pic de la FFT) : {f_pic:.0f} Hz")
+print(f"offset : {offset:.3f} V, écart-type en fin de fenêtre {bruit * 1e3:.0f} mV")
+print(f"{len(pics)} extremums au-dessus de {10 * bruit:.2f} V, le premier à {v_lib[pics[0]]:.2f} V")
+print(
+    f"amortissement : alpha = {alpha:.0f} 1/s, décrément delta = {delta:.3f}, Q ≈ pi/delta = {Q_estime:.2f}"
+)
 
 
 # 4. l'ajustement
@@ -101,7 +95,7 @@ A, f0, Q, t0_fit, v_off = pfit
 sig = ecarts_types(pcov)
 print(resume_parametres(("A", "f0", "Q", "t0", "v_off"), pfit, pcov, unites=("V", "Hz", "", "s", "V")))
 residus = v_lib - regime_libre(t_lib, *pfit)
-print("résidus : écart-type %.1f mV" % (residus.std() * 1e3))
+print(f"résidus : écart-type {residus.std() * 1e3:.1f} mV")
 
 # 5. la figure : l'acquisition brute, le régime libre ajusté avec son enveloppe, les résidus
 fig, (ax1, ax2, ax3) = plt.subplots(3, figsize=(7, 8), gridspec_kw={"height_ratios": [2, 3, 1.2]})
@@ -122,6 +116,9 @@ ax2.plot(
     "r",
     lw=1,
     label="ajustement : $f_0$ = " + formater(f0, sig[1], "Hz") + ", $Q$ = " + formater(Q, sig[2]),
+)
+ax2.plot(
+    (t_lib[pics] - t0_fit) * 1e3, v_lib[pics], "o", mfc="none", color="k", ms=5, label="extremums retenus"
 )
 env = abs(A) * np.exp(-np.pi * f0 * (tt - t0_fit) / Q)
 ax2.plot((tt - t0_fit) * 1e3, v_off + env, "--", color="gray", lw=0.8, label="enveloppe")

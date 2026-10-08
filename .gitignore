@@ -11,3 +11,4 @@ dist/
 exemples/*.pdf
 doc/*.pdf
 exemples/*.txt
+exemples/demo_*

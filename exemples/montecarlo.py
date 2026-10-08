@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Propager des incertitudes par la méthode de Monte-Carlo, sans formule de
 dérivées partielles : g par un pendule, un quotient dont la loi est
 dissymétrique, une droite ajustée sur cent mille tirages sans boucle, un
-modèle quelconque ajusté par tirages, une résistance par la loi d'Ohm, la
-valeur absolue d'une différence. Chaque cas trace sa figure, celles de
-doc/incertitudes.md.
+modèle quelconque ajusté par tirages, une résistance par la loi d'Ohm avec
+les tolérances des multimètres et la part de chacun, la valeur absolue d'une
+différence. Chaque cas trace sa figure, celles de doc/incertitudes.md.
 """
 
 import time
@@ -13,10 +12,11 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-from tpllg.ajustement import curvefit, formater
-from tpllg.montecarlo import Point, SerieLineaire, ajuster_modele
+from tpllg.ajustement import curvefit, formater, regression_york
+from tpllg.montecarlo import Point, SerieLineaire, ajuster_modele, fixer_graine, indices_sobol
 
-np.random.seed(0)  # pour retrouver les mêmes tirages d'une exécution à l'autre
+fixer_graine(0)  # les mêmes tirages d'une exécution à l'autre
+rng = np.random.default_rng(0)  # et les mêmes mesures simulées
 
 
 def histogrammes(axes, points, noms, nbins=200):
@@ -33,7 +33,7 @@ def histogrammes(axes, points, noms, nbins=200):
 L = Point(1.000, 0.002)
 T = Point(2.007, 0.010)
 g = 4 * np.pi**2 * L / T**2
-print("g =", formater(g.val, g.u, "m/s²"), "(Monte-Carlo, %d tirages)" % g.N)
+print("g =", formater(g.val, g.u, "m/s²"), f"(Monte-Carlo, {g.N} tirages)")
 g_lin = 4 * np.pi**2 * 1.000 / 2.007**2
 u_lin = g_lin * np.sqrt((0.002 / 1.000) ** 2 + (2 * 0.010 / 2.007) ** 2)
 print("g =", formater(g_lin, u_lin, "m/s²"), "(formule de propagation linéaire)")
@@ -50,20 +50,24 @@ bas, haut = q.quantiles()
 print(
     "a/b =",
     formater(q.val, q.u),
-    "; médiane %.3f ; 68 %% des tirages entre %.3f et %.3f" % (np.median(q.tirage), bas, haut),
+    f"; médiane {np.median(q.tirage):.3f} ; 68 % des tirages entre {bas:.3f} et {haut:.3f}",
 )
+court = q.intervalle_le_plus_court(0.95)
+symetrique = q.quantiles(0.95)
+print(f"à 95 % : de {symetrique[0]:.3f} à {symetrique[1]:.3f} (2,5 % de chaque côté), ou de {court[0]:.3f} à "
+      f"{court[1]:.3f} (le plus court)")  # fmt: skip
 fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
 histogrammes(axes, (a, b, q), ("a", "b", "q = a/b"))
-axes[2].axvline(np.median(q.tirage), color="k", linestyle=":", label="médiane=%.3f" % np.median(q.tirage))
+axes[2].axvline(np.median(q.tirage), color="k", linestyle=":", label=f"médiane={np.median(q.tirage):.3f}")
 axes[2].axvspan(bas, haut, color="gold", alpha=0.35, label="68 % des tirages")
 axes[2].legend(fontsize=8)
 fig.tight_layout()
 plt.savefig("montecarlo_quotient.pdf")
 
-# 3. une droite ajustée sur chaque tirage des mesures, face à curvefit
+# 3. une droite ajustée sur chaque tirage des mesures, face à regression_york et curvefit
 x = np.linspace(0, 10, 10)
-x_mes = x + np.random.normal(0, 0.2, x.size)
-y_mes = 2 * x + 1 + np.random.normal(0, 0.5, x.size)
+x_mes = x + rng.normal(0, 0.2, x.size)
+y_mes = 2 * x + 1 + rng.normal(0, 0.5, x.size)
 debut = time.perf_counter()
 serie = SerieLineaire(x_mes, 0.2, y_mes, 0.5)
 pa, pb = serie.ajuster()
@@ -73,8 +77,10 @@ print(
     formater(pa.val, pa.u),
     " b =",
     formater(pb.val, pb.u),
-    " (%d tirages en %.2f s)" % (serie.N, duree),
+    f" ({serie.N} tirages en {duree:.2f} s)",
 )
+york = regression_york(x_mes, 0.2, y_mes, 0.5)
+print("York        : a =", formater(york.pfit[0], york.err[0]), " b =", formater(york.pfit[1], york.err[1]))
 pfit, err, chi2 = curvefit(
     lambda x, a, b: a * x + b,
     x_mes,
@@ -90,7 +96,7 @@ print(
     formater(pfit[0], err[0]),
     " b =",
     formater(pfit[1], err[1]),
-    " chi2 réduit = %.2f" % chi2,
+    f" chi2 réduit = {chi2:.2f}",
 )
 plt.figure()
 plt.errorbar(x_mes, y_mes, xerr=0.2, yerr=0.5, fmt="o", label="mesures")
@@ -121,7 +127,7 @@ def exponentielle(t, A, tau):
 
 
 t = np.linspace(0, 5, 12)
-u = 2 * np.exp(-t / 1.5) + np.random.normal(0, 0.02, t.size)
+u = 2 * np.exp(-t / 1.5) + rng.normal(0, 0.02, t.size)
 debut = time.perf_counter()
 pA, ptau = ajuster_modele(exponentielle, t, 0.01, u, 0.02, p0=[1, 1], N=2000)
 duree = time.perf_counter() - debut
@@ -130,7 +136,7 @@ print(
     formater(pA.val, pA.u),
     " tau =",
     formater(ptau.val, ptau.u, "s"),
-    " (2000 tirages en %.1f s)" % duree,
+    f" (2000 tirages en {duree:.1f} s)",
 )
 fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
 t_fin = np.linspace(0, 5, 200)
@@ -145,20 +151,25 @@ histogrammes(axes[1:], (pA, ptau), ("A (V)", "tau (s)"), nbins=60)
 fig.tight_layout()
 plt.savefig("montecarlo_modele.pdf")
 
-# 5. une résistance par la loi d'Ohm, avec les incertitudes des multimètres
-U = Point(4.87, 0.5 * 0.01 * 4.87 + 0.005)  # 0,5 % + 5 mV : ce que la notice dit
-I = Point(0.0213, 0.008 * 0.0213 + 0.0001)
+# 5. une résistance par la loi d'Ohm, avec les tolérances des multimètres : la notice
+#    garantit ± (0,5 % + 5 mV), sans dire plus ; une loi uniforme sur cet intervalle,
+#    d'incertitude-type tolérance/√3 (GUM)
+U = Point.uniforme(4.87, 0.5 * 0.01 * 4.87 + 0.005)
+I = Point.uniforme(0.0213, 0.008 * 0.0213 + 0.0001)  # noqa: E741 — I, l'intensité
 R = U / I
-print("R =", formater(R.val, R.u, "Ω"))
+print("R =", formater(R.val, R.u, "Ω"), f"; u(U) = {U.u * 1e3:.1f} mV, u(I) = {I.u * 1e6:.0f} µA")
+# quel multimètre pèse le plus ? la part de la variance de R due à chacun (indices de Sobol)
+part_U, part_I = indices_sobol(lambda u, i: u / i, [U, I])
+print(f"part de la variance de R due à U : {100 * part_U:.0f} %, à I : {100 * part_I:.0f} %")
 
 # 6. une fonction non dérivable : la valeur absolue d'une différence
 d = abs(Point(1.02, 0.05) - Point(1.00, 0.05))
-print("|x1 - x2| =", formater(d.val, d.u), " médiane %.3f" % np.median(d.tirage))
-fig, axes = plt.subplots(1, 2, figsize=(9, 3.8))
-histogrammes(axes, (R, d), ("R = U/I (Ω)", "|x1 - x2|"))
-axes[1].axvline(np.median(d.tirage), color="k", linestyle=":", label="médiane=%.3f" % np.median(d.tirage))
-axes[1].axvline(0.02, color="tab:purple", label="|1,02 - 1,00| = 0,02")
-axes[1].legend(fontsize=8)
+print("|x1 - x2| =", formater(d.val, d.u), f" médiane {np.median(d.tirage):.3f}")
+fig, axes = plt.subplots(1, 4, figsize=(17, 3.8))
+histogrammes(axes, (U, I, R, d), ("U (V), loi uniforme", "I (A), loi uniforme", "R = U/I (Ω)", "|x1 - x2|"))
+axes[3].axvline(np.median(d.tirage), color="k", linestyle=":", label=f"médiane={np.median(d.tirage):.3f}")
+axes[3].axvline(0.02, color="tab:purple", label="|1,02 - 1,00| = 0,02")
+axes[3].legend(fontsize=8)
 fig.tight_layout()
 plt.savefig("montecarlo_cas.pdf")
 

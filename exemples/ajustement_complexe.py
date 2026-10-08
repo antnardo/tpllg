@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Ajuster une fonction de transfert par son module et sa phase à la fois :
 curve_fit_complex face à l'ajustement du module seul, les mesures dans le
@@ -13,6 +12,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from tpllg.ajustement import curve_fit_complex, resume_parametres
+from tpllg.bode import phase_continue
 
 
 def passe_bande(f, H0, f0, Q):
@@ -23,93 +23,20 @@ def module_seul(f, H0, f0, Q):
     return abs(H0) / np.sqrt(1 + Q**2 * (f / f0 - f0 / f) ** 2)
 
 
-def phase_deg(z):
-    """La phase d'un complexe en degrés, entre 0 et 360 : celle d'un passe-bande
-    inverseur va de 270° à 90° sans saut."""
-    return np.degrees(np.angle(z)) % 360
+def phase_deg(frequences, z):
+    """La phase d'un complexe en degrés, continue le long des fréquences, comme
+    tracer_bode la trace : celle d'un passe-bande inverseur va de -90° à -270°."""
+    return phase_continue(frequences, np.angle(z))
 
 
-f = np.array(
-    [
-        200,
-        300,
-        500,
-        700,
-        1000,
-        1300,
-        1500,
-        1700,
-        1800,
-        1900,
-        1950,
-        2000,
-        2050,
-        2100,
-        2200,
-        2400,
-        2700,
-        3300,
-        5000,
-        7000,
-        10000,
-        15000,
-        20000.0,
-    ]
-)
-H = np.array(
-    [
-        0.09,
-        0.12,
-        0.21,
-        0.30,
-        0.53,
-        0.88,
-        1.33,
-        2.18,
-        3.06,
-        4.21,
-        4.62,
-        5.13,
-        4.85,
-        4.42,
-        3.16,
-        1.95,
-        1.24,
-        0.72,
-        0.39,
-        0.24,
-        0.16,
-        0.11,
-        0.08,
-    ]
-)
-phi = np.radians(
-    [
-        -90,
-        -94,
-        -95,
-        -92,
-        -97,
-        -103,
-        -106,
-        -114,
-        -122,
-        -152,
-        -166,
-        176,
-        154,
-        144,
-        126,
-        117,
-        104,
-        94,
-        96,
-        92,
-        87,
-        89,
-        89,
-    ]
-)
+# fmt: off
+f = np.array([200, 300, 500, 700, 1000, 1300, 1500, 1700, 1800, 1900, 1950, 2000, 2050, 2100, 2200,
+              2400, 2700, 3300, 5000, 7000, 10000, 15000, 20000.0])
+H = np.array([0.09, 0.12, 0.21, 0.30, 0.53, 0.88, 1.33, 2.18, 3.06, 4.21, 4.62, 5.13, 4.85, 4.42,
+              3.16, 1.95, 1.24, 0.72, 0.39, 0.24, 0.16, 0.11, 0.08])
+phi = np.radians([-90, -94, -95, -92, -97, -103, -106, -114, -122, -152, -166, 176, 154, 144, 126,
+                  117, 104, 94, 96, 92, 87, 89, 89])
+# fmt: on
 NOMS, UNITES = ("H0", "f0", "Q"), ("", "Hz", "")
 f_fin = np.logspace(np.log10(150), np.log10(26000), 3000)
 f_zoom = np.linspace(1750, 2250, 400)
@@ -130,31 +57,35 @@ axes[0].loglog(f_fin, abs(passe_bande(f_fin, *pfit)), label="module et phase ens
 axes[0].loglog(f_fin, module_seul(f_fin, *pmod), "--", label="le module seul")
 axes[0].set_ylabel("|H|")
 axes[0].set_title("le module : les deux ajustements se valent", fontsize=10)
+phase_mesures = phase_deg(f, np.exp(1j * phi))
 for ax, frequences in zip(axes[1:], (f_fin, f_zoom)):
-    ax.plot(f, phase_deg(np.exp(1j * phi)), "o", markersize=4, label="les mesures")
-    ax.plot(frequences, phase_deg(passe_bande(frequences, *pfit)), label="module et phase ensemble")
+    ax.plot(f, phase_mesures, "o", markersize=4, label="les mesures")
+    ax.plot(
+        frequences, phase_deg(frequences, passe_bande(frequences, *pfit)), label="module et phase ensemble"
+    )
     # le module seul rend |H0| : la phase qu'il prédit dépend du signe qu'on lui donne
     ax.plot(
         frequences,
-        np.degrees(np.angle(passe_bande(frequences, abs(pmod[0]), *pmod[1:]))),
-        "--",
-        color="tab:green",
-        label="le module seul, si H0 > 0",
-    )
-    ax.plot(
-        frequences,
-        phase_deg(passe_bande(frequences, -abs(pmod[0]), *pmod[1:])),
+        phase_deg(frequences, passe_bande(frequences, -abs(pmod[0]), *pmod[1:])),
         "--",
         color="tab:red",
         label="le module seul, si H0 < 0",
     )
     ax.set_ylabel("phase (°)")
+# si H0 > 0, la phase est à 180° des mesures : pas dans le zoom, seulement sur le spectre entier
+axes[1].plot(
+    f_fin,
+    phase_deg(f_fin, passe_bande(f_fin, abs(pmod[0]), *pmod[1:])),
+    "--",
+    color="tab:green",
+    label="le module seul, si H0 > 0",
+)
 axes[1].set_xscale("log")
-axes[1].set_yticks(np.arange(-90, 271, 90))
+axes[1].set_yticks(np.arange(-270, 91, 90))
 axes[1].set_title("la phase : le signe de H0 se lit ici", fontsize=10)
 axes[2].set_xlim(f_zoom[0], f_zoom[-1])
-axes[2].set_ylim(100, 260)
-axes[2].set_title("autour de la résonance : f0 = %.0f Hz ou %.0f Hz" % (pfit[1], pmod[1]), fontsize=10)
+axes[2].set_ylim(-260, -100)
+axes[2].set_title(f"autour de la résonance : f0 = {pfit[1]:.0f} Hz ou {pmod[1]:.0f} Hz", fontsize=10)
 for ax in axes:
     ax.set_xlabel("f (Hz)")
     ax.legend(fontsize=8)
@@ -186,7 +117,7 @@ for k, decalage in (
     (22, (8, 6)),
 ):
     ax.annotate(
-        "%g Hz : %+.0f°" % (f[k], np.degrees(phi[k])),
+        f"{f[k]:g} Hz : {np.degrees(phi[k]):+.0f}°",
         (mesures[k].real, mesures[k].imag),
         textcoords="offset points",
         xytext=decalage,
@@ -208,7 +139,7 @@ pinc, einc, chi2 = curve_fit_complex(
 print(
     "avec les incertitudes    :",
     resume_parametres(NOMS, pinc, einc, UNITES).replace("\n", "   "),
-    "  chi2 réduit = %.2f" % chi2,
+    f"  chi2 réduit = {chi2:.2f}",
 )
 ajustements = (
     ("sans incertitudes", pfit, err, "tab:orange", "-"),
@@ -218,12 +149,12 @@ fig, axes = plt.subplots(1, 3, figsize=(14, 4.4))
 barres = {"fmt": "o", "markersize": 3, "capsize": 2, "color": "tab:blue", "label": "les mesures"}
 axes[0].errorbar(f, H, yerr=u_H, **barres)
 axes[1].errorbar(f, H, yerr=u_H, **barres)
-axes[2].errorbar(f, phase_deg(np.exp(1j * phi)), yerr=np.degrees(u_phi), **barres)
+axes[2].errorbar(f, phase_mesures, yerr=np.degrees(u_phi), **barres)
 for nom, p, e, couleur, trait in ajustements:
-    legende = "%s : %s" % (nom, resume_parametres(NOMS, p, e, UNITES).replace("\n", ", "))
+    legende = f"{nom} : " + resume_parametres(NOMS, p, e, UNITES).replace("\n", ", ")
     axes[0].plot(f_fin, abs(passe_bande(f_fin, *p)), trait, color=couleur, label=legende)
     axes[1].plot(f_zoom, abs(passe_bande(f_zoom, *p)), trait, color=couleur)
-    axes[2].plot(f_fin, phase_deg(passe_bande(f_fin, *p)), trait, color=couleur)
+    axes[2].plot(f_fin, phase_deg(f_fin, passe_bande(f_fin, *p)), trait, color=couleur)
 axes[0].set_xscale("log")
 axes[0].set_yscale("log")
 axes[0].set_ylabel("|H|")
@@ -233,7 +164,7 @@ axes[1].set_ylim(2, 5.6)
 axes[1].set_ylabel("|H|")
 axes[1].set_title("autour de la résonance", fontsize=10)
 axes[2].set_xscale("log")
-axes[2].set_yticks(np.arange(90, 271, 45))
+axes[2].set_yticks(np.arange(-270, -89, 45))
 axes[2].set_ylabel("phase (°)")
 axes[2].set_title("la phase, à 3° près", fontsize=10)
 for ax in axes:

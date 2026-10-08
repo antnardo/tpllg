@@ -1,182 +1,125 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Mar  6 13:35:03 2023
+Le diagramme de Bode automatique : la centrale génère elle-même une sinusoïde
+sur sa sortie SA1, la relit sur EA0 et lit la sortie du filtre sur EA1,
+fréquence par fréquence, puis trace gain et phase et les enregistre.
 
-@author: a. marchand, f. legrand
+Le montage : un câble de SA1 à EA0 et à l'entrée du filtre, la sortie du
+filtre sur EA1. SIMULATION = True remplace la centrale par un passe-bande
+inverseur (f0 = 2 kHz, Q = 6, H0 = -5) dont on calcule la réponse, bruit et
+quantification compris ; False mesure pour de bon. Voir doc/bode.md.
 
 Ce script dérive de l'exemple « Diagramme de Bode » de Frédéric Legrand
 (f-legrand.fr, CC BY-NC-SA 2.0 FR) : il est diffusé, comme le reste du dépôt,
 sous CC BY-NC-SA 4.0, version ultérieure que la 2.0 FR autorise pour une
 adaptation.
 https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html
-La mesure du gain (gain_std), l'interpolation par FFT et le choix de
-l'échantillonnage, dans tpllg.traitement, en viennent aussi.
+La mesure de la fonction de transfert et le choix de l'échantillonnage, dans
+tpllg.traitement, en viennent aussi.
 
-Bode automatique
-Utilisation de la sortie pour générer un signal sinusoïdal
+@author: a. marchand, f. legrand
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
+from tpllg.bode import tracer_bode
 from tpllg.sysam import Sysam
-from tpllg.traitement import gain, choix_echantillonnage
+from tpllg.traitement import choix_echantillonnage, fonction_transfert
 
-# I/O
-# Entrée sur EA0, sortie sur EA1
-# Mettre un cable entre S1 et EA0
-VOIES = [0, 1]  # entrée, sortie
-SORTIE = 1  # ou 2
-NOM_FICHIER = "filtreLC.txt"
+SIMULATION = True
 
-# Boucle sur les fréquences entre 10^LOGFMIN et 10^LOGFMAX :
+# Le montage
+VOIES = [0, 1]  # EA0 : l'entrée du filtre (la sortie SA1 relue), EA1 : sa sortie
+NOM_FICHIER = "bode_automatique.txt"
+
+# Les fréquences : NB_POINTS_BODE entre 10^LOGFMIN et 10^LOGFMAX
 LOGFMIN = 2
 LOGFMAX = 4
 NB_POINTS_BODE = 20
-AMPLITUDE = 1.7  # V pour le signal d'entrée généré par Sysam.
-# Attention à ce que Hmax*AMPLITUDE ne dépasse pas 10V
-CALIBRES_INIT = [2, 2]  # V pour EA0 et EA1
-METHODE = "std"  # ou 'fit'. Méthode de mesure du gain (cf docstring)
+AMPLITUDE = 1.7  # V, la sinusoïde générée ; |H| × AMPLITUDE doit rester sous 10 V
+CALIBRES_INIT = [5, 10]  # V, pour la première mesure, avant de connaître le gain : 0.2, 1, 5 ou 10
 
-# Paramètres d'execution, ne pas toucher a priori
-TE_MIN = Sysam.TE_MIN_SORTIE  # pas de temps d'échantillonnage minimal (Sysam)
-# = 2e-7 lors de l'utilisation de la sortie
+# L'échantillonnage, à ne pas toucher a priori
+TE_MIN = Sysam.TE_MIN_SORTIE  # 0,2 µs : les sorties ne tournent qu'à un multiple de 0,2 µs
 N_MAX = Sysam.n_max(len(VOIES), 1)  # la mémoire, partagée entre les 2 voies et la sortie
-T_MAX = 1  # temps total max d'acquisition par courbe
-PER_MIN = 20  # nb minimal de période dont faire l'acquisition (précision du spectre)
-NP_MIN = 100  # nb minimal de points par période (shannon : >2)
-DELAI_TRANSITOIRE = 5  # en nb de périodes, supprimées du signal à analyser
-N_INTERPOLATION = 0  # pour la méthode 'std', lourd en calculs si >0, mais plus précis
-DEFAUT_PLOT = False  # affiche le plot à chaque itération
-
-# Variables d'execution
-parametres = {"delai": DELAI_TRANSITOIRE, "method": METHODE, "ninter": N_INTERPOLATION}
-
-frequences_mesurees = np.zeros((NB_POINTS_BODE))
-gains_mesures = np.zeros((NB_POINTS_BODE))
-phases_mesurees = np.zeros((NB_POINTS_BODE))
-frequences = np.logspace(LOGFMIN, LOGFMAX, NB_POINTS_BODE)
-
-amp = AMPLITUDE
+T_MAX = 1  # s, la durée maximale d'une acquisition
+PER_MIN = 20  # le nombre minimal de périodes acquises
+NP_MIN = 100  # le nombre minimal de points par période
+DELAI_TRANSITOIRE = 5  # le nombre de périodes écartées au début : le régime transitoire
 
 
-def acquisition(can: Sysam, techant, N, amp, Np, delai, calibres):
-    """Génère un signal sinusoidal sur la sortie SORTIE,
-    Fait l'acquisition en même temps sur les 2 voies VOIES
-    L'entrée doit être sur VOIES[0], et la sortie sur VOIES[1]
+def reponse_simulee(t, e1, freq, calibres, H0=-5.0, f0=2000.0, Q=6.0, bruit=0.003):
+    """Ce que la centrale rendrait : la sinusoïde e1 relue sur EA0, la réponse
+    du passe-bande en régime établi sur EA1, un bruit et la quantification
+    de chaque calibre."""
+    H = H0 / (1 + 1j * Q * (freq / f0 - f0 / freq))
+    sortie = abs(H) * abs(e1).max() * np.cos(2 * np.pi * freq * t + np.angle(H))
+    rng = np.random.default_rng(round(freq))
+    lignes = []
+    for signal, calibre in zip((e1, sortie), calibres):
+        calibre = Sysam.get_calibre(calibre)
+        pas = 2 * calibre / 4096
+        mesure = np.round((signal + rng.normal(0, bruit, t.size)) / pas) * pas
+        lignes.append(np.clip(mesure, -calibre, calibre))
+    return np.array([t, t]), np.array(lignes)
 
-    Renvoit (t, e, s) (trois ndarray) en supprimant les premiers points
 
-        can: objet Sysam, ouvert
-        techant: temps échantillonnage
-        N: nb de points d'acquisition
-        amp: amplitude du signal à générer sur la sortie SORTIE (1 ou 2)
-        Np: nombre de points par période à générer
-        delai: nb de période du début du signal à ne pas exporter (transitoire)
-        calibres: liste des calibres sur les voies pour la lecture. En pratique,
-        les valeurs entières immédiatement supérieures sont sélectionnées
-    """
-    # on crée le signal de sortie
+def acquisition(can, techant, N, amp, Np, freq, calibres):
+    """Génère `amp` cos(2 pi n/Np) sur SA1 (Np points par période, N points en
+    tout : un nombre entier de périodes, qui se répète sans saut) et acquiert
+    les deux voies ; rend (t, e, s) sans les DELAI_TRANSITOIRE premières
+    périodes."""
     e1 = amp * np.cos(2 * np.pi * np.arange(N) / Np)
-    # on lance la sortie et l'acquisition
-    can.config_entrees(VOIES, calibres)
-    can.config_echantillon(techant, N)
-    sorties = (e1, 0) if SORTIE == 1 else (0, e1)
-    t, signaux = can.acquerir_avec_sorties(*sorties)
-    t, e, s = t[0], signaux[0], signaux[1]
-    # on exporte après un nombre entier de périodes pour éviter le transitoire
-    n1 = int(delai * Np)
-    t, e, s = t[n1:] - t[n1], e[n1:], s[n1:]
-    return t, e, s
+    if SIMULATION:
+        temps, tensions = reponse_simulee(np.arange(N) * techant, e1, freq, calibres)
+    else:
+        can.config_entrees(VOIES, calibres)
+        can.config_echantillon(techant, N)
+        temps, tensions = can.acquerir_avec_sorties(e1, None)
+    n1 = int(DELAI_TRANSITOIRE * Np)
+    return temps[0][n1:], tensions[0][n1:], tensions[1][n1:]
 
 
-def mesure_gain(can, freq, amp, calibres, delai, plot=DEFAUT_PLOT, **kwargs):
-    """
-    Génère un signal sinusoidal de sortie à freq
-    Mesure les signaux d'entree
-    Retourne les paramètres ajustés utiles pour le tracé du diagramme de Bode
-
-    Méthodes de mesure des amplitudes, phases et fréquences
-        method="std", par valeur efficace, avec une éventuelle interpolation
-            ninter=4 par défaut, 0 auaucne interpolation, par une TF
-        method="fit", par ajustement des valeurs
-        method="fit_fft", par ajustement des valeurs avec un premier guess via fft
-
-        can : objet Sysam ouvert
-        freq : fréquence à  laquelle généer la sortie
-        amp : amplitude du signal de sortie
-        calibres : calibres à appliquer aux voies de mesure
-        delai : nb de périodes de trnsitoire à ne pas prendre en compte
-        plot : affiche les reevés temporels pendant l'acquisition
-        **kwargs, donnés à la méthode de mesure gain()
-    """
+def mesure(can, freq, amp, calibres):
+    """La fonction de transfert H à la fréquence la plus proche de `freq` qui
+    fait un nombre entier de périodes dans l'acquisition. Rend (freq, H)."""
     techant, N = choix_echantillonnage(freq, TE_MIN, NP_MIN, PER_MIN, N_MAX, T_MAX)
-    P = int(freq * N * techant)  # période en nb de points
-    freq = P / (N * techant)  # recalcul pour tomber juste
-    Np = N / P  # nombre de points par période (float)
+    periodes = int(freq * N * techant)  # le nombre entier de périodes acquises
+    freq = periodes / (N * techant)
+    Np = N / periodes  # le nombre de points par période, pas forcément entier
     print(
-        f"  ACQUISITION {techant=:.1e}s, fe={1 / techant:.1e}Hz,",
-        f"points par période={Np:.1f}, {N=:.1e}, Ttotal={N * techant:.2f}s",
+        f"  acquisition : te = {techant:.1e} s, fe = {1 / techant:.1e} Hz, {Np:.1f} points par période, "
+        f"N = {N}, durée {N * techant:.2f} s"
     )
-    t, e, s = acquisition(can, techant, N, amp, Np, delai, calibres)
-    print(f"  ACQUISITION finie, mesure...")
-    G, phi = gain(t, e, s, freq, Np, **kwargs)
-    print(f"  MESURE {G=:.1e}, {phi=:.1e} rad")
-    if plot:
-        affiche_temporel(freq, t, e, s)
-    return freq, G, phi
+    t, e, s = acquisition(can, techant, N, amp, Np, freq, calibres)
+    H = fonction_transfert(t, e, s, freq)
+    print(f"  mesure : G = {abs(H):.3g}, phi = {np.degrees(np.angle(H)):.1f}°")
+    return freq, H
 
 
-def affiche_temporel(freq, t, e, s):
-    # faire une animation plutôt
-    plt.figure()
-    plt.plot(t, e, "b")
-    plt.plot(t, s, "r")
-    plt.grid()
-    plt.ylim(-10, 10)
-    plt.xlim(0, 10 / freq)
-    plt.show()
+frequences = np.logspace(LOGFMIN, LOGFMAX, NB_POINTS_BODE)
+frequences_mesurees = np.zeros(NB_POINTS_BODE)
+H_mesures = np.zeros(NB_POINTS_BODE, dtype=complex)
 
-
-# BOUCLE PRINCIPALE
 with Sysam() as can:
     for i, f in enumerate(frequences):
-        print(f"[{i:03d}] {f=:.1e}Hz")
-        # on fait une première mesure
-        f, G, phi = mesure_gain(can, f, amp, calibres=CALIBRES_INIT, **parametres)
-        # puis une seconde pour plus de précision sur le calibre une fois l'amplitude déterminée
-        amp = min(AMPLITUDE, AMPLITUDE / G)  # pour ne pas dépasser AMPLITUDE en sortie
-        f, G, phi = mesure_gain(can, f, amp, calibres=[amp * 1.1, amp * G * 1.1], **parametres, plot=False)
-        frequences_mesurees[i] = f
-        gains_mesures[i] = G
-        phases_mesurees[i] = phi
-        print("", flush=True)
+        print(f"[{i:02d}] f = {f:.3g} Hz")
+        # une première mesure, à l'amplitude et aux calibres de départ, donne le gain...
+        f, H = mesure(can, f, AMPLITUDE, CALIBRES_INIT)
+        # ... puis une seconde, à une amplitude qui ne sature pas la sortie et aux
+        # calibres ajustés (10 % de marge), pour la précision
+        amp = min(AMPLITUDE, AMPLITUDE / abs(H))
+        f, H = mesure(can, f, amp, [amp * 1.1, amp * abs(H) * 1.1])
+        frequences_mesurees[i], H_mesures[i] = f, H
 
-
-# Ajuste les phases à 2pi près pour garantir une continuité
-phases_mesurees = np.unwrap(phases_mesurees)
-
-# Export data
+gains, phases = abs(H_mesures), np.angle(H_mesures)
 np.savetxt(
-    NOM_FICHIER, np.array([frequences_mesurees, gains_mesures, phases_mesurees]).T, header="f\t G\t phi"
+    NOM_FICHIER,
+    np.column_stack([frequences_mesurees, gains, phases]),
+    header="f (Hz)\tG\tphi (rad)",
+    delimiter="\t",
 )
+print(f"mesures enregistrées dans {NOM_FICHIER}")
 
-GdB = 20 * np.log10(gains_mesures)
-
-plt.figure()
-plt.plot(frequences_mesurees, GdB, "b-")
-plt.xscale("log")
-plt.grid()
-plt.xlabel("f (Hz)")
-plt.ylabel("G (dB)")
+tracer_bode(frequences_mesurees, gains, phases, fichier="bode_automatique.pdf")
 plt.show()
-plt.savefig("gain.pdf")
-
-plt.figure()
-plt.plot(frequences_mesurees, phases_mesurees, "b-")
-plt.xscale("log")
-plt.xlabel("f (Hz)")
-plt.ylabel("phi (rad)")
-plt.grid()
-plt.show()
-plt.savefig("phase.pdf")

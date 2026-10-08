@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Une droite sur dix points, ajustée de trois façons : sans incertitudes, avec
 celles de y, avec celles de x et de y. Les trois donnent la même droite ; ce
@@ -51,12 +50,12 @@ for colonne, (titre, incertitudes, barres) in enumerate(cas):
     pfit, err, chi2 = curvefit(modele, x, y, p0=[1, 0], verbose=False, **incertitudes)
     resume = resume_parametres(("a", "b"), pfit, err).replace("\n", "   ")
     # sans incertitudes fournies, le chi2 réduit rendu n'a pas de sens : on ne l'écrit pas
-    suite = "chi2 réduit = %.2f" % chi2 if incertitudes else "chi2 réduit : sans objet"
-    print("%-24s" % titre, resume, "  " + suite)
+    suite = f"chi2 réduit = {chi2:.2f}" if incertitudes else "chi2 réduit : sans objet"
+    print(f"{titre:24s}", resume, "  " + suite)
     haut, bas = axes[0, colonne], axes[1, colonne]
     haut.errorbar(x, y, fmt="o", markersize=4, capsize=2, label="les mesures", **barres)
     haut.plot(x_fin, modele(x_fin, *pfit), color="tab:orange", label="la droite ajustée")
-    haut.set_title("%s\n%s\n%s" % (titre, resume, suite), fontsize=10)
+    haut.set_title(f"{titre}\n{resume}\n{suite}", fontsize=10)
     haut.legend(fontsize=8, loc="upper left")
     # la même chose une fois la droite retranchée : la bande devient visible
     u = bande(x_fin, x, err)

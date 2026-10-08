@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Ajuster une sinusoïde, amplitude, fréquence et phase : le cas où les valeurs
 de départ comptent le plus. Le chi2 en fonction de la fréquence est un puits
@@ -27,7 +26,7 @@ NOMS, UNITES = ("A", "f", "phi", "offset"), ("V", "Hz", "rad", "V")
 
 def acquisition_simulee(te, N, A=1.5, f=52.3, phi=0.7, offset=0.2, bruit=BRUIT, graine=3):
     """Une sinusoïde bruitée, telle que la centrale la rendrait : deux tableaux (1, N)."""
-    rng = np.random.RandomState(graine)
+    rng = np.random.default_rng(graine)
     t = np.arange(N) * te
     return np.array([t]), np.array([A * np.sin(2 * np.pi * f * t + phi) + offset + rng.normal(0, bruit, N)])
 
@@ -61,32 +60,32 @@ else:
 t, u = temps[0], tensions[0]
 
 # 2. les valeurs de départ : l'amplitude par l'écart-type, la fréquence par le pic de la FFT
-p0 = [np.sqrt(2) * u.std(), frequence_pic(u, te), 0, u.mean()]
+p0 = [np.sqrt(2) * u.std(), frequence_pic(t, u), 0, u.mean()]
 print("valeurs de départ :", resume_parametres(NOMS, p0, unites=UNITES).replace("\n", "   "))
 pfit, err, chi2 = curvefit(sinus, t, u, p0, datayerrors=BRUIT, verbose=False)
 print("tel que l'ajustement le rend :", resume_parametres(NOMS, pfit, unites=UNITES).replace("\n", "   "))
 pfit = forme_canonique(pfit)
 print(resume_parametres(NOMS, pfit, err, unites=UNITES))
-print("chi2 réduit = %.2f" % chi2)
+print(f"chi2 réduit = {chi2:.2f}")
 
 # 3. le même ajustement en partant d'une fréquence fausse de 12 Hz
 p0_faux = [p0[0], p0[1] + 12, 0, p0[3]]
 pfaux, efaux, chi2_faux = curvefit(sinus, t, u, p0_faux, datayerrors=BRUIT, verbose=False)
 pfaux = forme_canonique(pfaux)
 print(
-    "en partant de f = %g Hz :" % p0_faux[1],
+    f"en partant de f = {p0_faux[1]:g} Hz :",
     resume_parametres(NOMS, pfaux, unites=UNITES).replace("\n", "   "),
-    "  chi2 réduit = %.0f" % chi2_faux,
+    f"  chi2 réduit = {chi2_faux:.0f}",
 )
 
 # 4. la figure : le signal et les deux ajustements, puis le chi2 en fonction de la fréquence
 fig, axes = plt.subplots(1, 2, figsize=(13, 4.6))
 axes[0].plot(1e3 * t, u, ".", markersize=2, color="tab:blue", label="l'acquisition")
 axes[0].plot(
-    1e3 * t, sinus(t, *pfit), color="tab:orange", label="parti de %g Hz : f = %.3f Hz" % (p0[1], pfit[1])
+    1e3 * t, sinus(t, *pfit), color="tab:orange", label=f"parti de {p0[1]:g} Hz : f = {pfit[1]:.3f} Hz"
 )
 axes[0].plot(
-    1e3 * t, sinus(t, *pfaux), color="tab:red", label="parti de %g Hz : f = %.2f Hz" % (p0_faux[1], pfaux[1])
+    1e3 * t, sinus(t, *pfaux), color="tab:red", label=f"parti de {p0_faux[1]:g} Hz : f = {pfaux[1]:.2f} Hz"
 )
 axes[0].set_xlabel("t (ms)")
 axes[0].set_ylabel("u (V)")
@@ -105,7 +104,7 @@ for depart, arrivee, valeur, couleur in (
         "*",
         color=couleur,
         markersize=12,
-        label="de %g Hz à %.2f Hz : chi2 réduit = %.3g" % (depart, arrivee, valeur),
+        label=f"de {depart:g} Hz à {arrivee:.2f} Hz : chi2 réduit = {valeur:.3g}",
     )
 axes[1].set_xlabel("f (Hz)")
 axes[1].set_ylabel("chi2 réduit")

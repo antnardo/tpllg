@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Une série de mesures répétées : la moyenne m, l'écart-type s de la série et
 l'incertitude-type delta = s/sqrt(N) sur la moyenne, lus sur l'histogramme
@@ -16,11 +15,11 @@ import numpy as np
 from tpllg.ajustement import formater
 from tpllg.incertitudes import incertitudes, loi_normale
 
-np.random.seed(0)  # les mêmes mesures d'une exécution à l'autre
+rng = np.random.default_rng(0)  # les mêmes mesures d'une exécution à l'autre
 
 PAS = 0.01  # la résolution de la mesure : la largeur d'une classe de l'histogramme
 mesures = np.array([9.78, 9.81, 9.85, 9.79, 9.83])  # g, en m/s², cinq fois
-suite = np.round(np.random.normal(9.81, 0.03, 45), 2)  # quarante-cinq mesures de plus, simulées
+suite = np.round(rng.normal(9.81, 0.03, 45), 2)  # quarante-cinq mesures de plus, simulées
 series = (("5 mesures", mesures), ("50 mesures", np.concatenate([mesures, suite])))
 
 
@@ -34,7 +33,7 @@ def reperes(ax, m, s, delta, vertical):
 
 
 def titre_de(nom, m, s, delta):
-    return "%s\nm = %.3f   s = %.3f   delta = %.3f" % (nom, m, s, delta)
+    return f"{nom}\nm = {m:.3f}   s = {s:.3f}   delta = {delta:.3f}"
 
 
 def legende_commune(fig, ax):
@@ -46,10 +45,7 @@ def legende_commune(fig, ax):
 
 for nom, serie in series:
     m, delta, s = incertitudes(serie)
-    print(
-        "%-10s : m = %.4f  s = %.4f  delta = %.4f  soit g = %s"
-        % (nom, m, s, delta, formater(m, delta, "m/s²"))
-    )
+    print(f"{nom:10s} : m = {m:.4f}  s = {s:.4f}  delta = {delta:.4f}  soit g = {formater(m, delta, 'm/s²')}")
 
 # 1. l'histogramme des mesures : une classe par valeur lisible, centrée sur elle
 classes = np.arange(9.705, 9.925, PAS)
