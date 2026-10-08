@@ -201,5 +201,5 @@ Le plus sûr est de construire le chemin depuis le script :
 from pathlib import Path
 
 DOSSIER = Path(__file__).resolve().parent
-f, Ve, Vs, phi = readcsv(DOSSIER/"mesures.csv")
+f, Ve, Vs, phi = readcsv(DOSSIER / "mesures.csv")
 ```

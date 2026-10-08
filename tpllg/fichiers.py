@@ -6,6 +6,7 @@ CSV générique qui reconnaît seul le délimiteur et la virgule décimale
 
 @author: a. marchand
 """
+
 from pathlib import Path
 import csv
 import io
@@ -16,24 +17,27 @@ import numpy as np
 REGRESSI_HEADER = 3
 LATIS_HEADER = 1
 
+
 def import_latispro(filename, colonnes=2, delimiter=";"):
     """
     dans latispro : Menu Fichier>Exporter>CSV
     Glisser-Déplacer des Courbes depuis Courbes disponibles dans Courbes à exporter
     """
     if colonnes <= 0:
-        raise ValueError('Le nombre de colonnes doit être > 0')
+        raise ValueError("Le nombre de colonnes doit être > 0")
     cols = [[] for _ in range(colonnes)]
     filename = Path(filename)
     if not filename.exists():
-        raise ValueError(f"Le fichier {filename} n'existe pas : vérifiez le dossier d'exécution (actuellement {Path.cwd()})")
-    with open(filename, encoding='iso8859') as csvfile:
+        raise ValueError(
+            f"Le fichier {filename} n'existe pas : vérifiez le dossier d'exécution (actuellement {Path.cwd()})"
+        )
+    with open(filename, encoding="iso8859") as csvfile:
         reader = csv.reader(csvfile, delimiter=delimiter)
         for i, row in enumerate(reader):
             if i >= LATIS_HEADER:
                 for j, col in enumerate(cols):
                     try:
-                        col.append(float(row[j].replace(',', '.')))
+                        col.append(float(row[j].replace(",", ".")))
                     except ValueError:
                         col.append(np.nan)
     npcols = [np.array(col) for col in cols]
@@ -42,19 +46,22 @@ def import_latispro(filename, colonnes=2, delimiter=";"):
             print(f"WARNING: la colonne {i} contient des valeurs non numériques")
     return npcols
 
+
 def import_regressi(filename, colonnes=2, delimiter="\t"):
     """
     dans regressi : save as... csv > real csv checked
     temps en première colonne
     """
     if colonnes < 0:
-        raise ValueError('Le nombre de colonnes doit être >= 0')
+        raise ValueError("Le nombre de colonnes doit être >= 0")
     t = []
     cols = [[] for _ in range(colonnes)]
     filename = Path(filename)
     if not filename.exists():
-        raise ValueError(f"Le fichier {filename} n'existe pas : vérifiez le dossier d'exécution (actuellement {Path.cwd()})")
-    with open(filename, encoding='utf8') as csvfile:
+        raise ValueError(
+            f"Le fichier {filename} n'existe pas : vérifiez le dossier d'exécution (actuellement {Path.cwd()})"
+        )
+    with open(filename, encoding="utf8") as csvfile:
         reader = csv.reader(csvfile, delimiter=delimiter)
         for i, row in enumerate(reader):
             if i >= REGRESSI_HEADER:
@@ -73,11 +80,11 @@ def import_regressi(filename, colonnes=2, delimiter="\t"):
     npcols = [np.array(col) for col in cols]
     for i, col in enumerate(npcols):
         if np.isnan(col).any():
-            print(f"WARNING: la colonne {i+1} contient des valeurs non numériques")
+            print(f"WARNING: la colonne {i + 1} contient des valeurs non numériques")
     return t, npcols
 
 
-def readcsv(filename, encoding='utf8', entete=1, dtypes=None):
+def readcsv(filename, encoding="utf8", entete=1, dtypes=None):
     """
     Lecture d'un fichier CSV.
     Args:
@@ -92,25 +99,25 @@ def readcsv(filename, encoding='utf8', entete=1, dtypes=None):
     Si c'est une virgule qui est utilisée comme format de flottant, remplacé par un point.
 
     """
-    print('Lecture de {:s}'.format(filename), flush=True)
+    print("Lecture de {:s}".format(filename), flush=True)
     # If newline='' is not specified, newlines embedded inside quoted fields will not be interpreted correctly, and on
     # platforms that use \r\n linendings on write an extra \r will be added. It should always be safe to specify
     # newline='', since the csv module does its own (universal) newline handling.
-    with io.open(filename, encoding=encoding, newline='') as csvfile:
+    with io.open(filename, encoding=encoding, newline="") as csvfile:
         dialect = csv.Sniffer().sniff(csvfile.read(1024))  # find delimiter automatically
 
         csvfile.seek(0)  # retourne au début
         firstrow = csv.reader(csvfile, dialect).__next__()
         cols = len(firstrow)
-        print('{:d} colonnes'.format(cols), flush=True)
+        print("{:d} colonnes".format(cols), flush=True)
         T = []
         for _ in range(cols):
             T.append([])
         if dtypes is None:
-            dtypes = [float]*cols  # default dtypes
+            dtypes = [float] * cols  # default dtypes
         else:
             assert sum([1 for dt in dtypes if dt in [float, int, str]]) == cols
-        print('Formats de conversion : ', dtypes, flush=True)
+        print("Formats de conversion : ", dtypes, flush=True)
 
         csvfile.seek(0)  # retourne au début
         reader = csv.reader(csvfile, dialect)
@@ -121,12 +128,10 @@ def readcsv(filename, encoding='utf8', entete=1, dtypes=None):
                     print("Entete exclus : ", row)
                 else:
                     for j, element in enumerate(row):
-                        T[j].append(
-                            dtypes[j](fpointformat(element, dtypes[j])))
+                        T[j].append(dtypes[j](fpointformat(element, dtypes[j])))
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
-            raise ValueError('file {}, line {}, column {} : {}'.format(
-                filename, reader.line_num, j+1, e))
+            raise ValueError("file {}, line {}, column {} : {}".format(filename, reader.line_num, j + 1, e))
 
     A = []
     for i in range(cols):
@@ -134,8 +139,8 @@ def readcsv(filename, encoding='utf8', entete=1, dtypes=None):
     return A
 
 
-OTHERPOINT = ','
-PYTHONPOINT = '.'
+OTHERPOINT = ","
+PYTHONPOINT = "."
 
 
 def fpointformat(s, dtype):
@@ -151,4 +156,3 @@ def fpointformat(s, dtype):
             raise ValueError
     else:
         return s
-

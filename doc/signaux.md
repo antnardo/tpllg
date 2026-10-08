@@ -53,14 +53,14 @@ import numpy as np
 from tpllg.signaux import fronts_montants, fronts_descendants, front_utile
 
 fe = 200000.0
-t = np.arange(6000)/fe
+t = np.arange(6000) / fe
 rng = np.random.RandomState(3)
-v = np.sign(np.sin(2*np.pi*100*t + 2.3)) + rng.normal(0, 0.01, t.size)
+v = np.sign(np.sin(2 * np.pi * 100 * t + 2.3)) + rng.normal(0, 0.01, t.size)
 
 fronts, (v_bas, v_haut) = fronts_montants(t, v)
-print(np.round(fronts*1e3, 3), "ms ; niveaux", round(v_bas, 3), round(v_haut, 3))
+print(np.round(fronts * 1e3, 3), "ms ; niveaux", round(v_bas, 3), round(v_haut, 3))
 fronts_d, _ = fronts_descendants(t, v)
-print(np.round(fronts_d*1e3, 3), "ms")
+print(np.round(fronts_d * 1e3, 3), "ms")
 ```
 
 ```text
@@ -137,7 +137,7 @@ chaque étape : la demi-période après le front, les dix premières
 pseudo-périodes d'une oscillation, la fin de fenêtre où l'on lit l'offset.
 
 ```python
-t_lib, v_lib = fenetre(t, v, t0, 0.45*periode)     # du front à presque le suivant
+t_lib, v_lib = fenetre(t, v, t0, 0.45 * periode)  # du front à presque le suivant
 ```
 
 ## La fréquence d'une oscillation
@@ -158,9 +158,9 @@ le pic est large mais toujours au bon endroit.
 
 ```python
 fe, f0, Q = 200000.0, 2000.0, 6.0
-t = np.arange(2000)/fe                                     # 10 ms
-v = -1.5*np.exp(-np.pi*f0*t/Q)*np.sin(2*np.pi*f0*t) + 0.02
-print(frequence_pic(v, 1/fe), "Hz, résolution", fe/2000, "Hz")
+t = np.arange(2000) / fe  # 10 ms
+v = -1.5 * np.exp(-np.pi * f0 * t / Q) * np.sin(2 * np.pi * f0 * t) + 0.02
+print(frequence_pic(v, 1 / fe), "Hz, résolution", fe / 2000, "Hz")
 ```
 
 ```text
@@ -217,8 +217,8 @@ d'où `Q = pi f0/alpha`.
 
 ```python
 alpha = decrement_logarithmique(t[pics], v[pics], offset=0.02)
-print(alpha, "1/s ; Q =", np.pi*f0/alpha)
-print("sans tenir compte de l'offset : Q =", np.pi*f0/decrement_logarithmique(t[pics], v[pics]))
+print(alpha, "1/s ; Q =", np.pi * f0 / alpha)
+print("sans tenir compte de l'offset : Q =", np.pi * f0 / decrement_logarithmique(t[pics], v[pics]))
 ```
 
 ```text
@@ -261,19 +261,25 @@ from scipy.optimize import curve_fit
 
 from tpllg.acquisition import acquerir
 from tpllg.ajustement import ecarts_types, formater, resume_parametres
-from tpllg.signaux import (decrement_logarithmique, extremums, fenetre, frequence_pic,
-                           front_utile, fronts_montants)
+from tpllg.signaux import (
+    decrement_logarithmique,
+    extremums,
+    fenetre,
+    frequence_pic,
+    front_utile,
+    fronts_montants,
+)
 
 SIMULATION = True
 ENTREES = [0, 1]
 CALIBRE = 5
-fe = 200000.0              # une centaine de points par pseudo-période
-T = 0.03                   # trois périodes du créneau : au moins un front montant complet
-te, N = 1/fe, int(fe*T)
+fe = 200000.0  # une centaine de points par pseudo-période
+T = 0.03  # trois périodes du créneau : au moins un front montant complet
+te, N = 1 / fe, int(fe * T)
 
 # 1. l'acquisition
 if SIMULATION:
-    temps, tensions = acquisition_simulee(te, N)      # définie dans l'exemple
+    temps, tensions = acquisition_simulee(te, N)  # définie dans l'exemple
 else:
     temps, tensions = acquerir(ENTREES, CALIBRE, te, N, trigger=(0, 0.0, 50))
 t, ve, vs = temps[0], tensions[0], tensions[1]
@@ -281,32 +287,33 @@ t, ve, vs = temps[0], tensions[0], tensions[1]
 # 2. les fronts montants du créneau, et le premier qui laisse une demi-période derrière lui
 t_fronts, (v_bas, v_haut) = fronts_montants(t, ve)
 if v_haut - v_bas < 0.2:
-    raise SystemExit("pas de créneau sur EA0 (niveaux %.2f et %.2f V) : le GBF est-il branché ?"
-                     % (v_bas, v_haut))
+    raise SystemExit(
+        "pas de créneau sur EA0 (niveaux %.2f et %.2f V) : le GBF est-il branché ?" % (v_bas, v_haut)
+    )
 t0, periode = front_utile(t, t_fronts, fraction=0.45)
 
 # 3. la fenêtre du régime libre et les valeurs de départ
-t_demi, v_demi = fenetre(t, vs, t0, 0.45*periode)   # jusqu'au front suivant
-f_pic = frequence_pic(v_demi, te)                   # le pic de la FFT
-t_lib, v_lib = fenetre(t, vs, t0, min(0.45*periode, 10/f_pic))   # dix pseudo-périodes au plus
-offset = v_lib[-len(v_lib)//5:].mean()              # la fin de fenêtre, où tout est amorti
-pics = extremums(v_lib, fe, f_pic, offset)          # les indices des extremums
+t_demi, v_demi = fenetre(t, vs, t0, 0.45 * periode)  # jusqu'au front suivant
+f_pic = frequence_pic(v_demi, te)  # le pic de la FFT
+t_lib, v_lib = fenetre(t, vs, t0, min(0.45 * periode, 10 / f_pic))  # dix pseudo-périodes au plus
+offset = v_lib[-len(v_lib) // 5 :].mean()  # la fin de fenêtre, où tout est amorti
+pics = extremums(v_lib, fe, f_pic, offset)  # les indices des extremums
 alpha = decrement_logarithmique(t_lib[pics], v_lib[pics], offset)
-Q_estime = np.pi*f_pic/alpha
+Q_estime = np.pi * f_pic / alpha
 
 
 # 4. l'ajustement
 def regime_libre(t, A, f0, Q, t0, v_off):
     tau = t - t0
-    fp = f0*np.sqrt(1 - 1/(4*Q**2))
-    return A*np.exp(-np.pi*f0*tau/Q)*np.sin(2*np.pi*fp*tau) + v_off
+    fp = f0 * np.sqrt(1 - 1 / (4 * Q**2))
+    return A * np.exp(-np.pi * f0 * tau / Q) * np.sin(2 * np.pi * fp * tau) + v_off
 
 
-p0 = [1.2*(v_lib[pics[0]] - offset), f_pic, Q_estime, t0, offset]
+p0 = [1.2 * (v_lib[pics[0]] - offset), f_pic, Q_estime, t0, offset]
 pfit, pcov = curve_fit(regime_libre, t_lib, v_lib, p0=p0)
 print(resume_parametres(("A", "f0", "Q", "t0", "v_off"), pfit, pcov, unites=("V", "Hz", "", "s", "V")))
 residus = v_lib - regime_libre(t_lib, *pfit)
-print("résidus : écart-type %.1f mV" % (residus.std()*1e3))
+print("résidus : écart-type %.1f mV" % (residus.std() * 1e3))
 ```
 
 Ce que le script imprime, sur l'acquisition simulée (créneau ±1 V à

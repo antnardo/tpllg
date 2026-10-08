@@ -5,6 +5,7 @@ sauvegarde des voies acquises.
 
 @author: a. marchand
 """
+
 import numpy as np
 
 __all__ = ["acquerir", "sauvegarder"]
@@ -22,6 +23,7 @@ def acquerir(voies, calibre, te, nbpoints, trigger=None):
     Rend (temps, tensions) comme tpllg.sysam : une ligne par voie.
     """
     from tpllg.sysam import Sysam
+
     with Sysam(voies, calibre) as can:
         can.config_echantillon(te, nbpoints)
         if trigger is not None:

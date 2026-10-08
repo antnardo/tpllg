@@ -40,11 +40,11 @@ continue vaut la moyenne du signal. La transformée de Fourier discrète rend
 import numpy as np
 from tpllg.fft import calcule_DFT
 
-fe, N = 20000.0, 20000                                   # une seconde
-t = np.arange(N)/fe
-u = 1.0*np.sin(2*np.pi*440*t) + 0.3*np.sin(2*np.pi*1320*t) + 0.5
+fe, N = 20000.0, 20000  # une seconde
+t = np.arange(N) / fe
+u = 1.0 * np.sin(2 * np.pi * 440 * t) + 0.3 * np.sin(2 * np.pi * 1320 * t) + 0.5
 freq, amp = calcule_DFT(t, u)
-i = np.argsort(amp)[-3:]                                 # les trois plus grands
+i = np.argsort(amp)[-3:]  # les trois plus grands
 print(freq[i], np.round(amp[i], 4))
 print("pas", freq[1] - freq[0], "Hz, dernière fréquence", freq[-1], "Hz,", len(freq), "points")
 ```
@@ -66,7 +66,7 @@ l'acquisition étale son énergie sur les raies voisines, et le pic est plus
 bas que l'amplitude :
 
 ```python
-u2 = np.sin(2*np.pi*437.3*t)
+u2 = np.sin(2 * np.pi * 437.3 * t)
 freq, amp = calcule_DFT(t, u2)
 print("maximum à", freq[np.argmax(amp)], "Hz, hauteur", round(amp.max(), 3))
 ```
@@ -102,8 +102,10 @@ Les fréquences rendues vont de 0 à `fe` exclu : seule la moitié inférieure �
 
 ```python
 freq, amp = spectre(t, u2)
-moitie = len(freq)//2
-print("maximum à", round(freq[:moitie][np.argmax(amp[:moitie])], 2), "Hz, hauteur", round(amp[:moitie].max(), 4))
+moitie = len(freq) // 2
+print(
+    "maximum à", round(freq[:moitie][np.argmax(amp[:moitie])], 2), "Hz, hauteur", round(amp[:moitie].max(), 4)
+)
 print("pas", round(freq[1] - freq[0], 4), "Hz,", len(freq), "points")
 ```
 
@@ -153,11 +155,11 @@ Sur un créneau ±2 V à 200 Hz, cent millisecondes à 100 kHz :
 ```python
 freq, S = calcule_DFT(t, ve)
 fondamental = freq[np.argmax(S)]
-plages = indices_plages(freq, fondamental, delta_freq=0.3*fondamental)
+plages = indices_plages(freq, fondamental, delta_freq=0.3 * fondamental)
 i = detecte_maxima_secondaires(S, plages, seuil=0.1)
 for k in i[:5]:
-    n = int(round(freq[k]/fondamental))
-    print("n = %2d : %.3f V mesuré, 4E/(n pi) = %.3f V" % (n, S[k], 4*2.0/(n*np.pi)))
+    n = int(round(freq[k] / fondamental))
+    print("n = %2d : %.3f V mesuré, 4E/(n pi) = %.3f V" % (n, S[k], 4 * 2.0 / (n * np.pi)))
 ```
 
 ```text
@@ -232,11 +234,11 @@ SIMULATION = True
 ENTREES = [0, 1]
 CALIBRE = 5
 fe = 100000.0
-T = 0.1                    # 20 périodes du créneau
-te, N = 1/fe, int(fe*T)
+T = 0.1  # 20 périodes du créneau
+te, N = 1 / fe, int(fe * T)
 
 if SIMULATION:
-    temps, tensions = acquisition_simulee(te, N)      # définie dans l'exemple
+    temps, tensions = acquisition_simulee(te, N)  # définie dans l'exemple
 else:
     temps, tensions = acquerir(ENTREES, CALIBRE, te, N)
 t, ve, vs = temps[0], tensions[0], tensions[1]
@@ -246,25 +248,27 @@ freq, S_ve = calcule_DFT(t, ve)
 freq, S_vs = calcule_DFT(t, vs)
 df = freq[1] - freq[0]
 fondamental = freq[np.argmax(S_ve)]
-print("résolution %.1f Hz, fondamental à %.0f Hz, %.1f périodes acquises"
-      % (df, fondamental, t[-1]*fondamental))
+print(
+    "résolution %.1f Hz, fondamental à %.0f Hz, %.1f périodes acquises"
+    % (df, fondamental, t[-1] * fondamental)
+)
 
 # 2. les harmoniques : un maximum par plage autour de chaque multiple du fondamental
-plages = indices_plages(freq, fondamental, delta_freq=0.3*fondamental)
-i_ve = detecte_maxima_secondaires(S_ve, plages, seuil=0.1)     # V : les harmoniques au-dessus du bruit
+plages = indices_plages(freq, fondamental, delta_freq=0.3 * fondamental)
+i_ve = detecte_maxima_secondaires(S_ve, plages, seuil=0.1)  # V : les harmoniques au-dessus du bruit
 i_vs = detecte_maxima_secondaires(S_vs, plages, seuil=0.02)
 print("%d harmoniques détectées sur l'entrée, %d sur la sortie" % (len(i_ve), len(i_vs)))
 
 # 3. le gain, harmonique par harmonique, sur celles présentes des deux côtés
-i_ve, i_vs = valeurs_correspondantes(i_ve, i_vs, delta_indices=int(0.1*fondamental/df) + 1)
+i_ve, i_vs = valeurs_correspondantes(i_ve, i_vs, delta_indices=int(0.1 * fondamental / df) + 1)
 f_gain = freq[i_ve]
-gain = S_vs[i_vs]/S_ve[i_ve]
+gain = S_vs[i_vs] / S_ve[i_ve]
 print("%d points de gain, de %.0f à %.0f Hz" % (len(f_gain), f_gain[0], f_gain[-1]))
 
 
 # 4. un passe-bas du premier ordre ajusté sur ces points
 def passe_bas(f, H0, fc):
-    return H0/np.sqrt(1 + (f/fc)**2)
+    return H0 / np.sqrt(1 + (f / fc) ** 2)
 
 
 pfit, pcov = curve_fit(passe_bas, f_gain, gain, p0=[1, 500])

@@ -85,11 +85,19 @@ sert dès qu'on en a.
 ```python
 from tpllg.ajustement import curvefit
 
-pfit, err, chi2 = curvefit(function, datax, datay, p0,
-                           datayerrors=None, dataxerrors=None,
-                           function_derivate=None,
-                           n_var_method_max=10, chi_limit=0.01,
-                           verbose=True, **kwargs)
+pfit, err, chi2 = curvefit(
+    function,
+    datax,
+    datay,
+    p0,
+    datayerrors=None,
+    dataxerrors=None,
+    function_derivate=None,
+    n_var_method_max=10,
+    chi_limit=0.01,
+    verbose=True,
+    **kwargs,
+)
 ```
 
 | Argument | Sens |
@@ -160,15 +168,18 @@ Le cas d'une droite, dix points, incertitudes de 0,05 sur `x` et 0,15 sur
 import numpy as np
 from tpllg.ajustement import curvefit, resume_parametres
 
-def modele(x, a, b):
-    return a*x + b
 
-def modele_derivee(x, a, b):     # dérivée par rapport à x : constante, un nombre suffit
+def modele(x, a, b):
+    return a * x + b
+
+
+def modele_derivee(x, a, b):  # dérivée par rapport à x : constante, un nombre suffit
     return a
+
 
 x = np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9])
 y = np.array([-0.85, -0.42, 0.11, 0.35, 0.84, 1.15, 1.70, 1.95, 2.36, 2.85])
-sigma_x = 0.05                   # la même pour tous les points ; un tableau, une par point, sinon
+sigma_x = 0.05  # la même pour tous les points ; un tableau, une par point, sinon
 sigma_y = 0.15
 
 # 1. tous les points pèsent pareil ; pcov est mise à l'échelle des résidus, chi2 sans objet
@@ -176,11 +187,27 @@ pfit, err, chi2 = curvefit(modele, x, y, p0=[1, 0], verbose=False)
 print("sans incertitudes      ", resume_parametres(("a", "b"), pfit, err).replace("\n", "   "))
 # 2. les incertitudes sur y pèsent les points ; chi2 dit si elles sont justes
 pfit, err, chi2 = curvefit(modele, x, y, p0=[1, 0], datayerrors=sigma_y, verbose=False)
-print("incertitudes sur y     ", resume_parametres(("a", "b"), pfit, err).replace("\n", "   "), "chi2 réduit = %.2f" % chi2)
+print(
+    "incertitudes sur y     ",
+    resume_parametres(("a", "b"), pfit, err).replace("\n", "   "),
+    "chi2 réduit = %.2f" % chi2,
+)
 # 3. incertitudes sur x et y : variance effective, il faut la dérivée
-pfit, err, chi2 = curvefit(modele, x, y, p0=[1, 0], datayerrors=sigma_y,
-                           dataxerrors=sigma_x, function_derivate=modele_derivee, verbose=False)
-print("incertitudes sur x et y", resume_parametres(("a", "b"), pfit, err).replace("\n", "   "), "chi2 réduit = %.2f" % chi2)
+pfit, err, chi2 = curvefit(
+    modele,
+    x,
+    y,
+    p0=[1, 0],
+    datayerrors=sigma_y,
+    dataxerrors=sigma_x,
+    function_derivate=modele_derivee,
+    verbose=False,
+)
+print(
+    "incertitudes sur x et y",
+    resume_parametres(("a", "b"), pfit, err).replace("\n", "   "),
+    "chi2 réduit = %.2f" % chi2,
+)
 ```
 
 ```text
@@ -213,12 +240,16 @@ l'incertitude :
 ```python
 x = np.linspace(0, 5, 20)
 rng = np.random.RandomState(4)
-y = 2*np.exp(-x/1.5) + rng.normal(0, 0.02, x.size)      # le vrai bruit : 0,02
+y = 2 * np.exp(-x / 1.5) + rng.normal(0, 0.02, x.size)  # le vrai bruit : 0,02
 for sigma in (0.02, 0.005, 0.08):
-    pfit, err, chi2 = curvefit(lambda x, a, tau: a*np.exp(-x/tau), x, y, p0=[1, 1],
-                               datayerrors=sigma, verbose=False)
-    print("sigma = %g" % sigma, resume_parametres(("a", "tau"), pfit, err).replace("\n", "   "),
-          "chi2 réduit = %.2f" % chi2)
+    pfit, err, chi2 = curvefit(
+        lambda x, a, tau: a * np.exp(-x / tau), x, y, p0=[1, 1], datayerrors=sigma, verbose=False
+    )
+    print(
+        "sigma = %g" % sigma,
+        resume_parametres(("a", "tau"), pfit, err).replace("\n", "   "),
+        "chi2 réduit = %.2f" % chi2,
+    )
 ```
 
 ```text
@@ -281,9 +312,9 @@ modèle complexe dessus, en un seul jeu de paramètres :
 ```python
 from tpllg.ajustement import curve_fit_complex
 
-pfit, err, chi2 = curve_fit_complex(complex_func, datax, norm, phase, p0,
-                                    datayerrors=None, dataxerrors=None,
-                                    function_derivate=None, **kwargs)
+pfit, err, chi2 = curve_fit_complex(
+    complex_func, datax, norm, phase, p0, datayerrors=None, dataxerrors=None, function_derivate=None, **kwargs
+)
 ```
 
 | Argument | Sens |
@@ -309,15 +340,92 @@ Sur un passe-bande du second ordre, vingt-trois mesures :
 import numpy as np
 from tpllg.ajustement import curve_fit_complex, residus_complexes, resume_parametres
 
-def passe_bande(f, H0, f0, Q):
-    return H0/(1 + 1j*Q*(f/f0 - f0/f))
 
-f = np.array([200, 300, 500, 700, 1000, 1300, 1500, 1700, 1800, 1900, 1950, 2000,
-              2050, 2100, 2200, 2400, 2700, 3300, 5000, 7000, 10000, 15000, 20000.])
-H = np.array([0.09, 0.12, 0.21, 0.30, 0.53, 0.88, 1.33, 2.18, 3.06, 4.21, 4.62, 5.13,
-              4.85, 4.42, 3.16, 1.95, 1.24, 0.72, 0.39, 0.24, 0.16, 0.11, 0.08])
-phi = np.radians([-90, -94, -95, -92, -97, -103, -106, -114, -122, -152, -166, 176,
-                  154, 144, 126, 117, 104, 94, 96, 92, 87, 89, 89])
+def passe_bande(f, H0, f0, Q):
+    return H0 / (1 + 1j * Q * (f / f0 - f0 / f))
+
+
+f = np.array(
+    [
+        200,
+        300,
+        500,
+        700,
+        1000,
+        1300,
+        1500,
+        1700,
+        1800,
+        1900,
+        1950,
+        2000,
+        2050,
+        2100,
+        2200,
+        2400,
+        2700,
+        3300,
+        5000,
+        7000,
+        10000,
+        15000,
+        20000.0,
+    ]
+)
+H = np.array(
+    [
+        0.09,
+        0.12,
+        0.21,
+        0.30,
+        0.53,
+        0.88,
+        1.33,
+        2.18,
+        3.06,
+        4.21,
+        4.62,
+        5.13,
+        4.85,
+        4.42,
+        3.16,
+        1.95,
+        1.24,
+        0.72,
+        0.39,
+        0.24,
+        0.16,
+        0.11,
+        0.08,
+    ]
+)
+phi = np.radians(
+    [
+        -90,
+        -94,
+        -95,
+        -92,
+        -97,
+        -103,
+        -106,
+        -114,
+        -122,
+        -152,
+        -166,
+        176,
+        154,
+        144,
+        126,
+        117,
+        104,
+        94,
+        96,
+        92,
+        87,
+        89,
+        89,
+    ]
+)
 
 pfit, err, chi2 = curve_fit_complex(passe_bande, f, H, phi, p0=[-5, 2000, 6])
 print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
@@ -344,8 +452,9 @@ Les mêmes mesures avec leurs incertitudes, 3 % sur le module et 3° sur la
 phase, ce qu'on lit à l'oscilloscope :
 
 ```python
-pfit, err, chi2 = curve_fit_complex(passe_bande, f, H, phi, p0=[-5, 2000, 6],
-                                    datayerrors=(0.03*H, np.radians(3)), verbose=False)
+pfit, err, chi2 = curve_fit_complex(
+    passe_bande, f, H, phi, p0=[-5, 2000, 6], datayerrors=(0.03 * H, np.radians(3)), verbose=False
+)
 print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
 print("chi2 réduit = %.2f" % chi2)
 ```
@@ -546,13 +655,15 @@ import numpy as np
 from tpllg.acquisition import acquerir
 from tpllg.ajustement import curvefit, resume_parametres
 
-temps, tensions = acquerir([0], 5, te=1e-5, nbpoints=5000, trigger=(0, 2.0, 20, 0))   # front descendant
+temps, tensions = acquerir([0], 5, te=1e-5, nbpoints=5000, trigger=(0, 2.0, 20, 0))  # front descendant
 t, u = temps[0], tensions[0]
 
-def decharge(t, U0, tau, u_inf):
-    return u_inf + (U0 - u_inf)*np.exp(-t/tau)
 
-p0 = [u[0], t[np.argmin(abs(u - u[0]/np.e))], u[-1]]    # lus sur les données
+def decharge(t, U0, tau, u_inf):
+    return u_inf + (U0 - u_inf) * np.exp(-t / tau)
+
+
+p0 = [u[0], t[np.argmin(abs(u - u[0] / np.e))], u[-1]]  # lus sur les données
 pfit, err, chi2 = curvefit(decharge, t, u, p0, datayerrors=0.005)
 print(resume_parametres(("U0", "tau", "u_inf"), pfit, err, unites=("V", "s", "V")))
 print("chi2 réduit = %.2f" % chi2)
@@ -588,11 +699,13 @@ sur l'écart-type :
 ```python
 from tpllg.signaux import frequence_pic
 
+
 def sinus(t, A, f, phi, offset):
-    return A*np.sin(2*np.pi*f*t + phi) + offset
+    return A * np.sin(2 * np.pi * f * t + phi) + offset
+
 
 te = t[1] - t[0]
-p0 = [np.sqrt(2)*u.std(), frequence_pic(u, te), 0, u.mean()]
+p0 = [np.sqrt(2) * u.std(), frequence_pic(u, te), 0, u.mean()]
 pfit, err, chi2 = curvefit(sinus, t, u, p0, datayerrors=0.005, verbose=False)
 ```
 

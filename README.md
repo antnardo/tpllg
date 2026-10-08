@@ -92,8 +92,8 @@ import matplotlib.pyplot as plt
 from tpllg.acquisition import acquerir, sauvegarder
 
 fe = 200_000.0  # échantillonnage en Hz
-temps, tensions = acquerir([0, 1], calibre=5, te=1/fe, nbpoints=6_000)
-sauvegarder("essai", [0, 1], temps, tensions)   # essai_EA0.txt, essai_EA1.txt
+temps, tensions = acquerir([0, 1], calibre=5, te=1 / fe, nbpoints=6_000)
+sauvegarder("essai", [0, 1], temps, tensions)  # essai_EA0.txt, essai_EA1.txt
 
 plt.plot(temps[0], tensions[0], label="EA0")
 plt.plot(temps[1], tensions[1], label="EA1")
@@ -110,8 +110,10 @@ Ajuster un modèle sur des mesures, avec des incertitudes-types sur `y`:
 import numpy as np
 from tpllg.ajustement import curvefit, resume_parametres
 
+
 def modele(x, a, b):
-    return a*x + b
+    return a * x + b
+
 
 x = np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9])
 y = np.array([-0.85, -0.42, 0.11, 0.35, 0.84, 1.15, 1.70, 1.95, 2.36, 2.85])
@@ -138,17 +140,28 @@ import numpy as np
 from tpllg.ajustement import curve_fit_complex, resume_parametres
 from tpllg.bode import tracer_bode
 
-def passe_bande(f, H0, f0, Q):
-    return H0/(1 + 1j*Q*(f/f0 - f0/f))
 
-f = np.array([500, 1000, 1500, 1800, 2000, 2200, 2700, 5000.])       # Hz
-H = np.array([0.21, 0.53, 1.33, 3.06, 5.13, 3.16, 1.24, 0.39])      # |Vs/Ve|
-phi = np.radians([-95, -97, -106, -122, 176, 126, 104, 96])         # radians
+def passe_bande(f, H0, f0, Q):
+    return H0 / (1 + 1j * Q * (f / f0 - f0 / f))
+
+
+f = np.array([500, 1000, 1500, 1800, 2000, 2200, 2700, 5000.0])  # Hz
+H = np.array([0.21, 0.53, 1.33, 3.06, 5.13, 3.16, 1.24, 0.39])  # |Vs/Ve|
+phi = np.radians([-95, -97, -106, -122, 176, 126, 104, 96])  # radians
 
 pfit, err, chi2 = curve_fit_complex(passe_bande, f, norm=H, phase=phi, p0=[-5, 2000, 6])
 print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
-tracer_bode(f, H, phi, passe_bande, pfit, err, noms=("$H_0$", "$f_0$", "$Q$"),
-            unites=("", "Hz", ""), fichier="bode.pdf")
+tracer_bode(
+    f,
+    H,
+    phi,
+    passe_bande,
+    pfit,
+    err,
+    noms=("$H_0$", "$f_0$", "$Q$"),
+    unites=("", "Hz", ""),
+    fichier="bode.pdf",
+)
 ```
 
 ```text

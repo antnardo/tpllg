@@ -20,8 +20,9 @@ automatique.
 ```python
 from tpllg.bode import tracer_bode
 
-fig = tracer_bode(f, norm, phase, modele=None, pfit=None, err=None, noms=None,
-                  unites=None, fichier=None, gain_log=True)
+fig = tracer_bode(
+    f, norm, phase, modele=None, pfit=None, err=None, noms=None, unites=None, fichier=None, gain_log=True
+)
 ```
 
 | Argument | Sens |
@@ -84,43 +85,123 @@ from tpllg.ajustement import curve_fit_complex, residus_complexes, resume_parame
 from tpllg.bode import tracer_bode
 
 # 1. les mesures
-f = [200, 300, 500, 700, 1000, 1300, 1500, 1700, 1800, 1900, 1950, 2000,
-     2050, 2100, 2200, 2400, 2700, 3300, 5000, 7000, 10000, 15000, 20000]      # Hz
-Ve = [1.0]*len(f)                                                              # V crête
-Vs = [0.09, 0.12, 0.21, 0.30, 0.53, 0.88, 1.33, 2.18, 3.06, 4.21, 4.62, 5.13,
-      4.85, 4.42, 3.16, 1.95, 1.24, 0.72, 0.39, 0.24, 0.16, 0.11, 0.08]        # V crête
-phi = [-90, -94, -95, -92, -97, -103, -106, -114, -122, -152, -166, 176,
-       154, 144, 126, 117, 104, 94, 96, 92, 87, 89, 89]                        # degrés, sortie - entrée
+f = [
+    200,
+    300,
+    500,
+    700,
+    1000,
+    1300,
+    1500,
+    1700,
+    1800,
+    1900,
+    1950,
+    2000,
+    2050,
+    2100,
+    2200,
+    2400,
+    2700,
+    3300,
+    5000,
+    7000,
+    10000,
+    15000,
+    20000,
+]  # Hz
+Ve = [1.0] * len(f)  # V crête
+Vs = [
+    0.09,
+    0.12,
+    0.21,
+    0.30,
+    0.53,
+    0.88,
+    1.33,
+    2.18,
+    3.06,
+    4.21,
+    4.62,
+    5.13,
+    4.85,
+    4.42,
+    3.16,
+    1.95,
+    1.24,
+    0.72,
+    0.39,
+    0.24,
+    0.16,
+    0.11,
+    0.08,
+]  # V crête
+phi = [
+    -90,
+    -94,
+    -95,
+    -92,
+    -97,
+    -103,
+    -106,
+    -114,
+    -122,
+    -152,
+    -166,
+    176,
+    154,
+    144,
+    126,
+    117,
+    104,
+    94,
+    96,
+    92,
+    87,
+    89,
+    89,
+]  # degrés, sortie - entrée
 
 f = np.array(f, dtype=float)
-H = np.array(Vs)/np.array(Ve)                # le module de la fonction de transfert
-phi = np.radians(phi)                        # la phase, en radians pour l'ajustement
+H = np.array(Vs) / np.array(Ve)  # le module de la fonction de transfert
+phi = np.radians(phi)  # la phase, en radians pour l'ajustement
 
 
 # 2. le modèle, et les valeurs de départ lues sur les mesures
 def passe_bande(f, H0, f0, Q):
-    return H0/(1 + 1j*Q*(f/f0 - f0/f))
+    return H0 / (1 + 1j * Q * (f / f0 - f0 / f))
 
 
-PARAM_INIT = [-5, 2000, 6]     # H0 : |H| au maximum, signe donné par la phase (180° : négatif)
-                               # f0 : la fréquence du maximum ; Q : f0 sur la largeur à -3 dB
+PARAM_INIT = [-5, 2000, 6]  # H0 : |H| au maximum, signe donné par la phase (180° : négatif)
+# f0 : la fréquence du maximum ; Q : f0 sur la largeur à -3 dB
 
 # 3. l'ajustement simultané du gain et de la phase
-pfit, err, chi2 = curve_fit_complex(passe_bande, f, norm=H, phase=phi, p0=PARAM_INIT,
-                                    datayerrors=(0.03*H, np.radians(3)))   # 3 % sur |H|, 3° sur la phase
+pfit, err, chi2 = curve_fit_complex(
+    passe_bande, f, norm=H, phase=phi, p0=PARAM_INIT, datayerrors=(0.03 * H, np.radians(3))
+)  # 3 % sur |H|, 3° sur la phase
 print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
 print("chi2 réduit = %.2f" % chi2)
 
 # 4. les résidus : l'écart de chaque point à la courbe, sur le module et sur la phase
 res_H, res_phi = residus_complexes(passe_bande, f, H, phi, pfit)
-print("résidus relatifs sur |H| : écart-type %.1f %%, maximum %.1f %%"
-      % (100*res_H.std(), 100*abs(res_H).max()))
-print("résidus sur phi          : écart-type %.1f°, maximum %.1f°"
-      % (res_phi.std(), abs(res_phi).max()))
+print(
+    "résidus relatifs sur |H| : écart-type %.1f %%, maximum %.1f %%"
+    % (100 * res_H.std(), 100 * abs(res_H).max())
+)
+print("résidus sur phi          : écart-type %.1f°, maximum %.1f°" % (res_phi.std(), abs(res_phi).max()))
 
 # 5. la figure, gain au-dessus et phase au-dessous, l'ajustement en légende
-tracer_bode(f, H, phi, passe_bande, pfit, err, noms=("$H_0$", "$f_0$", "$Q$"),
-            unites=("", "Hz", ""), fichier="bode_ajustement.pdf")
+tracer_bode(
+    f,
+    H,
+    phi,
+    passe_bande,
+    pfit,
+    err,
+    noms=("$H_0$", "$f_0$", "$Q$"),
+    unites=("", "Hz", ""),
+    fichier="bode_ajustement.pdf",
+)
 plt.show()
 ```
 
@@ -189,9 +270,9 @@ précis et beaucoup plus long, en `O(N²)`.
 
 ```python
 fs, N, Np = 20000.0, 20000, 100
-t = np.arange(N)/fs
-e = 1.7*np.cos(2*np.pi*np.arange(N)/Np)
-s = 0.5*1.7*np.cos(2*np.pi*np.arange(N)/Np - 1.0)      # G = 0,5, phi = -1 rad
+t = np.arange(N) / fs
+e = 1.7 * np.cos(2 * np.pi * np.arange(N) / Np)
+s = 0.5 * 1.7 * np.cos(2 * np.pi * np.arange(N) / Np - 1.0)  # G = 0,5, phi = -1 rad
 print(gain_std(t, e, s, Np=Np))
 ```
 
@@ -252,34 +333,37 @@ import numpy as np
 from tpllg.sysam import Sysam
 from tpllg.traitement import choix_echantillonnage, gain_std
 
-VOIES = [0, 1]                 # EA0 lit la sortie SA1, EA1 la sortie du filtre
-AMPLITUDE = 1.7                # V ; |H| max × amplitude doit rester sous 10 V
+VOIES = [0, 1]  # EA0 lit la sortie SA1, EA1 la sortie du filtre
+AMPLITUDE = 1.7  # V ; |H| max × amplitude doit rester sous 10 V
 frequences = np.logspace(2, 4, 20)
 
+
 def mesure(can, freq, amplitude, calibres):
-    te, N = choix_echantillonnage(freq, temin=Sysam.TE_MIN_SORTIE, Npmin=100,
-                                  permin=20, Nmax=Sysam.N_MAX, Tmax=1)
-    P = int(freq*N*te)         # période en points : on ajuste la fréquence pour tomber juste
-    freq = P/(N*te)
-    Np = N/P
-    e1 = amplitude*np.cos(2*np.pi*np.arange(N)/Np)
+    te, N = choix_echantillonnage(
+        freq, temin=Sysam.TE_MIN_SORTIE, Npmin=100, permin=20, Nmax=Sysam.N_MAX, Tmax=1
+    )
+    P = int(freq * N * te)  # période en points : on ajuste la fréquence pour tomber juste
+    freq = P / (N * te)
+    Np = N / P
+    e1 = amplitude * np.cos(2 * np.pi * np.arange(N) / Np)
     can.config_entrees(VOIES, calibres)
     can.config_echantillon(te, N)
     temps, (e, s) = can.acquerir_avec_sorties(e1, 0)
-    n1 = int(5*Np)             # on écarte cinq périodes de transitoire
+    n1 = int(5 * Np)  # on écarte cinq périodes de transitoire
     G, phi = gain_std(temps[0][n1:], e[n1:], s[n1:], Np)
     return freq, G, phi
+
 
 resultats = []
 with Sysam() as can:
     for f in frequences:
-        f, G, phi = mesure(can, f, AMPLITUDE, [2, 2])          # une première mesure
-        amplitude = min(AMPLITUDE, AMPLITUDE/G)                # pour ne pas saturer la sortie
-        f, G, phi = mesure(can, f, amplitude, [amplitude*1.1, amplitude*G*1.1])   # calibres ajustés
+        f, G, phi = mesure(can, f, AMPLITUDE, [2, 2])  # une première mesure
+        amplitude = min(AMPLITUDE, AMPLITUDE / G)  # pour ne pas saturer la sortie
+        f, G, phi = mesure(can, f, amplitude, [amplitude * 1.1, amplitude * G * 1.1])  # calibres ajustés
         resultats.append((f, G, phi))
 
 f, G, phi = np.array(resultats).T
-phi = np.unwrap(phi)           # continuité de la phase à 2π près
+phi = np.unwrap(phi)  # continuité de la phase à 2π près
 ```
 
 Quatre choix à comprendre. La fréquence demandée est **ajustée** pour

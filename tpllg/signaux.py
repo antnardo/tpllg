@@ -5,11 +5,19 @@ fréquence, trouver les extremums d'une oscillation amortie et son décrément.
 
 @author: a. marchand
 """
+
 import numpy as np
 from scipy.signal import find_peaks
 
-__all__ = ["fronts_montants", "fronts_descendants", "front_utile",
-           "frequence_pic", "fenetre", "extremums", "decrement_logarithmique"]
+__all__ = [
+    "fronts_montants",
+    "fronts_descendants",
+    "front_utile",
+    "frequence_pic",
+    "fenetre",
+    "extremums",
+    "decrement_logarithmique",
+]
 
 
 def fronts_montants(t, v):
@@ -24,8 +32,8 @@ def fronts_montants(t, v):
     t = np.asarray(t, dtype=float)
     v = np.asarray(v, dtype=float)
     v_bas, v_haut = np.percentile(v, [5, 95])
-    milieu = (v_bas + v_haut)/2
-    marge = (v_haut - v_bas)/4
+    milieu = (v_bas + v_haut) / 2
+    marge = (v_haut - v_bas) / 4
     etat_haut = v[0] > milieu
     fronts = []
     for i in range(1, len(v)):
@@ -35,7 +43,7 @@ def fronts_montants(t, v):
             while j > 0 and v[j] > milieu:
                 j -= 1
             if v[j + 1] != v[j]:
-                tj = t[j] + (milieu - v[j])/(v[j + 1] - v[j])*(t[j + 1] - t[j])
+                tj = t[j] + (milieu - v[j]) / (v[j + 1] - v[j]) * (t[j + 1] - t[j])
             else:
                 tj = t[j]
             fronts.append(tj)
@@ -60,7 +68,7 @@ def front_utile(t, t_fronts, fraction=0.45):
     t_fin = np.asarray(t, dtype=float)[-1]
     periode = np.median(np.diff(t_fronts)) if len(t_fronts) > 1 else t_fin - t_fronts[0]
     for tf in t_fronts:
-        if tf + fraction*periode < t_fin:
+        if tf + fraction * periode < t_fin:
             return tf, periode
     return t_fronts[0], periode
 
@@ -85,13 +93,14 @@ def extremums(v, fe, f, offset=0.0):
     """Les indices des extremums d'une oscillation de fréquence `f`, en
     valeur absolue autour de `offset`, séparés d'au moins 0,4 période."""
     v = np.asarray(v, dtype=float)
-    pics, _ = find_peaks(np.abs(v - offset), distance=max(1, int(0.4*fe/f)))
+    pics, _ = find_peaks(np.abs(v - offset), distance=max(1, int(0.4 * fe / f)))
     return pics
 
 
 def decrement_logarithmique(t_pics, v_pics, offset=0.0):
     """Le taux d'amortissement alpha d'une enveloppe exp(-alpha t), par
     régression du logarithme des amplitudes des extremums."""
-    pente, _ = np.polyfit(np.asarray(t_pics, dtype=float),
-                          np.log(np.abs(np.asarray(v_pics, dtype=float) - offset)), 1)
+    pente, _ = np.polyfit(
+        np.asarray(t_pics, dtype=float), np.log(np.abs(np.asarray(v_pics, dtype=float) - offset)), 1
+    )
     return -pente

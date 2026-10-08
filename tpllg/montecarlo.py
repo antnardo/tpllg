@@ -18,6 +18,7 @@ montecarlo de dataanalysis (2018), refondu.
 
 @author: a. marchand
 """
+
 from numbers import Number
 
 import matplotlib.pyplot as plt
@@ -32,7 +33,7 @@ class Point:
     `Point(tirage=…)`. `val` et `u` sont la moyenne et l'écart-type des
     tirages ; le tirage n'est fait qu'à la première demande."""
 
-    NN = 100000     # nombre de tirages par défaut
+    NN = 100000  # nombre de tirages par défaut
 
     def __init__(self, val=None, u=None, N=None, tirage=None):
         if tirage is not None:
@@ -83,7 +84,7 @@ class Point:
         """L'intervalle qui contient `niveau` des tirages, centré en probabilité :
         (bas, haut). À 68,27 % c'est l'équivalent de ± un écart-type, et il
         dit si la loi est dissymétrique."""
-        marge = 100*(1 - niveau)/2
+        marge = 100 * (1 - niveau) / 2
         return tuple(np.percentile(self.tirage, [marge, 100 - marge]))
 
     def __repr__(self):
@@ -96,17 +97,16 @@ class Point:
             fig, ax = plt.subplots()
         else:
             fig = plt.gcf()
-        x1, x2 = self.val - largeur*self.u, self.val + largeur*self.u
+        x1, x2 = self.val - largeur * self.u, self.val + largeur * self.u
         bins = np.linspace(x1, x2, nbins, endpoint=True)
         n, _, patches = ax.hist(self.tirage, bins=bins, density=True)
-        M = max(n)*1.1
-        ax.plot([self.val, self.val], [0, M], '--', label='moyenne=%.2e' % self.val)
-        L = ax.plot([self.val - self.u, self.val - self.u], [0, M], '--',
-                    label='écart-type=%.2e' % self.u)
-        ax.plot([self.val + self.u, self.val + self.u], [0, M], '--', color=L[0].get_color())
+        M = max(n) * 1.1
+        ax.plot([self.val, self.val], [0, M], "--", label="moyenne=%.2e" % self.val)
+        L = ax.plot([self.val - self.u, self.val - self.u], [0, M], "--", label="écart-type=%.2e" % self.u)
+        ax.plot([self.val + self.u, self.val + self.u], [0, M], "--", color=L[0].get_color())
         x = np.linspace(x1, x2, 500)
-        y = np.exp(-((x - self.val)/self.u)**2/2)/(self.u*np.sqrt(2*np.pi))
-        ax.plot(x, y, label='loi normale')
+        y = np.exp(-(((x - self.val) / self.u) ** 2) / 2) / (self.u * np.sqrt(2 * np.pi))
+        ax.plot(x, y, label="loi normale")
         ax.legend()
         return fig, ax, n, bins, patches
 
@@ -137,10 +137,10 @@ class Point:
         return self._op(other, lambda a, b: a - b)
 
     def __mul__(self, other):
-        return self._op(other, lambda a, b: a*b)
+        return self._op(other, lambda a, b: a * b)
 
     def __truediv__(self, other):
-        return self._op(other, lambda a, b: a/b)
+        return self._op(other, lambda a, b: a / b)
 
     def __pow__(self, other):
         return self._op(other, lambda a, b: a**b)
@@ -152,10 +152,10 @@ class Point:
         return self._op(other, lambda a, b: b - a)
 
     def __rmul__(self, other):
-        return self._op(other, lambda a, b: b*a)
+        return self._op(other, lambda a, b: b * a)
 
     def __rtruediv__(self, other):
-        return self._op(other, lambda a, b: b/a)
+        return self._op(other, lambda a, b: b / a)
 
     def __rpow__(self, other):
         return self._op(other, lambda a, b: b**a)
@@ -181,7 +181,7 @@ class Point:
                 return NotImplemented
             tirages.append(autre)
         resultat = ufunc(*tirages, **kwargs)
-        if isinstance(resultat, tuple):            # np.modf, np.divmod : plusieurs sorties
+        if isinstance(resultat, tuple):  # np.modf, np.divmod : plusieurs sorties
             return tuple(Point(tirage=r) for r in resultat)
         return Point(tirage=resultat)
 
@@ -236,10 +236,10 @@ class SerieLineaire:
         """y = ax + b par moindres carrés : a = Cov(x,y)/V(x), b = <y> - a<x>.
         Sur des tableaux 1D, ou 2D (un jeu de mesures par ligne)."""
         xm, ym = x.mean(axis=-1), y.mean(axis=-1)
-        cov = (x*y).mean(axis=-1) - xm*ym
-        var = (x*x).mean(axis=-1) - xm*xm
-        a = cov/var
-        b = ym - a*xm
+        cov = (x * y).mean(axis=-1) - xm * ym
+        var = (x * x).mean(axis=-1) - xm * xm
+        a = cov / var
+        b = ym - a * xm
         return a, b
 
     def ajuster(self):

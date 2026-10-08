@@ -11,6 +11,7 @@ Docstrings détaillées
 Pour plus de détails :
 https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/interpy/interpy.html
 """
+
 import numpy as np
 
 try:
@@ -35,7 +36,7 @@ class Sysam(pycan.Sysam):
         configuration des voies (optionnel)
         ex: Sysam(voies=[0, 1])
         et pas besoin de mettre 'SP5', par défaut.
-        
+
         le choix du calibre : si on ne met qu'une valeur,
         elle s'applique à toutes les voies
 
@@ -70,18 +71,19 @@ class Sysam(pycan.Sysam):
 
     RAM 512ko
     Nb de points max par acquisition = 2**18 = 262144
-    
+
     12 bits ±1LSB, binaire naturel
     Non linéarité : ±1LSB sur la pleine échelle ±10V
     Calibre 0.1, 0.2, 1, 2, 5, 10 (ATTENTION, pycanum n'a pas accès à tous)
     Impédance entrée 1 Mohm
 
     """
+
     TE_MIN_SORTIE = 2e-7
     TE_MIN_DIRECT = 1e-7
     TE_MIN_MULTIPLEX = 2e-6
     N_MAX = 262_144
-    CALIBRES = [.2, 1, 5, 10]
+    CALIBRES = [0.2, 1, 5, 10]
     MODULES_ANALOG = {0: (0, 4), 1: (1, 5), 2: (2, 6), 3: (3, 7)}
 
     @classmethod
@@ -92,14 +94,14 @@ class Sysam(pycan.Sysam):
         for cal in cls.CALIBRES:
             if cal >= valeur:
                 return cal
-    
+
     @classmethod
     def te_min(cls, voies):
         """détermine si on fonctionne en mode direct ou multiplexé
         si les deux entrées d’un des 4 modules de conversion sont activées
         simultanément en mode simple
         """
-        modules = [0]*len(cls.MODULES_ANALOG)
+        modules = [0] * len(cls.MODULES_ANALOG)
         for v in voies:
             for k, EA in cls.MODULES_ANALOG.items():
                 if v in EA:
@@ -166,8 +168,8 @@ class Sysam(pycan.Sysam):
             diff = []
         if calibres is None:
             calibres = CAL_DEFAUT
-        if not hasattr(calibres, '__len__'):
-            calibres = [calibres]*len(voies)
+        if not hasattr(calibres, "__len__"):
+            calibres = [calibres] * len(voies)
         calibres = [float(c) for c in np.nan_to_num(calibres, nan=CAL_DEFAUT)]
         calibres = [c if c > 0 else CAL_DEFAUT for c in calibres]
         super().config_entrees(voies, calibres, diff)
@@ -181,12 +183,12 @@ class Sysam(pycan.Sysam):
                 MIN = 1e-7 pour les entrées 1 à 4
             nbpoints: nombre de points à acquérir
         """
-        return super().config_echantillon(techant*MICROSECONDES, nbpoints)
+        return super().config_echantillon(techant * MICROSECONDES, nbpoints)
 
     def config_quantification(self, quantification):
         """Configuration du nombre de bits de la quantification.
 
-            nbits (int<=12): nombre de bits utilisés pour la quantification.
+        nbits (int<=12): nombre de bits utilisés pour la quantification.
         """
         return super().config_quantification(quantification)
 
@@ -205,7 +207,7 @@ class Sysam(pycan.Sysam):
         """
         super().acquerir()  # ne sort que quand c'est fini
         return self.temps(reduction), self.entrees(reduction)
-    
+
     def acquerir_avec_sorties(self, sortie1=0, sortie2=0):
         """Acquisition avec une utilisation simultanée et synchrone des
         sorties.
@@ -225,7 +227,7 @@ class Sysam(pycan.Sysam):
                 voie correspondante.
             tableau ndaray (numpy): Chaque ligne du tableau fournit
                 les tensions (en V) de la voie correspondante.
-        
+
         Le nombre de points total utilisable pour les entrées et sorties
         est limité par la mémoire RAM du SysamSP5. Il est de 0x3FFFF,
         soit 262142.

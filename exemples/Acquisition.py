@@ -20,6 +20,7 @@ Acquisition temporelles via Sysam SP5 des entrées analogiques EA
 
 CAN 12 bits
 """
+
 from tpllg.sysam import Sysam
 from tpllg.fft import spectre
 
@@ -37,11 +38,11 @@ CALIBRE = 1
 ## PARAMETRES D'ÉCHANTILLONNAGE
 # Fréquence d'échantillonnage en Hz (max 10 MHz)
 fe = 20000.0
-te = 1/fe
+te = 1 / fe
 # durée de l'acquisition en s
 T = 1.0
 # nombre d'échantillons (max 130000 environ)
-N = int(fe*T)
+N = int(fe * T)
 
 print(f"{fe=:.1e}Hz fréquence d'échantillonnage")
 print(f"{te=:.1e}s pas de temps d'échantillonnage")
@@ -73,7 +74,7 @@ for i in range(len(ENTREES)):
     plt.savefig(f"{FILE_PREFIX:s}_{i:02d}.pdf")
 
     # il peut y avoir une différence avec les valeurs spécifiées au départ :
-    fe = 1/(t0[1] - t0[0])
+    fe = 1 / (t0[1] - t0[0])
 
     # calcul des spectres
     f0, a0 = spectre(t0, u0)

@@ -1,3 +1,19 @@
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
+
+# Les métadonnées du paquet sont dans setup.cfg. Ce qui suit ne règle que les
+# outils de développement ; target-version suit le plus vieux Python des postes
+# de TP (voir README, Prérequis).
+
+[tool.ruff]
+line-length = 110
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "C4", "RET", "PTH"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"

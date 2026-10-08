@@ -11,6 +11,7 @@ une ligne par voie, temps en secondes), un bruit de quantification.
 Écrit d'après pycanum de Frédéric Legrand :
 https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/interpy/interpy.html
 """
+
 import numpy
 import time
 
@@ -83,31 +84,33 @@ class Sysam:
         if self.verbose:
             print(f"[SYSAM] Quantification sur {quantification} bits")
 
-    def config_trigger(
-        self, voie, seuil, montant=1, pretrigger=1, pretriggerSouple=0, hysteresis=0
-    ):
+    def config_trigger(self, voie, seuil, montant=1, pretrigger=1, pretriggerSouple=0, hysteresis=0):
         # sysam.can_config_trigger(
         #    0, voie, seuil, montant, pretrigger, pretriggerSouple, hysteresis
-        #)
+        # )
         if self.verbose:
             if voie < 0:
                 print("[SYSAM] Déclenchement désactivé")
             else:
-                print(f"[SYSAM] Déclenchement sur EA{voie}, seuil {seuil} V, front "
-                      f"{'montant' if montant else 'descendant'}, {pretrigger} points avant"
-                      f"{', souple' if pretriggerSouple else ''}"
-                      f"{', hystérésis' if hysteresis else ''}")
+                print(
+                    f"[SYSAM] Déclenchement sur EA{voie}, seuil {seuil} V, front "
+                    f"{'montant' if montant else 'descendant'}, {pretrigger} points avant"
+                    f"{', souple' if pretriggerSouple else ''}"
+                    f"{', hystérésis' if hysteresis else ''}"
+                )
 
     def config_trigger_externe(self, pretrigger=1, pretriggerSouple=0):
         # sysam.can_config_trigger(1, 0, 0, 1, pretrigger, pretriggerSouple, 0)
         if self.verbose:
-            print(f"[SYSAM] Déclenchement externe, {pretrigger} points avant"
-                  f"{', souple' if pretriggerSouple else ''}")
+            print(
+                f"[SYSAM] Déclenchement externe, {pretrigger} points avant"
+                f"{', souple' if pretriggerSouple else ''}"
+            )
 
     def acquerir(self):
         if self.verbose:
             print("[SYSAM] Acquisition...")
-        time.sleep(self.techant*self.nbpoints/1e6)
+        time.sleep(self.techant * self.nbpoints / 1e6)
         # sysam.can_acquerir()
         if self.verbose:
             print("[SYSAM] Terminée.")
@@ -132,7 +135,7 @@ class Sysam:
         # return sysam.can_temps(reduction)
         # comme pycanum : un tableau 2D de double, une ligne par voie, en secondes
         # (techant est en microsecondes), un point sur `reduction`
-        t = numpy.arange(self.nbpoints)*self.techant*1e-6
+        t = numpy.arange(self.nbpoints) * self.techant * 1e-6
         return numpy.tile(t[::reduction], (len(self.voies), 1))
 
     def entrees(self, reduction=1):
@@ -141,9 +144,9 @@ class Sysam:
         # ici un bruit gaussien d'un pas de quantification, arrondi au pas
         entrees = numpy.zeros((len(self.voies), self.nbpoints))
         for i, c in enumerate(self.calibres):
-            pas = 2*c/2**12
+            pas = 2 * c / 2**12
             bruit = numpy.random.normal(0, pas, self.nbpoints)
-            entrees[i] = numpy.round(bruit/pas)*pas
+            entrees[i] = numpy.round(bruit / pas) * pas
         return entrees[:, ::reduction]
 
     def entrees_filtrees(self, reduction=1):
@@ -188,7 +191,7 @@ class Sysam:
         if self.verbose:
             print("[SYSAM] Génération des sorties...")
             print("[SYSAM] Acquisition synchrone...")
-        time.sleep(self.techant*self.nbpoints/1e6)
+        time.sleep(self.techant * self.nbpoints / 1e6)
         # sysam.can_acquerir_avec_sorties(valeurs1, valeurs2)
         if self.verbose:
             print("[SYSAM] Terminée.")
@@ -213,7 +216,7 @@ class Sysam:
         NotImplemented
 
     def lire(self):
-        #return sysam.can_lire()
+        # return sysam.can_lire()
         NotImplemented
 
     def portC_config(self, bit, etat):
@@ -225,7 +228,7 @@ class Sysam:
         NotImplemented
 
     def portC_lire(self, bit):
-        return 0 # sysam.can_portC_lire(bit)
+        return 0  # sysam.can_portC_lire(bit)
 
     def portB_config(self, bit, etat):
         # sysam.can_portB_config(bit, etat)
@@ -235,22 +238,21 @@ class Sysam:
         # sysam.can_portB_ecrire(bit, etat)
         NotImplemented
 
-
     def portB_lire(self, bit):
-        #return sysam.can_portB_lire(bit)
+        # return sysam.can_portB_lire(bit)
         return 0
 
     def config_filtre(self, listeA, listeB):
         # sysam.can_config_filtre(
         #    numpy.array(listeA, dtype=numpy.double),
         #    numpy.array(listeB, dtype=numpy.double),
-        #)
+        # )
         NotImplemented
 
     def config_compteur(self, entree, front_montant, front_descend, hysteresis, duree):
         # sysam.can_config_compteur(
         #    entree, front_montant, front_descend, hysteresis, duree
-        #)
+        # )
         NotImplemented
 
     def compteur(self):

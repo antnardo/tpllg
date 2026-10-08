@@ -60,9 +60,9 @@ façon de le voir est de regarder le tracé.
 ```python
 from tpllg.sysam import Sysam
 
-with Sysam([0, 1], 5) as can:        # EA0 et EA1, calibre 5 V sur les deux
-    ...                              # can est ouvert ici
-                                     # et fermé là, même en cas d'erreur
+with Sysam([0, 1], 5) as can:  # EA0 et EA1, calibre 5 V sur les deux
+    ...  # can est ouvert ici
+    # et fermé là, même en cas d'erreur
 ```
 
 `Sysam(voies=None, calibres=None, diff=None)` ouvre la centrale et, si des
@@ -179,9 +179,9 @@ from tpllg.sysam import Sysam
 
 ENTREES = [0, 1]
 CALIBRE = 5
-fe = 100000.0                 # Hz
-T = 0.05                      # s
-te, N = 1/fe, int(fe*T)
+fe = 100000.0  # Hz
+T = 0.05  # s
+te, N = 1 / fe, int(fe * T)
 
 with Sysam(ENTREES, CALIBRE) as can:
     can.config_echantillon(te, N)
@@ -190,7 +190,7 @@ with Sysam(ENTREES, CALIBRE) as can:
 print(temps.shape, tensions.shape)
 for ea, t, u in zip(ENTREES, temps, tensions):
     np.savetxt("essai_EA%d.txt" % ea, [t, u])
-    plt.plot(t*1e3, u, label="EA%d" % ea)
+    plt.plot(t * 1e3, u, label="EA%d" % ea)
 plt.xlabel("t (ms)")
 plt.ylabel("u (V)")
 plt.legend()
@@ -208,8 +208,7 @@ L'acquisition démarre normalement à l'appel, donc n'importe où dans le
 signal. La centrale sait attendre qu'une voie passe par un seuil :
 
 ```python
-can.config_trigger(voie, seuil, montant=1, pretrigger=1,
-                   pretriggerSouple=0, hysteresis=0)
+can.config_trigger(voie, seuil, montant=1, pretrigger=1, pretriggerSouple=0, hysteresis=0)
 ```
 
 | Argument | Sens |
@@ -230,8 +229,8 @@ même session ; `config_trigger(-1, 0)` le retire.
 
 ```python
 with Sysam([0, 1], 5) as can:
-    can.config_echantillon(1/200000, 6000)
-    can.config_trigger(0, 0.0, montant=1, pretrigger=50)   # EA0 passe par 0 V en montant
+    can.config_echantillon(1 / 200000, 6000)
+    can.config_trigger(0, 0.0, montant=1, pretrigger=50)  # EA0 passe par 0 V en montant
     temps, tensions = can.acquerir()
 ```
 
@@ -270,11 +269,11 @@ sorties, est limité par la mémoire de la carte, 262 142.
 import numpy as np
 from tpllg.sysam import Sysam
 
-N, Np = 20000, 100                              # points, points par période
-e1 = 1.7*np.cos(2*np.pi*np.arange(N)/Np)        # une sinusoïde d'amplitude 1,7 V
-with Sysam([0, 1], [2, 2]) as can:              # calibres 5 V en pratique
-    can.config_echantillon(1e-5, N)             # 100 points par période à 1 kHz
-    temps, tensions = can.acquerir_avec_sorties(e1, 0)   # SA1 : e1 ; SA2 : 0 V
+N, Np = 20000, 100  # points, points par période
+e1 = 1.7 * np.cos(2 * np.pi * np.arange(N) / Np)  # une sinusoïde d'amplitude 1,7 V
+with Sysam([0, 1], [2, 2]) as can:  # calibres 5 V en pratique
+    can.config_echantillon(1e-5, N)  # 100 points par période à 1 kHz
+    temps, tensions = can.acquerir_avec_sorties(e1, 0)  # SA1 : e1 ; SA2 : 0 V
 ```
 
 Un câble relie la sortie SA1 à l'entrée EA0 pour lire ce qu'on envoie
@@ -332,10 +331,10 @@ front montant, ou `(voie, seuil, pretrigger, montant)`.
 lignes, le temps puis les tensions ; `np.loadtxt` les relit :
 
 ```python
-temps, tensions = acquerir([0, 1], 5, 1/200000, 6000, trigger=(0, 0.0, 50))
-sauvegarder("echelon", [0, 1], temps, tensions)      # echelon_EA0.txt, echelon_EA1.txt
+temps, tensions = acquerir([0, 1], 5, 1 / 200000, 6000, trigger=(0, 0.0, 50))
+sauvegarder("echelon", [0, 1], temps, tensions)  # echelon_EA0.txt, echelon_EA1.txt
 
-t, u = np.loadtxt("echelon_EA1.txt")                 # plus tard, sans centrale
+t, u = np.loadtxt("echelon_EA1.txt")  # plus tard, sans centrale
 ```
 
 Une acquisition par appel : `acquerir` rouvre la centrale à chaque fois.
@@ -370,7 +369,7 @@ les fabriquer, comme la centrale les rendrait, derrière un interrupteur :
 SIMULATION = True
 
 if SIMULATION:
-    temps, tensions = acquisition_simulee(te, N)    # une fonction du script
+    temps, tensions = acquisition_simulee(te, N)  # une fonction du script
 else:
     temps, tensions = acquerir(ENTREES, CALIBRE, te, N)
 ```
@@ -400,7 +399,7 @@ ENTREES = [0, 1]
 CALIBRE = 5
 fe = 100000.0
 T = 0.05
-te, N = 1/fe, int(fe*T)
+te, N = 1 / fe, int(fe * T)
 
 temps, tensions = acquerir(ENTREES, CALIBRE, te, N)
 sauvegarder(PREFIXE, ENTREES, temps, tensions)
@@ -408,7 +407,7 @@ print("acquis :", temps.shape, "points par voie, de", temps[0][0], "à", temps[0
 
 fig, axes = plt.subplots(len(ENTREES), sharex=True)
 for ax, ea, t, u in zip(axes, ENTREES, temps, tensions):
-    ax.plot(t*1e3, u)
+    ax.plot(t * 1e3, u)
     ax.set_ylabel("EA%d (V)" % ea)
     ax.grid()
 axes[-1].set_xlabel("t (ms)")
@@ -435,9 +434,9 @@ l'acquisition, et le régime libre qui le suit en entier :
 ```python
 from tpllg.acquisition import acquerir, sauvegarder
 
-fe = 200000.0             # cent points par pseudo-période à 2 kHz
-T = 0.03                  # trois périodes d'un créneau à 100 Hz
-temps, tensions = acquerir([0, 1], 5, 1/fe, int(fe*T), trigger=(0, 0.0, 50))
+fe = 200000.0  # cent points par pseudo-période à 2 kHz
+T = 0.03  # trois périodes d'un créneau à 100 Hz
+temps, tensions = acquerir([0, 1], 5, 1 / fe, int(fe * T), trigger=(0, 0.0, 50))
 sauvegarder("echelon", [0, 1], temps, tensions)
 ```
 
@@ -464,7 +463,7 @@ d'une résistance de mesure par exemple, se mesure entre EA0 et EA4 en mode
 différentiel :
 
 ```python
-with Sysam([0], 1, diff=[0]) as can:      # EA0 − EA4, calibre 1 V
+with Sysam([0], 1, diff=[0]) as can:  # EA0 − EA4, calibre 1 V
     can.config_echantillon(1e-4, 10000)
     temps, tensions = can.acquerir()
 ```

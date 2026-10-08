@@ -5,6 +5,7 @@ gain au-dessus et phase au-dessous.
 
 @author: a. marchand
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -20,8 +21,9 @@ def phase_0_360(phase):
     return np.degrees(phase) % 360
 
 
-def tracer_bode(f, norm, phase, modele=None, pfit=None, err=None, noms=None,
-                unites=None, fichier=None, gain_log=True):
+def tracer_bode(
+    f, norm, phase, modele=None, pfit=None, err=None, noms=None, unites=None, fichier=None, gain_log=True
+):
     """Les points (f, |H|, phi) et, si `modele` et `pfit` sont donnés, la
     courbe ajustée avec les valeurs des paramètres dans la légende.
 

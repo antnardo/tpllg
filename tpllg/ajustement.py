@@ -15,11 +15,18 @@ Ajustements de courbes : outils génériques autour de scipy.optimize.curve_fit.
 
 @author: a. marchand
 """
+
 import numpy as np
 from scipy import optimize
 
-__all__ = ["curvefit", "curve_fit_complex", "ecarts_types", "formater", "resume_parametres",
-           "residus_complexes"]
+__all__ = [
+    "curvefit",
+    "curve_fit_complex",
+    "ecarts_types",
+    "formater",
+    "resume_parametres",
+    "residus_complexes",
+]
 
 
 def _tableau(valeur, forme):
@@ -32,9 +39,11 @@ def _vectorisee(f, datax, p0, dtype=float):
     """f(x, *p) rendue en tableau de la forme de x, quoi que f fasse d'un
     tableau : une fonction écrite avec math.exp est appelée point par point,
     une dérivée constante (`return a`) est étendue à tous les points."""
+
     def etendue(g):
         def h(x, *p):
             return np.broadcast_to(np.asarray(g(x, *p), dtype=dtype), np.shape(x))
+
         return h
 
     try:
@@ -46,9 +55,20 @@ def _vectorisee(f, datax, p0, dtype=float):
     return etendue(np.vectorize(f, otypes=[dtype]))
 
 
-def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, function_derivate=None,  # noqa C901
-             n_var_method_max=10, chi_limit=0.01, verbose=True, **kwargs):
-    """ Curve fitting wrapped up around scipy.optimize.curve_fit with better error management
+def curvefit(
+    function,
+    datax,
+    datay,
+    p0,
+    datayerrors=None,
+    dataxerrors=None,
+    function_derivate=None,  # noqa C901
+    n_var_method_max=10,
+    chi_limit=0.01,
+    verbose=True,
+    **kwargs,
+):
+    """Curve fitting wrapped up around scipy.optimize.curve_fit with better error management
 
     Arguments:
         - function must be called as function(datax, a, b) where p0 = [a, b].
@@ -102,9 +122,11 @@ def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, fun
     datay = np.asarray(datay, dtype=float)
     p0 = np.asarray(p0, dtype=float)
     if dataxerrors is not None and function_derivate is None:
-        raise NotImplementedError('Pour utiliser des erreurs en x, il faut indiquer '
-                                  'la dérivée de la fonction par rapport à x '
-                                  '(effective variance method)')
+        raise NotImplementedError(
+            "Pour utiliser des erreurs en x, il faut indiquer "
+            "la dérivée de la fonction par rapport à x "
+            "(effective variance method)"
+        )
     if dataxerrors is not None and datayerrors is None:
         raise NotImplementedError("Mettre les erreurs en y lorsqu'il n'y en a qu'un type")
     assert type(n_var_method_max) is int and n_var_method_max > 0
@@ -123,13 +145,14 @@ def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, fun
 
     def calc_chi_sq_red(p):
         if datayerrors is None:
-            return (errfunc(p, datax, datay)**2).sum()/(len(datay)-len(p0))
+            return (errfunc(p, datax, datay) ** 2).sum() / (len(datay) - len(p0))
         elif dataxerrors is None:
-            return ((errfunc(p, datax, datay)/datayerrors)**2).sum()/(len(datay)-len(p0))
+            return ((errfunc(p, datax, datay) / datayerrors) ** 2).sum() / (len(datay) - len(p0))
         else:
-            return (errfunc(p, datax, datay)**2
-                    / (datayerrors**2+dataxerrors**2*function_derivate(datax, *p)**2)
-                    ).sum()/(len(datay)-len(p0))
+            return (
+                errfunc(p, datax, datay) ** 2
+                / (datayerrors**2 + dataxerrors**2 * function_derivate(datax, *p) ** 2)
+            ).sum() / (len(datay) - len(p0))
 
     # Fitting
     if dataxerrors is not None:  # and datayerrors is not None and function_derivate is not None
@@ -138,18 +161,19 @@ def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, fun
             print("Effective variance method")
         pfit = p0.copy()
         chi = calc_chi_sq_red(pfit)
-        chi_prev = chi+2*chi_limit
+        chi_prev = chi + 2 * chi_limit
         i = 0
         # loop where sigma is recalculted with new guesses of p
-        while chi < chi_prev and chi_prev-chi > chi_limit and i < n_var_method_max:
-            sigma = np.sqrt(datayerrors**2 + dataxerrors**2 * function_derivate(datax, *pfit)**2)
+        while chi < chi_prev and chi_prev - chi > chi_limit and i < n_var_method_max:
+            sigma = np.sqrt(datayerrors**2 + dataxerrors**2 * function_derivate(datax, *pfit) ** 2)
             pfit, pcov = optimize.curve_fit(
-                function, datax, datay, p0=pfit, sigma=sigma, absolute_sigma=True, **kwargs)
+                function, datax, datay, p0=pfit, sigma=sigma, absolute_sigma=True, **kwargs
+            )
             chi_prev = chi
             chi = calc_chi_sq_red(pfit)
             i += 1
         if chi_prev < chi and verbose:
-            print('Warning : effective variance method not efficient. Try guessing a better p0.')
+            print("Warning : effective variance method not efficient. Try guessing a better p0.")
     else:
         # Least square method
         if verbose:
@@ -157,17 +181,17 @@ def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, fun
         # sans incertitudes fournies, pcov est mise à l'échelle des résidus,
         # comme le fait curve_fit ; avec, elle est absolue
         pfit, pcov = optimize.curve_fit(
-            function, datax, datay, p0=p0, sigma=datayerrors,
-            absolute_sigma=datayerrors is not None, **kwargs)
+            function, datax, datay, p0=p0, sigma=datayerrors, absolute_sigma=datayerrors is not None, **kwargs
+        )
     # curve_fit notes :
     # absolute_sigma = bool, optional :
-        # If True, sigma is used in an absolute sense and the estimated parameter covariance pcov reflects these
-        # absolute values.
-        # If False, only the relative magnitudes of the sigma values matter. The returned parameter covariance matrix
-        # pcov is based on scaling sigma by a constant factor. This constant is set by demanding that the reduced
-        # chisq for the optimal parameters popt when using the scaled sigma equals unity. In other words, sigma is
-        # scaled to match the sample variance of the residuals after the fit.
-        # Mathematically, pcov(absolute_sigma=False) = pcov(absolute_sigma=True) * chisq(popt)/(M-N)
+    # If True, sigma is used in an absolute sense and the estimated parameter covariance pcov reflects these
+    # absolute values.
+    # If False, only the relative magnitudes of the sigma values matter. The returned parameter covariance matrix
+    # pcov is based on scaling sigma by a constant factor. This constant is set by demanding that the reduced
+    # chisq for the optimal parameters popt when using the scaled sigma equals unity. In other words, sigma is
+    # scaled to match the sample variance of the residuals after the fit.
+    # Mathematically, pcov(absolute_sigma=False) = pcov(absolute_sigma=True) * chisq(popt)/(M-N)
 
     # Errors on pfit parameters
     err = np.sqrt(np.diag(pcov))
@@ -176,8 +200,9 @@ def curvefit(function, datax, datay, p0, datayerrors=None, dataxerrors=None, fun
     return pfit, err, chi_sq_reduced
 
 
-def curve_fit_complex(complex_func, datax, norm, phase, p0, datayerrors=None, dataxerrors=None,
-                      function_derivate=None, **kwargs):
+def curve_fit_complex(
+    complex_func, datax, norm, phase, p0, datayerrors=None, dataxerrors=None, function_derivate=None, **kwargs
+):
     """Ajuste un modèle complexe à des mesures données par leur module `norm`
     et leur phase `phase` (radians) : les parties réelle et imaginaire sont
     empilées bout à bout et ajustées d'un seul coup par curvefit, dont c'est
@@ -196,7 +221,7 @@ def curve_fit_complex(complex_func, datax, norm, phase, p0, datayerrors=None, da
     p0 = np.asarray(p0, dtype=float)
     n = datax.size
     x_empile = np.hstack((datax, datax))
-    y_empile = np.hstack((norm*np.cos(phase), norm*np.sin(phase)))
+    y_empile = np.hstack((norm * np.cos(phase), norm * np.sin(phase)))
 
     def empile(f):
         f = _vectorisee(f, datax, p0, dtype=complex)
@@ -204,6 +229,7 @@ def curve_fit_complex(complex_func, datax, norm, phase, p0, datayerrors=None, da
         def g(x, *p):
             y = f(x[:n], *p)
             return np.hstack((np.real(y), np.imag(y)))
+
         return g
 
     erreurs = None
@@ -211,16 +237,26 @@ def curve_fit_complex(complex_func, datax, norm, phase, p0, datayerrors=None, da
         try:
             u_norm, u_phase = (_tableau(u, norm.shape) for u in datayerrors)
         except (TypeError, ValueError):
-            raise ValueError("datayerrors : le couple (u_norm, u_phase) des incertitudes sur le "
-                             "module et sur la phase, chacune un nombre ou un tableau")
-        u_re = np.hypot(np.cos(phase)*u_norm, norm*np.sin(phase)*u_phase)
-        u_im = np.hypot(np.sin(phase)*u_norm, norm*np.cos(phase)*u_phase)
+            raise ValueError(
+                "datayerrors : le couple (u_norm, u_phase) des incertitudes sur le "
+                "module et sur la phase, chacune un nombre ou un tableau"
+            )
+        u_re = np.hypot(np.cos(phase) * u_norm, norm * np.sin(phase) * u_phase)
+        u_im = np.hypot(np.sin(phase) * u_norm, norm * np.cos(phase) * u_phase)
         erreurs = np.hstack((u_re, u_im))
     if dataxerrors is not None:
-        dataxerrors = np.hstack([_tableau(dataxerrors, datax.shape)]*2)
+        dataxerrors = np.hstack([_tableau(dataxerrors, datax.shape)] * 2)
     derivee = empile(function_derivate) if function_derivate is not None else None
-    return curvefit(empile(complex_func), x_empile, y_empile, p0, datayerrors=erreurs,
-                    dataxerrors=dataxerrors, function_derivate=derivee, **kwargs)
+    return curvefit(
+        empile(complex_func),
+        x_empile,
+        y_empile,
+        p0,
+        datayerrors=erreurs,
+        dataxerrors=dataxerrors,
+        function_derivate=derivee,
+        **kwargs,
+    )
 
 
 def ecarts_types(pcov):
@@ -234,7 +270,7 @@ def formater(valeur, sigma=None, unite=""):
     unite = f" {unite}" if unite else ""
     if sigma is None or not np.isfinite(sigma) or sigma <= 0:
         return f"{valeur:.4g}{unite}"
-    decimales = 1 - int(np.floor(np.log10(sigma)))    # négatif au-delà de 100
+    decimales = 1 - int(np.floor(np.log10(sigma)))  # négatif au-delà de 100
     valeur, sigma = round(valeur, decimales), round(sigma, decimales)
     decimales = max(0, decimales)
     return f"{valeur:.{decimales}f} ± {sigma:.{decimales}f}{unite}"
@@ -246,13 +282,12 @@ def resume_parametres(noms, pfit, err=None, unites=None):
     curvefit), ou la matrice de covariance que rend scipy.optimize.curve_fit,
     dont on prend la racine de la diagonale ; sans, les valeurs seules."""
     if err is None:
-        sigmas = [None]*len(pfit)
+        sigmas = [None] * len(pfit)
     else:
         err = np.asarray(err, dtype=float)
         sigmas = ecarts_types(err) if err.ndim == 2 else err
-    unites = unites if unites is not None else [""]*len(pfit)
-    return "\n".join(f"{nom} = {formater(v, s, u)}"
-                     for nom, v, s, u in zip(noms, pfit, sigmas, unites))
+    unites = unites if unites is not None else [""] * len(pfit)
+    return "\n".join(f"{nom} = {formater(v, s, u)}" for nom, v, s, u in zip(noms, pfit, sigmas, unites))
 
 
 def residus_complexes(complex_func, x, norm, phase, pfit):
@@ -261,6 +296,6 @@ def residus_complexes(complex_func, x, norm, phase, pfit):
     y = complex_func(np.asarray(x, dtype=float), *pfit)
     norm = np.asarray(norm, dtype=float)
     phase = np.asarray(phase, dtype=float)
-    res_norm = (norm - np.abs(y))/norm
-    res_phase = np.degrees(np.angle(np.exp(1j*phase)*np.abs(y)/y))
+    res_norm = (norm - np.abs(y)) / norm
+    res_phase = np.degrees(np.angle(np.exp(1j * phase) * np.abs(y) / y))
     return res_norm, res_phase

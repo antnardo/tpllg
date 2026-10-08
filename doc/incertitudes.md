@@ -47,8 +47,8 @@ fonction fait :
 
 ```python
 m = np.mean(mesures)
-s = np.std(mesures, ddof=1)          # ddof=1 : la division par N - 1
-delta = s/np.sqrt(len(mesures))
+s = np.std(mesures, ddof=1)  # ddof=1 : la division par N - 1
+delta = s / np.sqrt(len(mesures))
 ```
 
 Avec `advanced`, `delta` est multipliée par le coefficient de Student au
@@ -59,7 +59,7 @@ import numpy as np
 from tpllg.ajustement import formater, resume_parametres
 from tpllg.incertitudes import incertitudes
 
-mesures = [9.78, 9.81, 9.85, 9.79, 9.83]           # g, en m/s², cinq fois
+mesures = [9.78, 9.81, 9.85, 9.79, 9.83]  # g, en m/s², cinq fois
 m, delta, s = incertitudes(mesures)
 print(m, delta, s)
 print(formater(m, delta, "m/s²"))
@@ -151,8 +151,8 @@ incertitude-type.
 ```python
 from tpllg.incertitudes import loi_normale, loi_normale_cumulee
 
-y = loi_normale(x, m=0, s=1)         # la densité, de moyenne m et d'écart-type s
-p = loi_normale_cumulee(t)           # la probabilité d'un tirage dans [-t s, +t s]
+y = loi_normale(x, m=0, s=1)  # la densité, de moyenne m et d'écart-type s
+p = loi_normale_cumulee(t)  # la probabilité d'un tirage dans [-t s, +t s]
 ```
 
 ```python
@@ -182,7 +182,7 @@ import numpy as np
 N = 100000
 x = np.random.normal(1.0, 0.05, N)
 y = np.random.normal(2.0, 0.09, N)
-q = x*y**2
+q = x * y**2
 print(q.mean(), "±", q.std(ddof=1))
 ```
 
@@ -227,14 +227,14 @@ import numpy as np
 from tpllg.ajustement import formater
 from tpllg.montecarlo import Point
 
-np.random.seed(0)                        # les mêmes tirages d'une fois sur l'autre
+np.random.seed(0)  # les mêmes tirages d'une fois sur l'autre
 L = Point(1.000, 0.002)
 T = Point(2.007, 0.010)
-g = 4*np.pi**2*L/T**2
+g = 4 * np.pi**2 * L / T**2
 print(formater(g.val, g.u, "m/s²"), "(%d tirages)" % g.N)
 fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
 for ax, point in zip(axes, (L, T, g)):
-    point.show(ax, nbins=200)            # l'histogramme d'un Point, dans le repère donné
+    point.show(ax, nbins=200)  # l'histogramme d'un Point, dans le repère donné
 ```
 
 ```text
@@ -269,11 +269,13 @@ n'en est déjà plus une :
 
 ```python
 a = Point(1.0, 0.1)
-b = Point(2.0, 0.3)                      # 15 %
-q = a/b
+b = Point(2.0, 0.3)  # 15 %
+q = a / b
 bas, haut = q.quantiles()
-print(formater(q.val, q.u), "; médiane %.3f ; 68 %% des tirages entre %.3f et %.3f"
-      % (np.median(q.tirage), bas, haut))
+print(
+    formater(q.val, q.u),
+    "; médiane %.3f ; 68 %% des tirages entre %.3f et %.3f" % (np.median(q.tirage), bas, haut),
+)
 ```
 
 ```text
@@ -377,8 +379,8 @@ en `u` :
 
 ```python
 t = np.linspace(0, 5, 12)
-u = 2*np.exp(-t/1.5) + np.random.normal(0, 0.02, t.size)
-A, tau = ajuster_modele(lambda t, A, tau: A*np.exp(-t/tau), t, 0.01, u, 0.02, p0=[1, 1], N=2000)
+u = 2 * np.exp(-t / 1.5) + np.random.normal(0, 0.02, t.size)
+A, tau = ajuster_modele(lambda t, A, tau: A * np.exp(-t / tau), t, 0.01, u, 0.02, p0=[1, 1], N=2000)
 print("A =", formater(A.val, A.u), " tau =", formater(tau.val, tau.u, "s"))
 ```
 
@@ -405,9 +407,9 @@ fiche. Une résistance par la loi d'Ohm, avec les incertitudes des
 multimètres, en quatre lignes :
 
 ```python
-U = Point(4.87, 0.5*0.01*4.87 + 0.005)    # 0,5 % + 5 mV : ce que la notice dit
-I = Point(0.0213, 0.008*0.0213 + 0.0001)
-R = U/I
+U = Point(4.87, 0.5 * 0.01 * 4.87 + 0.005)  # 0,5 % + 5 mV : ce que la notice dit
+I = Point(0.0213, 0.008 * 0.0213 + 0.0001)
+R = U / I
 print(formater(R.val, R.u, "Ω"))
 ```
 

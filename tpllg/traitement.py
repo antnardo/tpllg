@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def indices_plages(freq, fondamental, delta_freq):
     """
     freq est l'array des fréquences, régulièrement espacée
@@ -14,11 +15,15 @@ def indices_plages(freq, fondamental, delta_freq):
     indice_fondamental = np.argmax(freq >= fondamental)
     df = freq[1] - freq[0]
     n = len(freq)
-    delta_indice = int(delta_freq/df/2)
-    imax = int(n/indice_fondamental)
-    return [(indice_fondamental*i-delta_indice, min(indice_fondamental*i+delta_indice, n)) for i in range(1, imax)]
+    delta_indice = int(delta_freq / df / 2)
+    imax = int(n / indice_fondamental)
+    return [
+        (indice_fondamental * i - delta_indice, min(indice_fondamental * i + delta_indice, n))
+        for i in range(1, imax)
+    ]
 
-def detecte_maxima_secondaires(valeurs, indices_bords, seuil=.1):
+
+def detecte_maxima_secondaires(valeurs, indices_bords, seuil=0.1):
     """
     Il existe from scipy.signal import find_peaks, mais compliqué à tuner
 
@@ -27,7 +32,7 @@ def detecte_maxima_secondaires(valeurs, indices_bords, seuil=.1):
     seulement si la valeur dépasse un certain seuil
 
     indices_bords est renvoyé par indices_plages(freq, fondamental, delta_freq)
-    
+
     Renvoit les indices de ces maxima secondaires
     """
     indices = []
@@ -35,8 +40,9 @@ def detecte_maxima_secondaires(valeurs, indices_bords, seuil=.1):
         valeurs_secondaires = valeurs[debut:fin]
         i = np.argmax(valeurs_secondaires)
         if valeurs_secondaires[i] > seuil:
-            indices.append(debut+i)
+            indices.append(debut + i)
     return indices
+
 
 def valeurs_correspondantes(indexes1, indexes2, delta_indices):
     """
@@ -50,7 +56,7 @@ def valeurs_correspondantes(indexes1, indexes2, delta_indices):
     while i < len(indexes1) and j < len(indexes2):
         index1 = indexes1[i]
         index2 = indexes2[j]
-        if abs(index1-index2) <= delta_indices:
+        if abs(index1 - index2) <= delta_indices:
             # c'est le même, on enregistre et on avance
             indices_final1.append(index1)
             indices_final2.append(index2)
@@ -78,11 +84,10 @@ def interpolation_fft(x, n_interpolation):
     N = len(x)
     tfd = np.fft.fft(x)
     N1 = N // 2
-    tfd2 = np.concatenate(
-        (tfd[0:N1], np.zeros(N * n_interpolation), tfd[N1:N])
-    )
+    tfd2 = np.concatenate((tfd[0:N1], np.zeros(N * n_interpolation), tfd[N1:N]))
     y = np.real(np.fft.ifft(tfd2)) * (n_interpolation + 1)
     return y
+
 
 def gain(t, e, s, freq, Np, method, **kwargs):
     """Mesure du gain selon différentes méthodes.
@@ -90,10 +95,11 @@ def gain(t, e, s, freq, Np, method, **kwargs):
 
     Retourne G, phi, H avec H = G exp(j phi)
     """
-    if method == 'std':
+    if method == "std":
         return gain_std(t, e, s, Np, **kwargs)
-    elif method == 'fit':
+    elif method == "fit":
         return NotImplemented
+
 
 def gain_std(t, e, s, Np=0, ninter=0):
     """Mesure du gain complexe H entre e et s
@@ -126,11 +132,12 @@ def gain_std(t, e, s, Np=0, ninter=0):
     E, S = e.std(), s.std()
     G = S / E
     d = int(Np * (ninter + 1) / 4)  # 1/4 de période (pi/2) en nombre de points
-    z = s[d:N] * (e[d:N] - 1j * e[0:N - d])  # = G * A0**2 cos(omega t + phi) * exp(j omega t)
+    z = s[d:N] * (e[d:N] - 1j * e[0 : N - d])  # = G * A0**2 cos(omega t + phi) * exp(j omega t)
     Z = z.mean()  # = G * A0**2/2 * exp(j phi)
     phi = np.angle(Z)
     # H = Z / E ** 2 si on veut...
     return G, phi
+
 
 def choix_echantillonnage(freq, temin, Npmin, permin, Nmax, Tmax):
     """Le pas et le nombre de points pour acquérir une fréquence donnée.
@@ -154,10 +161,10 @@ def choix_echantillonnage(freq, temin, Npmin, permin, Nmax, Tmax):
     techant = int(1 / (Np * freq * temin)) * temin  # c'est de totue façon un multiple de temin
     if techant == 0:
         techant = temin
-    n = min(Nmax, int(Tmax/techant))
-    periodes = n*techant*freq  # nb de périodes acquises
+    n = min(Nmax, int(Tmax / techant))
+    periodes = n * techant * freq  # nb de périodes acquises
     if periodes < permin:
-        print(f'[WARNING] : nb de périodes faible {periodes:.1f}<{permin}')
-    if 1/(freq*techant) < Npmin:
-        print(f"[WARNING] : nb de points par période faible {1/(freq*techant):.1f}<{Npmin}")
+        print(f"[WARNING] : nb de périodes faible {periodes:.1f}<{permin}")
+    if 1 / (freq * techant) < Npmin:
+        print(f"[WARNING] : nb de points par période faible {1 / (freq * techant):.1f}<{Npmin}")
     return techant, n

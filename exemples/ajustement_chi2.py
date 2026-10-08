@@ -9,6 +9,7 @@ Deux modèles : une droite, dont le chi2 est une cuvette parabolique que
 curve_fit descend en un pas, et une exponentielle, dont la vallée est courbe
 et se descend en plusieurs.
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
@@ -17,16 +18,16 @@ from tpllg.ajustement import curvefit, formater
 
 
 def droite(x, a, b):
-    return a*x + b
+    return a * x + b
 
 
 def exponentielle(x, a, tau):
-    return a*np.exp(-x/tau)
+    return a * np.exp(-x / tau)
 
 
 def chi2(modele, x, y, sigma, *p):
     """La somme des carrés des écarts au modèle, chacun rapporté à l'incertitude du point."""
-    return np.sum(((y - modele(x, *p))/sigma)**2)
+    return np.sum(((y - modele(x, *p)) / sigma) ** 2)
 
 
 def carte_chi2(modele, x, y, sigma, p1, p2):
@@ -45,7 +46,7 @@ def chemin(modele, jacobienne, x, y, sigma, p0):
         etapes.append(p)
         return jacobienne(x, *p)
 
-    curve_fit(modele, x, y, p0=p0, sigma=sigma*np.ones_like(x), absolute_sigma=True, jac=jac)
+    curve_fit(modele, x, y, p0=p0, sigma=sigma * np.ones_like(x), absolute_sigma=True, jac=jac)
     return np.array(etapes)
 
 
@@ -57,16 +58,19 @@ p0 = [1, 0]
 pfit, err, chi2_reduit = curvefit(droite, x, y, p0, datayerrors=sigma_y, verbose=False)
 chi2_min = chi2(droite, x, y, sigma_y, *pfit)
 print("droite : a =", formater(pfit[0], err[0]), " b =", formater(pfit[1], err[1]))
-print("chi2 = %.1f aux valeurs de départ, %.2f au minimum, soit %.2f par degré de liberté"
-      % (chi2(droite, x, y, sigma_y, *p0), chi2_min, chi2_reduit))
+print(
+    "chi2 = %.1f aux valeurs de départ, %.2f au minimum, soit %.2f par degré de liberté"
+    % (chi2(droite, x, y, sigma_y, *p0), chi2_min, chi2_reduit)
+)
 
 # 1. ce que le chi2 additionne : les écarts, aux valeurs de départ puis au minimum
 fig, axes = plt.subplots(2, 2, figsize=(11, 6.5), sharex=True, gridspec_kw={"height_ratios": [3, 2]})
 x_fin = np.linspace(0, 2, 50)
-for colonne, (titre, p) in enumerate((("aux valeurs de départ, a = 1, b = 0", p0),
-                                      ("au minimum, a = %.3f, b = %.3f" % tuple(pfit), pfit))):
+for colonne, (titre, p) in enumerate(
+    (("aux valeurs de départ, a = 1, b = 0", p0), ("au minimum, a = %.3f, b = %.3f" % tuple(pfit), pfit))
+):
     haut, bas = axes[0, colonne], axes[1, colonne]
-    ecarts = (y - droite(x, *p))/sigma_y
+    ecarts = (y - droite(x, *p)) / sigma_y
     haut.plot(x_fin, droite(x_fin, *p), color="tab:orange", label="le modèle")
     haut.vlines(x, droite(x, *p), y, color="tab:red", linewidth=2, label="les écarts")
     haut.errorbar(x, y, yerr=sigma_y, fmt="o", color="tab:blue", markersize=4, capsize=3, label="les mesures")
@@ -80,8 +84,8 @@ fig.tight_layout()
 plt.savefig("ajustement_chi2_ecarts.pdf")
 
 # 2. la vallée du chi2 dans le plan (a, b), autour du minimum
-a = np.linspace(pfit[0] - 4.5*err[0], pfit[0] + 4.5*err[0], 201)
-b = np.linspace(pfit[1] - 4.5*err[1], pfit[1] + 4.5*err[1], 201)
+a = np.linspace(pfit[0] - 4.5 * err[0], pfit[0] + 4.5 * err[0], 201)
+b = np.linspace(pfit[1] - 4.5 * err[1], pfit[1] + 4.5 * err[1], 201)
 carte = carte_chi2(droite, x, y, sigma_y, a, b)
 fig, ax = plt.subplots(figsize=(7, 5.5))
 fond = ax.contourf(a, b, carte - chi2_min, levels=np.linspace(0, 20, 21), cmap="Blues_r", extend="max")
@@ -104,15 +108,33 @@ plt.savefig("ajustement_chi2_vallee.pdf")
 # 3. le chemin des itérations : un pas pour la droite, plusieurs pour l'exponentielle
 xe = np.linspace(0, 5, 20)
 rng = np.random.RandomState(4)
-ye = 2*np.exp(-xe/1.5) + rng.normal(0, 0.02, xe.size)
+ye = 2 * np.exp(-xe / 1.5) + rng.normal(0, 0.02, xe.size)
 sigma_e = 0.02
 cas = (
-    ("une droite : a x + b", droite, lambda x, a, b: np.column_stack([x, np.ones_like(x)]),
-     x, y, sigma_y, np.linspace(0.7, 2.6, 121), np.linspace(-1.7, 0.4, 121), ([1, 0], [2.4, 0.2]), ("a", "b")),
-    ("une exponentielle : a exp(-x/tau)", exponentielle,
-     lambda x, a, tau: np.column_stack([np.exp(-x/tau), a*x/tau**2*np.exp(-x/tau)]),
-     xe, ye, sigma_e, np.linspace(0.3, 3.3, 121), np.linspace(0.2, 4.7, 121),
-     ([1, 1], [0.5, 4], [3, 0.3]), ("a", "tau")),
+    (
+        "une droite : a x + b",
+        droite,
+        lambda x, a, b: np.column_stack([x, np.ones_like(x)]),
+        x,
+        y,
+        sigma_y,
+        np.linspace(0.7, 2.6, 121),
+        np.linspace(-1.7, 0.4, 121),
+        ([1, 0], [2.4, 0.2]),
+        ("a", "b"),
+    ),
+    (
+        "une exponentielle : a exp(-x/tau)",
+        exponentielle,
+        lambda x, a, tau: np.column_stack([np.exp(-x / tau), a * x / tau**2 * np.exp(-x / tau)]),
+        xe,
+        ye,
+        sigma_e,
+        np.linspace(0.3, 3.3, 121),
+        np.linspace(0.2, 4.7, 121),
+        ([1, 1], [0.5, 4], [3, 0.3]),
+        ("a", "tau"),
+    ),
 )
 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 for ax, (titre, modele, jacobienne, xd, yd, sigma, p1, p2, departs, noms) in zip(axes, cas):
@@ -121,11 +143,23 @@ for ax, (titre, modele, jacobienne, xd, yd, sigma, p1, p2, departs, noms) in zip
     ax.contour(p1, p2, np.log10(carte), levels=12, colors="white", linewidths=0.4)
     for depart, couleur in zip(departs, ("tab:red", "tab:orange", "gold")):
         etapes = chemin(modele, jacobienne, xd, yd, sigma, depart)
-        ax.plot(etapes[:, 0], etapes[:, 1], "o-", color=couleur, markersize=4,
-                label="depuis (%g, %g) : %d pas" % (depart[0], depart[1], len(etapes) - 1))
-        print("%s, depuis %s : %d pas, chi2 = %s" % (
-            titre, depart, len(etapes) - 1,
-            " → ".join("%.1f" % chi2(modele, xd, yd, sigma, *p) for p in etapes)))
+        ax.plot(
+            etapes[:, 0],
+            etapes[:, 1],
+            "o-",
+            color=couleur,
+            markersize=4,
+            label="depuis (%g, %g) : %d pas" % (depart[0], depart[1], len(etapes) - 1),
+        )
+        print(
+            "%s, depuis %s : %d pas, chi2 = %s"
+            % (
+                titre,
+                depart,
+                len(etapes) - 1,
+                " → ".join("%.1f" % chi2(modele, xd, yd, sigma, *p) for p in etapes),
+            )
+        )
     ax.plot(etapes[-1, 0], etapes[-1, 1], "k+", markersize=12, label="le minimum")
     ax.set_title(titre, fontsize=10)
     ax.set_xlabel(noms[0])

@@ -9,17 +9,18 @@ Deux séries côte à côte, cinq mesures puis cinquante de même dispersion :
 s ne change pas, c'est la dispersion d'une mesure ; delta rétrécit comme
 1/sqrt(N), c'est ce qu'on gagne à répéter.
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from tpllg.ajustement import formater
 from tpllg.incertitudes import incertitudes, loi_normale
 
-np.random.seed(0)          # les mêmes mesures d'une exécution à l'autre
+np.random.seed(0)  # les mêmes mesures d'une exécution à l'autre
 
-PAS = 0.01                 # la résolution de la mesure : la largeur d'une classe de l'histogramme
-mesures = np.array([9.78, 9.81, 9.85, 9.79, 9.83])       # g, en m/s², cinq fois
-suite = np.round(np.random.normal(9.81, 0.03, 45), 2)    # quarante-cinq mesures de plus, simulées
+PAS = 0.01  # la résolution de la mesure : la largeur d'une classe de l'histogramme
+mesures = np.array([9.78, 9.81, 9.85, 9.79, 9.83])  # g, en m/s², cinq fois
+suite = np.round(np.random.normal(9.81, 0.03, 45), 2)  # quarante-cinq mesures de plus, simulées
 series = (("5 mesures", mesures), ("50 mesures", np.concatenate([mesures, suite])))
 
 
@@ -45,8 +46,10 @@ def legende_commune(fig, ax):
 
 for nom, serie in series:
     m, delta, s = incertitudes(serie)
-    print("%-10s : m = %.4f  s = %.4f  delta = %.4f  soit g = %s"
-          % (nom, m, s, delta, formater(m, delta, "m/s²")))
+    print(
+        "%-10s : m = %.4f  s = %.4f  delta = %.4f  soit g = %s"
+        % (nom, m, s, delta, formater(m, delta, "m/s²"))
+    )
 
 # 1. l'histogramme des mesures : une classe par valeur lisible, centrée sur elle
 classes = np.arange(9.705, 9.925, PAS)
@@ -56,7 +59,7 @@ for ax, (nom, serie) in zip(axes, series):
     m, delta, s = incertitudes(serie)
     ax.hist(serie, bins=classes, color="tab:blue", alpha=0.75, label="les mesures")
     # la loi normale de mêmes m et s, à l'échelle de l'histogramme : N × largeur de classe × densité
-    ax.plot(x, len(serie)*PAS*loi_normale(x, m, s), color="navy", label="la loi normale de mêmes m et s")
+    ax.plot(x, len(serie) * PAS * loi_normale(x, m, s), color="navy", label="la loi normale de mêmes m et s")
     reperes(ax, m, s, delta, vertical=True)
     ax.set_title(titre_de(nom, m, s, delta), fontsize=10)
     ax.set_xlabel("g (m/s²)")

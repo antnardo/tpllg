@@ -21,9 +21,9 @@ def calcule_DFT(temps, valeurs):
     fourier = np.abs(fft(valeurs)) * 2 / N
     fourier[0] *= 0.5
     if N % 2 == 0:
-        nmax = N//2
+        nmax = N // 2
     else:
-        nmax = (N+1)//2
+        nmax = (N + 1) // 2
     freq = fftfreq(N, d=tau)[:nmax]
     return freq, fourier[:nmax]
 
