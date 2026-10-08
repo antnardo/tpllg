@@ -1,41 +1,62 @@
 import numpy as np
+import pytest
 from scipy import stats
 
 from tpllg.incertitudes import incertitudes, loi_normale, loi_normale_cumulee, student_coef
+
+MESURES = [9.78, 9.81, 9.85, 9.79, 9.83]
 
 
 def integrale(y, x):
     return (y.sum() - (y[0] + y[-1]) / 2) * (x[1] - x[0])
 
 
-def test_incertitudes_estimateurs():
-    L = [9.78, 9.81, 9.85, 9.79, 9.83]
-    m, delta, s = incertitudes(L)
-    assert abs(m - 9.812) < 1e-9
-    assert abs(s - np.std(L, ddof=1)) < 1e-12
-    assert abs(delta - s / np.sqrt(5)) < 1e-12
-    m2, delta2, s2 = incertitudes(L, sigma=2, advanced=True)
-    assert abs(delta2 - student_coef(2, 5) * s / np.sqrt(5)) < 1e-12
+class TestIncertitudes:
+    def test_estimateurs(self):
+        m, delta, s = incertitudes(MESURES)
+        assert m == pytest.approx(9.812) and s == pytest.approx(np.std(MESURES, ddof=1))
+        assert delta == pytest.approx(s / np.sqrt(5))
+
+    def test_sigma_sans_student_multiplie_l_incertitude(self):
+        """sigma était ignoré sans advanced : incertitudes(L, sigma=2) rendait l'incertitude à 68 %."""
+        _, delta, s = incertitudes(MESURES, sigma=2)
+        assert delta == pytest.approx(2 * s / np.sqrt(5))
+
+    def test_avec_student(self):
+        _, delta, s = incertitudes(MESURES, sigma=2, advanced=True)
+        assert delta == pytest.approx(student_coef(2, 5) * s / np.sqrt(5))
+
+    def test_une_mesure_ne_suffit_pas(self):
+        with pytest.raises(ValueError, match="deux mesures"):
+            incertitudes([9.81])
 
 
-def test_student_tend_vers_la_loi_normale():
-    assert abs(student_coef(2, 1000) - 2) < 0.01
-    assert student_coef(2, 5) > 2.5
-    assert abs(loi_normale_cumulee(1) - 0.6827) < 1e-3
+class TestStudent:
+    def test_tend_vers_la_loi_normale(self):
+        assert student_coef(2, 1000) == pytest.approx(2, abs=0.01)
+        assert student_coef(2, 5) > 2.5
+        assert loi_normale_cumulee(1) == pytest.approx(0.6827, abs=1e-3)
 
-
-def test_student_coef_est_le_quantile_bilateral():
-    for sigma, n in ((1, 5), (2, 5), (2, 30)):
+    @pytest.mark.parametrize(("sigma", "n"), [(1, 5), (2, 5), (2, 30)])
+    def test_est_le_quantile_bilateral(self, sigma, n):
         t = student_coef(sigma, n)  # P(|T| < t) = P(|Z| < sigma), T de Student à n - 1
-        assert abs(stats.t(n - 1).cdf(t) - stats.t(n - 1).cdf(-t) - loi_normale_cumulee(sigma)) < 1e-12
+        assert stats.t(n - 1).cdf(t) - stats.t(n - 1).cdf(-t) == pytest.approx(
+            loi_normale_cumulee(sigma), abs=1e-9
+        )
+
+    def test_sur_un_tableau_de_n(self):
+        assert np.allclose(student_coef(1, np.array([5, 30])), [student_coef(1, 5), student_coef(1, 30)])
 
 
-def test_loi_normale_est_normalisee_quel_que_soit_l_ecart_type():
+@pytest.mark.parametrize(("m", "s"), [(0, 1), (2.0, 3.0), (-1.0, 0.5)])
+def test_loi_normale_est_normalisee_quel_que_soit_l_ecart_type(m, s):
     x = np.linspace(-40, 40, 400001)
-    for m, s in ((0, 1), (2.0, 3.0), (-1.0, 0.5)):
-        y = loi_normale(x, m, s)
-        assert abs(integrale(y, x) - 1) < 1e-6
-        assert abs(y.max() - 1 / (s * np.sqrt(2 * np.pi))) < 1e-6
-        assert abs(x[np.argmax(y)] - m) < 1e-3
+    y = loi_normale(x, m, s)
+    assert integrale(y, x) == pytest.approx(1, abs=1e-6)
+    assert y.max() == pytest.approx(1 / (s * np.sqrt(2 * np.pi)), abs=1e-6)
+    assert x[np.argmax(y)] == pytest.approx(m, abs=1e-3)
+
+
+def test_loi_normale_cumulee_est_l_integrale_de_la_densite():
     t = np.linspace(-1.5, 1.5, 300001)
-    assert abs(integrale(loi_normale(t), t) - loi_normale_cumulee(1.5)) < 1e-6
+    assert integrale(loi_normale(t), t) == pytest.approx(loi_normale_cumulee(1.5), abs=1e-6)
