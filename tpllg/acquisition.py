@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Acquisition à la Sysam SP5 en une fonction, déclenchement compris, et
 sauvegarde des voies acquises.
@@ -20,10 +19,13 @@ def acquerir(voies, calibre, te, nbpoints, trigger=None):
     la voie par le seuil (montant=1 front montant, 0 descendant), en gardant
     `pretrigger` points avant le front.
 
-    Rend (temps, tensions) comme tpllg.sysam : une ligne par voie.
+    Rend (temps, tensions) comme tpllg.sysam : deux tableaux 2D, une ligne par
+    voie dans l'ordre de `voies`, le temps en secondes.
     """
     from tpllg.sysam import Sysam
 
+    if trigger is not None and len(trigger) not in (3, 4):
+        raise ValueError("trigger : (voie, seuil, pretrigger) ou (voie, seuil, pretrigger, montant)")
     with Sysam(voies, calibre) as can:
         can.config_echantillon(te, nbpoints)
         if trigger is not None:
@@ -36,6 +38,10 @@ def acquerir(voies, calibre, te, nbpoints, trigger=None):
 
 def sauvegarder(prefixe, voies, temps, tensions):
     """Un fichier texte par voie, `<prefixe>_EA<n>.txt`, deux lignes : temps
-    et tensions — le format du TP2."""
+    et tensions — le format du TP2. np.loadtxt les relit."""
+    if not len(voies) == len(temps) == len(tensions):
+        raise ValueError(
+            f"{len(voies)} voies pour {len(temps)} lignes de temps et {len(tensions)} de tensions"
+        )
     for ea, t, u in zip(voies, temps, tensions):
         np.savetxt(f"{prefixe}_EA{ea}.txt", [t, u])

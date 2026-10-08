@@ -1,15 +1,30 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Mar  6 13:35:03 2023
+La Sysam SP5 par pycanum, avec un `with`, des calibres simples, des temps en
+secondes et des acquisitions qui rendent directement temps et tensions.
+
+Sans pycanum (un Mac, un poste sans carte), la classe hérite du simulateur
+tpllg.sysam_factice, qui a la même interface et refuse les mêmes choses.
+
+La classe corrige au passage quatre pièges du pilote de pycanum, lus dans son
+source C (SysamSP5Link.c, pysysam.c) — non vérifiés sur la centrale :
+
+- la période est passée en flottant 32 bits puis tronquée au dixième de
+  microseconde : 0,7 µs demandées donnaient 0,6 µs, 1,4 µs donnaient 1,3 µs ;
+  on passe la valeur arrondie au dixième, avec un demi-pas de marge ;
+- les voies sont rangées dans l'ordre croissant mais les calibres appliqués
+  dans l'ordre donné : on range les couples (voie, calibre) ensemble, et on
+  rend les lignes dans l'ordre demandé ;
+- le seuil de déclenchement est converti avec le calibre rangé à la position
+  du numéro de la voie : on le corrige d'autant ;
+- un tableau de sortie qui n'est pas un ndarray de flottants était ignoré sans
+  message : on convertit, et une sortie sur une période qui n'est pas un
+  multiple de 0,2 µs (les sorties tournent alors à une autre cadence que les
+  entrées) est refusée.
+
+Pour plus de détails sur pycanum :
+https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/interpy/interpy.html
 
 @author: a. marchand
-
-Classe enfant de la classe pycanum pour simplifier l'accès.
-
-Docstrings détaillées
-
-Pour plus de détails :
-https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/interpy/interpy.html
 """
 
 import numpy as np
@@ -19,218 +34,235 @@ try:
 except ImportError:  # pas de pycanum sur cette machine : centrale simulée
     from tpllg import sysam_factice as pycan
 
+__all__ = ["CAL_DEFAUT", "SYSAM_TYPE", "Sysam"]
+
 SYSAM_TYPE = "SP5"  # et non "PCI", qui n'existe pas au lycée
-CAL_DEFAUT = 10  # calibre par défaut
+CAL_DEFAUT = 10  # calibre par défaut, en volts
 MICROSECONDES = 1e6
 
 
 class Sysam(pycan.Sysam):
-    """
-    Classe enfant de la classe proposée par pycanum pour régler quelques bugs
-    et proposer une syntaxe un peu plus friendly et pythonique.
-    Avec des détails techniques et des docstring.
+    """La classe de pycanum, en plus simple :
 
-    Toutes les classes existantes sont évidemment les mêmes.
-    Sont changées :
-        l'initialisation: on peut directement y mettre la
-        configuration des voies (optionnel)
-        ex: Sysam(voies=[0, 1])
-        et pas besoin de mettre 'SP5', par défaut.
+    - `Sysam(voies=[0, 1], calibres=5)` configure les entrées dès l'ouverture,
+      un calibre seul vaut pour toutes les voies, et 'SP5' est implicite ;
+    - `with Sysam([0, 1]) as can:` ferme la centrale en sortie de bloc ;
+    - les périodes sont en secondes ;
+    - `acquerir` et `acquerir_avec_sorties` rendent (temps, tensions), deux
+      tableaux 2D, une ligne par voie dans l'ordre des voies demandées.
 
-        le choix du calibre : si on ne met qu'une valeur,
-        elle s'applique à toutes les voies
+    Exemple minimal :
 
-        les fonctions acquerir et acquerir_avec_sorties
-        renvoient directement les valeurs
+        with Sysam([0, 1]) as can:
+            can.config_echantillon(1e-5, 1000)
+            temps, tensions = can.acquerir()
 
-        On peut utiliser with, pas besoin d'ouvrir et de fermer manuellement
-        Exemple minimal :
-
-        with Sysam(voies=[0, 1]) as can:
-            temps, entrees = can.acquerir()
-
-    Caractéristiques techniques :
-    Elle se compose de 4 modules de conversion analogique-numérique 12 bits
-    avec un temps de conversion minimal de 100ns (10MHz), d'un module double
-    sortie numérique-analogique 12 bits 200ns (5MHz), associés à une interface
-    de 16 lignes d’entrées/sorties logiques.
-
-    CAN 1 à 4 voies simples ou différentielles 10MHz
-    CAN 5 à 8 voies simples ou différentielles 5MHz
-    CNA 5MHz 12 bits ±10V 50mA
-
-    2 modes de CAN : Direct (10MHz) ou multiplexé (500KHz)
-    Pour travailler en mode Direct, il est nécessaire que chaque module de
-    conversion travaille en mode différentiel, ou s’il travaille en mode simple,
-    qu’une seule de ses entrées soit activée. En effet, si les deux entrées
-    d’un des 4 modules de conversion sont activées simultanément en mode simple,
-    la centrale propose alors un fonctionnement en mode multiplexé.
-    MODULE0 = EA0+EA4
-    MODULE1 = EA1+EA5
-    etc
-
-    RAM 512ko
-    Nb de points max par acquisition = 2**18 = 262144
-
-    12 bits ±1LSB, binaire naturel
-    Non linéarité : ±1LSB sur la pleine échelle ±10V
-    Calibre 0.1, 0.2, 1, 2, 5, 10 (ATTENTION, pycanum n'a pas accès à tous)
-    Impédance entrée 1 Mohm
-
+    La centrale : quatre modules de conversion 12 bits (EA0 et EA4, EA1 et EA5,
+    EA2 et EA6, EA3 et EA7), 10 MHz quand chaque module n'a qu'une entrée
+    active (ou est en différentiel), 500 kHz sinon ; deux sorties 12 bits à
+    5 MHz, ±10 V ; une mémoire de 0x3FFFF = 262 143 mots de 12 bits partagée
+    entre les entrées (voies × points) et les sorties ; calibres 0,2, 1, 5 et
+    10 V accessibles par pycanum ; impédance d'entrée 1 MΩ.
     """
 
-    TE_MIN_SORTIE = 2e-7
-    TE_MIN_DIRECT = 1e-7
-    TE_MIN_MULTIPLEX = 2e-6
-    N_MAX = 262_144
-    CALIBRES = [0.2, 1, 5, 10]
-    MODULES_ANALOG = {0: (0, 4), 1: (1, 5), 2: (2, 6), 3: (3, 7)}
+    TE_MIN_DIRECT = 1e-7  # s, un module, une entrée
+    TE_MIN_MULTIPLEX = 2e-6  # s, deux entrées d'un même module en mode simple
+    TE_MIN_SORTIE = 2e-7  # s, et les sorties ne tournent qu'à un multiple de 0,2 µs
+    PAS_TE = 1e-7  # s, la centrale compte la période en dixièmes de microseconde
+    MEMOIRE = 0x3FFFF  # mots de 12 bits, entrées et sorties ensemble
+    POINTS_SORTIE_MAX = 0x1FFFF
+    CALIBRES = (0.2, 1, 5, 10)
+    MODULES_ANALOG = ((0, 4), (1, 5), (2, 6), (3, 7))  # les deux entrées de chaque module
 
     @classmethod
     def get_calibre(cls, valeur):
-        """pour info, a priori inutile c'est déjà codé en dur (lignes 226 à 235 de SysamSP5Link.c)"""
-        if valeur > max(cls.CALIBRES):
-            return max(cls.CALIBRES)
+        """Le calibre que la centrale prend pour une tension maximale `valeur` :
+        le plus petit qui la contient, et 10 V au-delà de 10 V."""
         for cal in cls.CALIBRES:
-            if cal >= valeur:
+            if valeur <= cal:
                 return cal
+        return max(cls.CALIBRES)
 
     @classmethod
-    def te_min(cls, voies):
-        """détermine si on fonctionne en mode direct ou multiplexé
-        si les deux entrées d’un des 4 modules de conversion sont activées
-        simultanément en mode simple
-        """
-        modules = [0] * len(cls.MODULES_ANALOG)
-        for v in voies:
-            for k, EA in cls.MODULES_ANALOG.items():
-                if v in EA:
-                    modules[k] += 1
-        return cls.TE_MIN_DIRECT if max(modules) <= 1 else cls.TE_MIN_MULTIPLEX
+    def te_min(cls, voies, diff=()):
+        """La période minimale pour ces voies : 0,1 µs, ou 2 µs (mode
+        multiplexé) quand les deux entrées d'un même module sont actives en
+        mode simple."""
+        diff = {d % 4 for d in diff}
+        for module, (a, b) in enumerate(cls.MODULES_ANALOG):
+            if a in voies and b in voies and module not in diff:
+                return cls.TE_MIN_MULTIPLEX
+        return cls.TE_MIN_DIRECT
+
+    @classmethod
+    def n_max(cls, nb_voies, nb_sorties=0):
+        """Le nombre de points le plus grand qu'une acquisition sur `nb_voies`
+        voies peut demander, quand `nb_sorties` sorties tournent avec autant de
+        points que les entrées (le Bode automatique : 2 voies, 1 sortie).
+
+        La mémoire est partagée : voies × N + points des sorties ≤ 0x3FFFF. La
+        centrale arrondit N au paquet de sa FIFO (255 mots au plus) : on garde
+        255 mots de marge."""
+        return (cls.MEMOIRE - 255) // (nb_voies + nb_sorties)
+
+    @classmethod
+    def te_effectif(cls, te):
+        """La période (s) que la centrale appliquera : `te` arrondie au dixième
+        de microseconde."""
+        return round(te / cls.PAS_TE) * cls.PAS_TE
 
     def __init__(self, voies=None, calibres=None, diff=None):
+        self.voies = []
+        self.calibres = []
+        self.diff = []
+        self.te = None
+        self.nbpoints = None
+        self._ordre = []
+        self._calibres_pilote = [10.0] * 8  # le tableau calibreEA du pilote, par position
         super().__init__(SYSAM_TYPE)
-        if voies is None:
-            return
-        self.config_entrees(voies, calibres, diff)
+        if voies is not None:
+            self.config_entrees(voies, calibres, diff)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit the runtime context related to this object.
-        The parameters describe the exception that caused the context to be
-        exited.
-        If the context was exited without an exception, all three arguments
-        will be None.
-        If an exception is supplied, and the method wishes to suppress the
-        exception (i.e., prevent it from being propagated), it should return
-        a true value.
-        Otherwise, the exception will be processed normally upon exit
-        from this method.
-        Note that __exit__() methods should not reraise the passed-in
-        exception; this is the caller’s responsibility.
-        """
         self.fermer()
         return False
 
     def config_entrees(self, voies, calibres=None, diff=None):
-        """Sélection des entrées analogiques et configuration du calibre (gain
-        de l'amplificateur d'entrée).
+        """Les entrées analogiques et leurs calibres.
 
-            voies (list): liste des entrées analogiques à sélectionner,
-                numérotées de 0 à 7.
+        voies : les numéros des entrées, de 0 à 7 (par ex. [0, 1]) ;
+        calibres : la tension maximale attendue sur chaque voie, en volts, une
+            par voie ou une seule pour toutes (10 V par défaut). La centrale
+            prend le plus petit calibre parmi 0,2, 1, 5 et 10 V qui la contient ;
+            au-delà de 10 V, 10 V, en le disant ; une valeur illisible ou nulle
+            donne 10 V ;
+        diff : les modules en mode différentiel : [0] met EA0 en différentiel,
+            EA4 étant l'entrée moins ; ne mettez alors pas EA4 dans `voies`.
 
-            calibres (list): liste des valeurs absolues maximales des
-                tensions (en volts), une pour chaque voie sélectionnée.
-            [ALT] calibres (float) : le même calibre pour chaque voie
-            [DEFAUT] 10V par voie
-            seuls les calibres 10, 5, 1 et 0.2 volts sont accessibles
-            pour les entrées analogiques
-
-            diff (list): argument optionnel, liste des voies en
-                mode différentiel.
-
-        Sur SP5, l faut sélectionner les entrées 0,1,2 et 3 pour bénéficier de
-        la fréquence d'échantillonnage maximale (10 MHz).
-
-        Sur SysamSP5, chaque canal (0-4,1-5,2-6,3-7) peut être placé en mode
-        différentiel indépendamment des autres. Pour placer le premier et le
-        deuxième canal en mode différentiel, il faut affecter [0,1]
-        au dernier argument (diff).
-
-        En principe la carte accepte les valeurs 0.1, 0.2, 1, 2, 5, 10
-        Mais l'interface pycanum ne prend en compte que les valeurs 0.2, 1, 5, 10
-        Si le calibre n'est pas parmi ces valeurs, la valeur immédiatement
-        supérieure est sélectionnée automatiquement (avec un seuil à 10)
+        Pour la fréquence maximale (10 MHz), une seule entrée par module : EA0
+        à EA3, sans EA4 à EA7.
         """
-        if diff is None:
-            diff = []
+        voies = [int(v) for v in voies]
+        diff = [int(d) for d in (diff or [])]
+        if len(set(voies)) != len(voies):
+            raise ValueError(f"voies {voies} : une voie apparaît deux fois")
+        for v in voies:
+            if v >= 4 and (v - 4) in {d % 4 for d in diff}:
+                raise ValueError(
+                    f"EA{v} est l'entrée moins de EA{v - 4} en différentiel : ne la mettez pas dans voies"
+                )
         if calibres is None:
             calibres = CAL_DEFAUT
-        if not hasattr(calibres, "__len__"):
+        if np.ndim(calibres) == 0:
             calibres = [calibres] * len(voies)
-        calibres = [float(c) for c in np.nan_to_num(calibres, nan=CAL_DEFAUT)]
-        calibres = [c if c > 0 else CAL_DEFAUT for c in calibres]
-        super().config_entrees(voies, calibres, diff)
+        if len(calibres) != len(voies):
+            raise ValueError(f"{len(calibres)} calibres pour {len(voies)} voies")
+        calibres = [self._calibre(v, c) for v, c in zip(voies, calibres)]
+        # le pilote range les voies dans l'ordre croissant et applique les calibres
+        # dans l'ordre donné : on range les couples ensemble
+        self._ordre = sorted(range(len(voies)), key=voies.__getitem__)
+        voies_rangees = [voies[i] for i in self._ordre]
+        calibres_ranges = [calibres[i] for i in self._ordre]
+        super().config_entrees(voies_rangees, calibres_ranges, diff)
+        self.voies, self.calibres, self.diff = voies, calibres, diff
+        for i, c in enumerate(calibres_ranges):
+            self._calibres_pilote[i] = c
+
+    @classmethod
+    def _calibre(cls, voie, valeur):
+        valeur = float(np.nan_to_num(valeur, nan=CAL_DEFAUT))
+        if valeur <= 0:
+            return float(CAL_DEFAUT)
+        if valeur > max(cls.CALIBRES):
+            print(f"[SYSAM] EA{voie} : calibre {valeur:g} V ramené à 10 V, le plus grand")
+        return float(cls.get_calibre(valeur))
 
     def config_echantillon(self, techant, nbpoints):
-        """Configuration de la période d'échantillonnage et du nombre de
+        """La période d'échantillonnage `techant`, en secondes, et le nombre de
         points à acquérir.
 
-            techant: période d'échantillonnage en secondes (et non
-                microsecondes)
-                MIN = 1e-7 pour les entrées 1 à 4
-            nbpoints: nombre de points à acquérir
-        """
-        return super().config_echantillon(techant * MICROSECONDES, nbpoints)
+        La période est arrondie au dixième de microseconde (self.te la donne) ;
+        son minimum dépend des voies (te_min). Au-delà de ce que la mémoire
+        permet pour les voies configurées, la centrale rend moins de points
+        que demandé : on le dit."""
+        dixiemes = round(techant / self.PAS_TE)
+        nbpoints = int(nbpoints)
+        if self.voies and nbpoints > self.MEMOIRE // len(self.voies):
+            print(
+                f"[SYSAM] ATTENTION : {nbpoints} points demandés sur {len(self.voies)} voie(s), la mémoire "
+                f"en permet au plus {self.MEMOIRE // len(self.voies)} : la centrale en rendra moins"
+            )
+        # un demi-pas de marge : pycanum passe la période en flottant 32 bits, que
+        # le pilote tronque au dixième de microseconde
+        super().config_echantillon((dixiemes + 0.5) / 10, nbpoints)
+        self.te = dixiemes * self.PAS_TE
+        self.nbpoints = nbpoints
 
-    def config_quantification(self, quantification):
-        """Configuration du nombre de bits de la quantification.
+    def config_trigger(self, voie, seuil, montant=1, pretrigger=1, pretriggerSouple=0, hysteresis=0):
+        """Le déclenchement sur le passage de la voie `voie` par `seuil` (V),
+        front montant (1) ou descendant (0), en gardant `pretrigger` points
+        avant ; voie=-1 le désactive."""
+        if voie in self.voies:
+            # le pilote convertit le seuil avec le calibre rangé à la position `voie`
+            lu = self._calibres_pilote[voie]
+            vrai = self.calibres[self.voies.index(voie)]
+            seuil = seuil * lu / vrai
+        super().config_trigger(voie, seuil, montant, pretrigger, pretriggerSouple, hysteresis)
 
-        nbits (int<=12): nombre de bits utilisés pour la quantification.
-        """
-        return super().config_quantification(quantification)
+    def temps(self, reduction=1):
+        """Les instants, un tableau 2D : une ligne par voie, dans l'ordre des
+        voies demandées ; un point sur `reduction`."""
+        return self._dans_l_ordre(super().temps(reduction))
+
+    def entrees(self, reduction=1):
+        """Les tensions, comme temps()."""
+        return self._dans_l_ordre(super().entrees(reduction))
+
+    def _dans_l_ordre(self, lignes):
+        if len(self._ordre) != len(lignes):
+            return lignes
+        return lignes[np.argsort(self._ordre)]
 
     def acquerir(self, reduction=1):
-        """Acquisition et récupération des données
-
-            reduction (integer): facteur de réduction de la fréquence
-                d'échantillonnage.
-
-        Renvoit une fois l'acquisition finie :
-            temps (ndarray): tableau ndarray (numpy). Chaque ligne du
-                tableau fournit les temps (en s) échantillonnés de la
-                voie correspondante.
-            tableau ndaray (numpy): Chaque ligne du tableau fournit
-                les tensions (en V) de la voie correspondante.
-        """
-        super().acquerir()  # ne sort que quand c'est fini
+        """Acquiert et rend (temps, tensions), deux tableaux 2D, une ligne par
+        voie dans l'ordre des voies demandées, temps en secondes ; un point sur
+        `reduction` (floor(N/reduction) points)."""
+        super().acquerir()  # ne rend la main qu'à la fin
         return self.temps(reduction), self.entrees(reduction)
 
-    def acquerir_avec_sorties(self, sortie1=0, sortie2=0):
-        """Acquisition avec une utilisation simultanée et synchrone des
-        sorties.
-        La période d'échantillonnage des sorties est la même que pour les
-        entrées.
+    def acquerir_avec_sorties(self, sortie1=None, sortie2=None):
+        """Acquiert en générant en même temps les sorties S1 et S2, à la même
+        période que les entrées, et rend (temps, tensions) comme acquerir.
 
-            sortie1 (ndarray): tableau ndarray (numpy) fournissant le signal
-            échantillonné à appliquer sur la sortie 1 (en volts).
-            sortie2 (ndarray): idem, sortie 2
-            les sorties peuvent être des entiers = valeur constante (par
-            exemple 0)
-            par défaut, c'est 0.
+        sortie1, sortie2 : les tensions (V) à appliquer, échantillon par
+            échantillon, répétées en boucle ; None pour ne rien générer, un
+            nombre pour une tension constante. Au plus 0x1FFFF points chacune,
+            et la mémoire est partagée : voies × N + points des sorties ≤
+            0x3FFFF (n_max le calcule).
 
-        Renvoit une fois l'acquisition finie :
-            temps (ndarray): tableau ndarray (numpy). Chaque ligne du
-                tableau fournit les temps (en s) échantillonnés de la
-                voie correspondante.
-            tableau ndaray (numpy): Chaque ligne du tableau fournit
-                les tensions (en V) de la voie correspondante.
-
-        Le nombre de points total utilisable pour les entrées et sorties
-        est limité par la mémoire RAM du SysamSP5. Il est de 0x3FFFF,
-        soit 262142.
-        """
-        super().acquerir_avec_sorties(sortie1, sortie2)
+        La période doit être un multiple de 0,2 µs : les sorties ne connaissent
+        pas d'autre cadence."""
+        sorties = [_sortie(s, n) for n, s in ((1, sortie1), (2, sortie2))]
+        if any(s.size for s in sorties) and self.te is not None:
+            dixiemes = round(self.te / self.PAS_TE)
+            if dixiemes % 2:
+                raise ValueError(
+                    f"période de {dixiemes / 10:.1f} µs : avec des sorties, elle doit être un multiple de "
+                    "0,2 µs, sans quoi les sorties tournent à une autre cadence que les entrées"
+                )
+        super().acquerir_avec_sorties(*sorties)
         return self.temps(), self.entrees()
+
+
+def _sortie(valeurs, numero):
+    """Ce que pycanum attend d'une sortie : un tableau 1D de flottants, vide
+    pour « pas de sortie »."""
+    if valeurs is None:
+        return np.zeros(0)
+    valeurs = np.atleast_1d(np.asarray(valeurs, dtype=float))
+    if valeurs.ndim != 1:
+        raise ValueError(f"sortie {numero} : un tableau 1D de tensions, ou un nombre")
+    return valeurs

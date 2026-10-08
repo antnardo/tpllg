@@ -41,7 +41,7 @@ METHODE = "std"  # ou 'fit'. Méthode de mesure du gain (cf docstring)
 # Paramètres d'execution, ne pas toucher a priori
 TE_MIN = Sysam.TE_MIN_SORTIE  # pas de temps d'échantillonnage minimal (Sysam)
 # = 2e-7 lors de l'utilisation de la sortie
-N_MAX = Sysam.N_MAX  # nb de points acquis max (Sysam) = 2**18
+N_MAX = Sysam.n_max(len(VOIES), 1)  # la mémoire, partagée entre les 2 voies et la sortie
 T_MAX = 1  # temps total max d'acquisition par courbe
 PER_MIN = 20  # nb minimal de période dont faire l'acquisition (précision du spectre)
 NP_MIN = 100  # nb minimal de points par période (shannon : >2)
