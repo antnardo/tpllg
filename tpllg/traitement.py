@@ -1,40 +1,63 @@
+"""
+Mesurer une fonction de transfert : à une fréquence, par détection synchrone
+de l'entrée et de la sortie (fonction_transfert) ; le choix de
+l'échantillonnage du Bode automatique ; l'interpolation par FFT ; et, sur un
+spectre, les harmoniques d'un signal périodique (indices_plages,
+detecte_maxima_secondaires, valeurs_correspondantes).
+
+@author: a. marchand
+"""
+
+import math
+
 import numpy as np
+
+from tpllg.signaux import frequence_pic
+
+__all__ = [
+    "choix_echantillonnage",
+    "detecte_maxima_secondaires",
+    "fonction_transfert",
+    "indices_plages",
+    "interpolation_fft",
+    "valeurs_correspondantes",
+]
 
 
 def indices_plages(freq, fondamental, delta_freq):
-    """
-    freq est l'array des fréquences, régulièrement espacée
-    fourier (optionnel), si donné est l'array de la fft : sert à calculer le fondamental si on ne le connait pas
-    fondamental (optionnel) : valeur de la fréquence du fondamental
-    delta_freq (optionnel) : valeur des largeurs de frequences dans lesquelles chercher (attention aux décalages)
+    """Les plages d'indices du tableau `freq` (régulièrement espacé, depuis
+    0) où chercher chaque harmonique de `fondamental` : une plage de largeur
+    `delta_freq` centrée sur la case de n × fondamental, pour n = 1, 2… tant
+    qu'elle est dans le spectre.
 
-    soit on donne fourier, soit la valeur de la fréquence du fondamental
+    Le centre de chaque plage est arrondi séparément, round(n f1/df) : la
+    multiplier par n arrondie une fois accumulait l'erreur, et dès n = 25 les
+    plages manquaient les harmoniques.
 
-    Renvoit indices_bords = [(début, fin), (début, fin), ...] de la liste freq
+    Rend [(début, fin), (début, fin), ...] pour detecte_maxima_secondaires.
     """
-    indice_fondamental = np.argmax(freq >= fondamental)
+    freq = np.asarray(freq, dtype=float)
     df = freq[1] - freq[0]
     n = len(freq)
-    delta_indice = int(delta_freq / df / 2)
-    imax = int(n / indice_fondamental)
-    return [
-        (indice_fondamental * i - delta_indice, min(indice_fondamental * i + delta_indice, n))
-        for i in range(1, imax)
-    ]
+    if not freq[0] < fondamental <= freq[-1]:
+        raise ValueError(f"fondamental {fondamental:g} Hz hors du spectre ({freq[0]:g} à {freq[-1]:g} Hz)")
+    demi = int(delta_freq / df / 2)
+    plages = []
+    rang = 1
+    while True:
+        centre = round((rang * fondamental - freq[0]) / df)
+        if centre >= n:
+            return plages
+        plages.append((max(0, centre - demi), min(centre + demi, n)))
+        rang += 1
 
 
 def detecte_maxima_secondaires(valeurs, indices_bords, seuil=0.1):
-    """
-    Il existe from scipy.signal import find_peaks, mais compliqué à tuner
+    """Le maximum de `valeurs` dans chacune des plages d'indices_bords
+    (indices_plages les donne), s'il dépasse `seuil`. Rend leurs indices.
 
-    On cherche les max absolus dans plusieurs plages de valeurs déjà trouvées
-    et données par indices_bords = [(début, fin), (début, fin), ...]
-    seulement si la valeur dépasse un certain seuil
-
-    indices_bords est renvoyé par indices_plages(freq, fondamental, delta_freq)
-
-    Renvoit les indices de ces maxima secondaires
-    """
+    scipy.signal.find_peaks fait la même chose, mais se règle moins
+    facilement sur un spectre d'harmoniques."""
     indices = []
     for debut, fin in indices_bords:
         valeurs_secondaires = valeurs[debut:fin]
@@ -45,11 +68,9 @@ def detecte_maxima_secondaires(valeurs, indices_bords, seuil=0.1):
 
 
 def valeurs_correspondantes(indexes1, indexes2, delta_indices):
-    """
-    Deux liste d'indices croissant
-    Si les indices correspondent à delta_indices près, ils "correspondent"
-    Renvoit les deux listes des indices qui correspondent exactement un à un, sans trou
-    """
+    """Deux listes d'indices croissants (les harmoniques détectées sur
+    l'entrée et sur la sortie) : ceux qui se correspondent à delta_indices
+    près, appariés un à un, sans trou. Rend deux tableaux de même longueur."""
     i, j = 0, 0
     indices_final1 = []
     indices_final2 = []
@@ -72,10 +93,9 @@ def valeurs_correspondantes(indexes1, indexes2, delta_indices):
 
 
 def interpolation_fft(x, n_interpolation):
-    """Interpolation par FFT.
-
-    on fait la fft du signal, on rajoute N*n_interpolation zéros aux hautes fréquences
-    on fait la fft inverse, qui contient donc le signal avec N*(ninter+1) points
+    """Interpolation par FFT : N*n_interpolation zéros ajoutés aux hautes
+    fréquences de la FFT du signal, puis FFT inverse — le signal sur
+    N*(n_interpolation + 1) points, exact pour un signal à bande limitée.
 
     Fonction interpol() de Frédéric Legrand, « Diagramme de Bode »
     (f-legrand.fr, CC BY-NC-SA 2.0 FR), reprise ici :
@@ -85,58 +105,37 @@ def interpolation_fft(x, n_interpolation):
     tfd = np.fft.fft(x)
     N1 = N // 2
     tfd2 = np.concatenate((tfd[0:N1], np.zeros(N * n_interpolation), tfd[N1:N]))
-    y = np.real(np.fft.ifft(tfd2)) * (n_interpolation + 1)
-    return y
+    return np.real(np.fft.ifft(tfd2)) * (n_interpolation + 1)
 
 
-def gain(t, e, s, freq, Np, method, **kwargs):
-    """Mesure du gain selon différentes méthodes.
-    Il faut a priori une idée de la période selon la méthode utilisée.
+def fonction_transfert(t, e, s, freq=None):
+    """La fonction de transfert complexe H = S/E à la fréquence `freq`,
+    mesurée sur l'entrée e(t) et la sortie s(t) : |H| est le gain,
+    np.angle(H) la phase de s par rapport à e, en radians.
 
-    Retourne G, phi, H avec H = G exp(j phi)
-    """
-    if method == "std":
-        return gain_std(t, e, s, Np, **kwargs)
-    elif method == "fit":
-        return NotImplemented
+    Détection synchrone : chaque signal est projeté sur exp(-2j pi freq t),
+    avec une fenêtre de Hann, et H est le rapport des deux projections. Ce
+    qui est commun aux deux — la fenêtre, un nombre non entier de périodes,
+    une petite erreur sur freq — s'élimine du rapport ; la fenêtre rend
+    négligeables les composantes continues et la fréquence négative. Il faut
+    une dizaine de périodes au moins. Sans `freq`, elle est prise au pic de
+    la FFT de e (frequence_pic), à 1/durée près, ce qui suffit.
 
-
-def gain_std(t, e, s, Np=0, ninter=0):
-    """Mesure du gain complexe H entre e et s
-
-    Méthode due à Frédéric Legrand — la fonction mesure() de son exemple
-    « Diagramme de Bode » (f-legrand.fr, CC BY-NC-SA 2.0 FR), réécrite ici :
+    Remplace gain_std, d'après la fonction mesure() de Frédéric Legrand,
+    « Diagramme de Bode » (f-legrand.fr, CC BY-NC-SA 2.0 FR), dont la phase,
+    mesurée par un décalage d'un quart de période arrondi au point, était
+    biaisée de 0,15 à 3° :
     https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html
-
-    Méthode : on mesure les valeurs efficaces et le déphasage par moyennage entre
-    les deux signaux puisque
-        <cos(omega t + phi) * exp(j omega t)> = 1/2*exp(j phi)
-
-    Interpolation possible si ninter > 0:
-        on fait la fft du signal, on rajoute N*ninter zéros aux hautes fréquences
-        on fait la fft inverse, qui contient donc le signal avec N*(ninter+1) points
-
-        ninter : facteur d'interpolation entier : multiplie le nombre de points
-            (defaut: 0)
-
-    Renvoit G, phi, H avec H = G exp(j phi)
-
-    Il faut que le signal fasse un grand nombre de périodes
     """
-    if ninter > 0:
-        # lourd en calculs (O(N^2))
-        e = interpolation_fft(e, ninter)
-        s = interpolation_fft(s, ninter)
-        # t = np.arange(len(e)) * t[len(t) - 1] / len(e)
-    N = len(e)
-    E, S = e.std(), s.std()
-    G = S / E
-    d = int(Np * (ninter + 1) / 4)  # 1/4 de période (pi/2) en nombre de points
-    z = s[d:N] * (e[d:N] - 1j * e[0 : N - d])  # = G * A0**2 cos(omega t + phi) * exp(j omega t)
-    Z = z.mean()  # = G * A0**2/2 * exp(j phi)
-    phi = np.angle(Z)
-    # H = Z / E ** 2 si on veut...
-    return G, phi
+    t = np.asarray(t, dtype=float)
+    e = np.asarray(e, dtype=float)
+    s = np.asarray(s, dtype=float)
+    if not (t.ndim == 1 and t.shape == e.shape == s.shape):
+        raise ValueError("t, e et s : trois tableaux 1D de même longueur")
+    if freq is None:
+        freq = frequence_pic(t, e)
+    reference = np.hanning(t.size) * np.exp(-2j * np.pi * freq * (t - t[0]))
+    return np.sum((s - s.mean()) * reference) / np.sum((e - e.mean()) * reference)
 
 
 def choix_echantillonnage(freq, temin, Npmin, permin, Nmax, Tmax):
@@ -146,21 +145,17 @@ def choix_echantillonnage(freq, temin, Npmin, permin, Nmax, Tmax):
     de Bode » (f-legrand.fr, CC BY-NC-SA 2.0 FR) :
     https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html
 
-    On veut
-    un nombre minimal de points par période Npmin
-    que techant ne soit pas en-dessous de temin
-    que le temps total d'acquisition ne dépasse pas Tmax
+    On veut au moins Npmin points par période, une période d'échantillonnage
+    multiple de temin (et pas plus petite), et un temps total d'acquisition
+    au plus Tmax. On vérifie qu'on acquiert au moins permin périodes et pas
+    plus de Nmax points (Sysam.n_max le donne, sorties comprises), en le
+    disant sinon.
 
-    On vérifie
-    un nombre minimal de périodes acquises permin
-    que N ne dépasse pas Nmax
-
-    Retourne : techant (en s) et n, le nb de points
+    Rend techant (en s) et n, le nombre de points.
     """
     Np = min(Npmin, 1 / (temin * freq))
-    techant = int(1 / (Np * freq * temin)) * temin  # c'est de totue façon un multiple de temin
-    if techant == 0:
-        techant = temin
+    # un multiple de temin ; la marge relative de 1e-9 évite que 49,9999999 soit pris pour 49
+    techant = max(1, math.floor(1 / (Np * freq * temin) * (1 + 1e-9))) * temin
     n = min(Nmax, int(Tmax / techant))
     periodes = n * techant * freq  # nb de périodes acquises
     if periodes < permin:
