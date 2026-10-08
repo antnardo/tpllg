@@ -1,7 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Signaux acquis : repérer des fronts, découper une fenêtre, estimer une
-fréquence, trouver les extremums d'une oscillation amortie et son décrément.
+fréquence, trouver les extremums d'une oscillation amortie et son taux
+d'amortissement.
+
+Toutes les fonctions prennent le signal comme l'acquisition le rend, les
+instants `t` (en secondes) puis les tensions `v` : la période
+d'échantillonnage s'en déduit, il n'y a ni te ni fe à passer.
 
 @author: a. marchand
 """
@@ -10,46 +14,63 @@ import numpy as np
 from scipy.signal import find_peaks
 
 __all__ = [
-    "fronts_montants",
-    "fronts_descendants",
-    "front_utile",
-    "frequence_pic",
-    "fenetre",
     "extremums",
-    "decrement_logarithmique",
+    "fenetre",
+    "frequence_pic",
+    "front_utile",
+    "fronts_descendants",
+    "fronts_montants",
+    "taux_amortissement",
 ]
+
+
+def _tableaux(t, v):
+    t = np.asarray(t, dtype=float)
+    v = np.asarray(v, dtype=float)
+    if t.ndim != 1 or t.shape != v.shape:
+        raise ValueError(
+            "t et v : deux tableaux 1D de même longueur, une seule voie (temps[0] et tensions[0])"
+        )
+    return t, v
+
+
+def _niveaux(v):
+    """Les niveaux bas et haut d'un créneau : la médiane des points de chaque
+    côté du milieu entre minimum et maximum. Contrairement à des percentiles,
+    elle trouve le niveau haut d'impulsions brèves (rapport cyclique de 1 %)."""
+    milieu = (v.min() + v.max()) / 2
+    dessus = v > milieu
+    if not dessus.any() or dessus.all():
+        return v.min(), v.max()
+    return np.median(v[~dessus]), np.median(v[dessus])
 
 
 def fronts_montants(t, v):
     """Les instants des fronts montants d'un créneau.
 
-    Seuil à mi-hauteur entre les niveaux bas et haut (percentiles 5 et 95)
-    avec hystérésis d'un quart de l'amplitude : on passe à l'état haut
-    au-dessus du seuil haut, à l'état bas au-dessous du seuil bas, et un front
-    est une transition bas -> haut. L'instant est interpolé linéairement au
-    passage à mi-hauteur. Rend (instants, (niveau bas, niveau haut)).
+    Seuil à mi-hauteur entre les niveaux bas et haut, avec hystérésis d'un
+    quart de l'amplitude : on passe à l'état haut au-dessus du seuil haut, à
+    l'état bas au-dessous du seuil bas, et un front est une transition bas ->
+    haut. L'instant est interpolé linéairement au passage à mi-hauteur. Rend
+    (instants, (niveau bas, niveau haut)).
     """
-    t = np.asarray(t, dtype=float)
-    v = np.asarray(v, dtype=float)
-    v_bas, v_haut = np.percentile(v, [5, 95])
+    t, v = _tableaux(t, v)
+    v_bas, v_haut = _niveaux(v)
     milieu = (v_bas + v_haut) / 2
     marge = (v_haut - v_bas) / 4
-    etat_haut = v[0] > milieu
-    fronts = []
-    for i in range(1, len(v)):
-        if not etat_haut and v[i] > milieu + marge:
-            etat_haut = True
-            j = i
-            while j > 0 and v[j] > milieu:
-                j -= 1
-            if v[j + 1] != v[j]:
-                tj = t[j] + (milieu - v[j]) / (v[j + 1] - v[j]) * (t[j + 1] - t[j])
-            else:
-                tj = t[j]
-            fronts.append(tj)
-        elif etat_haut and v[i] < milieu - marge:
-            etat_haut = False
-    return np.array(fronts), (v_bas, v_haut)
+    # l'état, +1 haut ou -1 bas, ne change qu'en franchissant le seuil opposé
+    etat = np.where(v > milieu + marge, 1, np.where(v < milieu - marge, -1, 0))
+    if etat[0] == 0:
+        etat[0] = 1 if v[0] > milieu else -1
+    indices = np.arange(v.size)
+    etat = etat[np.maximum.accumulate(np.where(etat != 0, indices, 0))]
+    montees = np.flatnonzero((etat[1:] == 1) & (etat[:-1] == -1)) + 1
+    # le dernier point sous la mi-hauteur avant chaque montée, et le suivant
+    j = np.maximum.accumulate(np.where(v <= milieu, indices, 0))[montees]
+    j = np.minimum(j, v.size - 2)
+    pente = v[j + 1] - v[j]
+    fraction = np.divide(milieu - v[j], pente, out=np.zeros_like(pente), where=pente != 0)
+    return t[j] + fraction * (t[j + 1] - t[j]), (v_bas, v_haut)
 
 
 def fronts_descendants(t, v):
@@ -73,12 +94,12 @@ def front_utile(t, t_fronts, fraction=0.45):
     return t_fronts[0], periode
 
 
-def frequence_pic(v, te):
-    """La fréquence du pic de la FFT d'un signal échantillonné à `te`, moyenne
-    retirée : une première estimation de la fréquence d'une oscillation."""
-    v = np.asarray(v, dtype=float)
+def frequence_pic(t, v):
+    """La fréquence du pic de la FFT du signal (t, v), moyenne retirée : une
+    première estimation de la fréquence d'une oscillation, à 1/durée près."""
+    t, v = _tableaux(t, v)
     spectre = np.abs(np.fft.rfft(v - v.mean()))
-    frequences = np.fft.rfftfreq(len(v), te)
+    frequences = np.fft.rfftfreq(len(v), t[1] - t[0])
     return frequences[np.argmax(spectre[1:]) + 1]
 
 
@@ -89,18 +110,25 @@ def fenetre(t, v, t_debut, duree):
     return t[masque], np.asarray(v, dtype=float)[masque]
 
 
-def extremums(v, fe, f, offset=0.0):
+def extremums(t, v, f, offset=0.0, seuil=0.0):
     """Les indices des extremums d'une oscillation de fréquence `f`, en
-    valeur absolue autour de `offset`, séparés d'au moins 0,4 période."""
-    v = np.asarray(v, dtype=float)
-    pics, _ = find_peaks(np.abs(v - offset), distance=max(1, int(0.4 * fe / f)))
+    valeur absolue autour de `offset`, séparés d'au moins 0,4 période ; ceux
+    dont l'écart à `offset` ne dépasse pas `seuil` sont écartés : cinq à dix
+    fois l'écart-type du bruit, pour ne pas prendre ses bosses en fin
+    d'amortissement, qui aplatiraient l'enveloppe."""
+    t, v = _tableaux(t, v)
+    distance = max(1, int(0.4 / (f * (t[1] - t[0]))))
+    pics, _ = find_peaks(np.abs(v - offset), distance=distance, height=seuil if seuil > 0 else None)
     return pics
 
 
-def decrement_logarithmique(t_pics, v_pics, offset=0.0):
-    """Le taux d'amortissement alpha d'une enveloppe exp(-alpha t), par
-    régression du logarithme des amplitudes des extremums."""
-    pente, _ = np.polyfit(
-        np.asarray(t_pics, dtype=float), np.log(np.abs(np.asarray(v_pics, dtype=float) - offset)), 1
-    )
+def taux_amortissement(t_pics, v_pics, offset=0.0):
+    """Le taux d'amortissement alpha (s⁻¹) d'une enveloppe exp(-alpha t), par
+    régression du logarithme des amplitudes des extremums. Le décrément
+    logarithmique, sur une pseudo-période T, est delta = alpha T ; le facteur
+    de qualité Q ≈ pi/delta quand l'amortissement est faible."""
+    t_pics = np.asarray(t_pics, dtype=float)
+    if t_pics.size < 2:
+        raise ValueError("il faut au moins deux extremums")
+    pente, _ = np.polyfit(t_pics, np.log(np.abs(np.asarray(v_pics, dtype=float) - offset)), 1)
     return -pente

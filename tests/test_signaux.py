@@ -1,55 +1,78 @@
+import time
+
 import numpy as np
 import pytest
 
 from tpllg.signaux import (
-    decrement_logarithmique,
     extremums,
     fenetre,
-    fronts_descendants,
-    fronts_montants,
     frequence_pic,
     front_utile,
+    fronts_descendants,
+    fronts_montants,
+    taux_amortissement,
 )
 
 
-def creneau(fe=100000.0, n=3000, f=200.0, phase=1.0):
+def creneau(rng, fe=100000.0, n=3000, f=200.0, phase=1.0):
     t = np.arange(n) / fe
-    v = np.sign(np.sin(2 * np.pi * f * t + phase)) + np.random.RandomState(2).normal(0, 0.01, t.size)
-    return t, v
+    return t, np.sign(np.sin(2 * np.pi * f * t + phase)) + rng.normal(0, 0.01, t.size)
 
 
-def test_fronts_montants_d_un_creneau():
-    fe = 100000.0
-    t, v = creneau(fe)
-    fronts, (bas, haut) = fronts_montants(t, v)
-    assert abs(bas + 1) < 0.05 and abs(haut - 1) < 0.05
-    attendus = [(k - 1.0 / (2 * np.pi)) / 200 for k in range(0, 8)]  # sin(2 pi 200 t + 1) = 0, montant
-    attendus = [a for a in attendus if 0 < a < t[-1]]
-    assert len(fronts) == len(attendus)
-    assert np.allclose(fronts, attendus, atol=2 / fe)
-    t0, periode = front_utile(t, fronts)
-    assert abs(periode - 1 / 200) < 2 / fe and t0 == fronts[0]
+def oscillation_amortie(fe=200000.0, f0=2000.0, Q=6.0, n=2000, offset=0.0):
+    t = np.arange(n) / fe
+    return t, offset - 1.5 * np.exp(-np.pi * f0 * t / Q) * np.sin(2 * np.pi * f0 * t)
 
 
-def test_fronts_descendants_d_un_creneau():
-    fe = 100000.0
-    t, v = creneau(fe)
-    fronts, (bas, haut) = fronts_descendants(t, v)
-    assert abs(bas + 1) < 0.05 and abs(haut - 1) < 0.05
-    attendus = [
-        (k + 0.5 - 1.0 / (2 * np.pi)) / 200 for k in range(0, 8)
-    ]  # sin(2 pi 200 t + 1) = 0, descendant
-    attendus = [a for a in attendus if 0 < a < t[-1]]
-    assert len(fronts) == len(attendus)
-    assert np.allclose(fronts, attendus, atol=2 / fe)
+class TestFronts:
+    def test_fronts_montants_d_un_creneau(self, rng):
+        t, v = creneau(rng)
+        fronts, (bas, haut) = fronts_montants(t, v)
+        assert bas == pytest.approx(-1, abs=0.05) and haut == pytest.approx(1, abs=0.05)
+        attendus = [a for a in ((k - 1 / (2 * np.pi)) / 200 for k in range(8)) if 0 < a < t[-1]]
+        assert np.allclose(fronts, attendus, atol=2e-5)
+        t0, periode = front_utile(t, fronts)
+        assert periode == pytest.approx(1 / 200, abs=2e-5) and t0 == fronts[0]
+
+    def test_fronts_descendants_d_un_creneau(self, rng):
+        t, v = creneau(rng)
+        fronts, (bas, haut) = fronts_descendants(t, v)
+        assert bas == pytest.approx(-1, abs=0.05) and haut == pytest.approx(1, abs=0.05)
+        attendus = [a for a in ((k + 0.5 - 1 / (2 * np.pi)) / 200 for k in range(8)) if 0 < a < t[-1]]
+        assert np.allclose(fronts, attendus, atol=2e-5)
+
+    @pytest.mark.parametrize("rapport_cyclique", [0.02, 0.5, 0.98])
+    def test_impulsions_breves(self, rng, rapport_cyclique):
+        """Les percentiles 5 et 95 ne voyaient rien sous 5 % de rapport cyclique."""
+        t = np.arange(100000) / 1e6
+        v = 5.0 * ((t * 1000) % 1 < rapport_cyclique) + rng.normal(0, 0.02, t.size)
+        fronts, (bas, haut) = fronts_montants(t, v)
+        assert bas == pytest.approx(0, abs=0.01) and haut == pytest.approx(5, abs=0.01)
+        assert len(fronts) == 99 and np.allclose(np.diff(fronts), 1e-3, atol=2e-6)
+
+    def test_rapide_sur_une_acquisition_pleine(self, rng):
+        t = np.arange(262144) / 1e6
+        v = np.sign(np.sin(2 * np.pi * 1000 * t + 1)) + rng.normal(0, 0.01, t.size)
+        debut = time.perf_counter()
+        fronts, _ = fronts_montants(t, v)
+        assert time.perf_counter() - debut < 0.5 and len(fronts) == 262
+
+    def test_signal_plat_sans_front(self):
+        t = np.arange(100) * 1e-3
+        fronts, _ = fronts_montants(t, np.ones(100))
+        assert fronts.size == 0
+
+    def test_deux_voies_d_un_coup_refusees(self):
+        with pytest.raises(ValueError, match="une seule voie"):
+            fronts_montants(np.zeros((2, 10)), np.zeros((2, 10)))
 
 
 def test_front_utile():
     t = np.linspace(0, 1, 1001)
     t0, periode = front_utile(t, [0.12, 0.32, 0.52, 0.73])
-    assert t0 == 0.12 and abs(periode - 0.2) < 1e-12  # la médiane des écarts : 0,2, 0,2, 0,21
+    assert t0 == 0.12 and periode == pytest.approx(0.2)  # la médiane des écarts : 0,2, 0,2, 0,21
     t0, periode = front_utile(t, [0.4])
-    assert t0 == 0.4 and abs(periode - 0.6) < 1e-12  # un seul front : jusqu'à la fin
+    assert t0 == 0.4 and periode == pytest.approx(0.6)  # un seul front : jusqu'à la fin
     with pytest.raises(ValueError):
         front_utile(t, [])
 
@@ -61,29 +84,39 @@ def test_fenetre_est_un_intervalle_semi_ouvert():
 
 
 def test_frequence_pic_exacte_sur_un_nombre_entier_de_periodes():
-    fe, N = 10000.0, 1000
-    t = np.arange(N) / fe
-    assert (
-        abs(frequence_pic(3 + np.cos(2 * np.pi * 370 * t), 1 / fe) - 370) < 1e-6
-    )  # la moyenne ne compte pas
+    t = np.arange(1000) / 10000.0
+    assert frequence_pic(t, 3 + np.cos(2 * np.pi * 370 * t)) == pytest.approx(370)  # la moyenne ne compte pas
 
 
-def test_frequence_et_decrement_d_une_oscillation_amortie():
-    fe, f0, Q = 200000.0, 2000.0, 6.0
-    t = np.arange(2000) / fe
-    v = -1.5 * np.exp(-np.pi * f0 * t / Q) * np.sin(2 * np.pi * f0 * t)
-    assert abs(frequence_pic(v, 1 / fe) - f0) < 150
-    pics = extremums(v, fe, f0)
-    alpha = decrement_logarithmique(t[pics], v[pics])
-    assert abs(np.pi * f0 / alpha - Q) < 0.3
+class TestExtremums:
+    def test_frequence_et_amortissement_d_une_oscillation(self):
+        t, v = oscillation_amortie()
+        assert frequence_pic(t, v) == pytest.approx(2000, abs=150)
+        pics = extremums(t, v, 2000)
+        alpha = taux_amortissement(t[pics], v[pics])
+        assert alpha == pytest.approx(np.pi * 2000 / 6, rel=0.05)
 
+    def test_autour_d_un_offset(self):
+        t, v = oscillation_amortie(offset=2.0)
+        pics = extremums(t, v, 2000, offset=2.0)
+        assert np.all(np.diff(t[pics]) > 0.4 / 2000)
+        assert np.median(np.diff(t[pics])) == pytest.approx(0.5 / 2000, abs=1e-5)  # une demi-période
+        assert taux_amortissement(t[pics], v[pics], offset=2.0) == pytest.approx(np.pi * 2000 / 6, rel=0.05)
 
-def test_extremums_autour_d_un_offset():
-    fe, f0, Q = 200000.0, 2000.0, 6.0
-    t = np.arange(2000) / fe
-    v = 2.0 + 1.5 * np.exp(-np.pi * f0 * t / Q) * np.sin(2 * np.pi * f0 * t)
-    pics = extremums(v, fe, f0, offset=2.0)
-    assert np.all(np.diff(t[pics]) > 0.4 / f0)
-    assert abs(np.median(np.diff(t[pics])) - 0.5 / f0) < 2 / fe  # une demi-période entre deux extremums
-    alpha = decrement_logarithmique(t[pics], v[pics], offset=2.0)
-    assert abs(np.pi * f0 / alpha - Q) < 0.3
+    def test_seuil_ecarte_les_bosses_du_bruit(self, rng):
+        t, v = oscillation_amortie(n=4000)
+        v = v + rng.normal(0, 0.003, v.size)
+        tous = extremums(t, v, 2000)
+        francs = extremums(t, v, 2000, seuil=0.03)  # dix fois le bruit
+        assert len(francs) < len(tous) and np.all(abs(v[francs]) > 0.03)
+        assert taux_amortissement(t[francs], v[francs]) == pytest.approx(np.pi * 2000 / 6, rel=0.05)
+
+    def test_te_deduit_de_t(self):
+        """extremums(v, fe, f) et frequence_pic(v, te) ne prenaient pas la même chose : 509 extremums
+        au lieu de 41 en confondant les deux. Les deux prennent maintenant (t, v)."""
+        t, v = oscillation_amortie()  # 10 ms à 2 kHz : vingt périodes, quarante extremums
+        assert len(extremums(t, v, 2000)) == 40
+
+    def test_taux_amortissement_veut_deux_extremums(self):
+        with pytest.raises(ValueError, match="deux extremums"):
+            taux_amortissement([0.1], [1.0])
