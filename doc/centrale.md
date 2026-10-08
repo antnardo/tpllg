@@ -4,9 +4,11 @@
 commodités : un `with` qui ouvre et ferme la centrale, des calibres qu'on
 donne une fois pour toutes les voies, des temps en secondes, et des
 acquisitions qui rendent directement temps et tensions. Tout ce que pycanum
-sait faire reste accessible, la classe en hérite. `tpllg.acquisition` réduit
-le cas courant à une fonction, et `tpllg.sysam_factice` tient lieu de
-centrale quand il n'y en a pas.
+sait faire reste accessible, la classe en hérite. Elle corrige au passage
+quelques pièges du pilote de pycanum, lus dans son source C et décrits plus
+bas. `tpllg.acquisition` réduit le cas courant à une fonction, et
+`tpllg.sysam_factice` tient lieu de centrale quand il n'y en a pas, en
+refusant ce que la centrale refuse.
 
 ## Sommaire
 
@@ -27,13 +29,13 @@ centrale quand il n'y en a pas.
 
 La Sysam SP5 est une carte d'acquisition USB d'Eurosmart :
 
-| | |
+| Organe | Caractéristiques |
 | --- | --- |
 | entrées analogiques | 8, EA0 à EA7, ±10 V, impédance 1 MΩ, convertisseur 12 bits |
 | calibres | 0,2 V, 1 V, 5 V, 10 V (la carte en connaît d'autres, pycanum non) |
 | échantillonnage | jusqu'à 10 MHz en mode direct, 500 kHz en mode multiplexé |
-| mémoire | 512 ko, soit 262 144 points au total, toutes voies confondues |
-| sorties analogiques | 2, SA1 et SA2, ±10 V, 50 mA, 12 bits, 5 MHz |
+| mémoire | 0x3FFFF = 262 143 mots de 12 bits, partagés entre les entrées (voies × points) et les sorties |
+| sorties analogiques | 2, SA1 et SA2, ±10 V, 50 mA, 12 bits, 5 MHz, 131 071 points chacune au plus |
 | entrées-sorties logiques | 16 lignes, ports B et C |
 | déclenchement | sur une voie (seuil, front, prétrig) ou sur l'entrée externe |
 
@@ -87,33 +89,46 @@ can.config_entrees(voies, calibres=None, diff=None)
 
 | Argument | Sens |
 | --- | --- |
-| `voies` | la liste des entrées analogiques à acquérir, numéros de 0 à 7, dans l'ordre où l'on veut les retrouver dans les résultats |
-| `calibres` | la tension maximale en valeur absolue, en volts : un nombre, appliqué à toutes les voies, ou une liste avec une valeur par voie ; 10 V par défaut. Une valeur qui n'est pas un calibre existant est remplacée par le calibre immédiatement supérieur (0,5 V devient 1 V ; au-delà de 10 V, 10 V) ; une valeur nulle ou `nan` devient 10 V |
-| `diff` | la liste des voies à mettre en mode différentiel : `[0]` mesure EA0 − EA4, `[0, 1]` aussi EA1 − EA5 ; les deux entrées du module servent alors à une seule voie |
+| `voies` | la liste des entrées analogiques à acquérir, numéros de 0 à 7, dans l'ordre où l'on veut les retrouver dans les résultats ; une voie ne peut y être qu'une fois |
+| `calibres` | la tension maximale en valeur absolue, en volts : un nombre, appliqué à toutes les voies, ou une liste avec une valeur par voie ; 10 V par défaut. La carte prend le plus petit calibre qui contient la valeur (0,5 V donne 1 V) ; au-delà de 10 V, 10 V, en le disant ; une valeur nulle, négative ou `nan` donne 10 V |
+| `diff` | la liste des modules à mettre en mode différentiel : `[0]` mesure EA0 − EA4, `[0, 1]` aussi EA1 − EA5 ; on ne met alors que EA0 (ou EA1) dans `voies`, EA4 étant l'entrée moins |
 
-`Sysam.CALIBRES` est la liste des calibres que pycanum accepte, `[0.2, 1,
-5, 10]`, et `Sysam.get_calibre(valeur)` dit lequel une valeur donnée
-obtiendra. `Sysam.te_min(voies)` dit si une liste de voies impose le mode
-multiplexé : elle rend `TE_MIN_DIRECT` ou `TE_MIN_MULTIPLEX`.
+Après la configuration, `can.voies` et `can.calibres` donnent les voies et
+les calibres réellement pris, dans l'ordre demandé.
+
+`Sysam.CALIBRES` est la liste des calibres que pycanum accepte, `(0.2, 1,
+5, 10)`, et `Sysam.get_calibre(valeur)` dit lequel une valeur donnée
+obtiendra. `Sysam.te_min(voies, diff=())` dit si une liste de voies impose
+le mode multiplexé : elle rend `TE_MIN_DIRECT` ou `TE_MIN_MULTIPLEX`.
 
 ```python
 >>> Sysam.get_calibre(0.5), Sysam.get_calibre(2), Sysam.get_calibre(20)
 (1, 5, 10)
->>> Sysam.te_min([0, 1, 2, 3]), Sysam.te_min([0, 4])
-(1e-07, 2e-06)
+>>> Sysam.te_min([0, 1, 2, 3]), Sysam.te_min([0, 4]), Sysam.te_min([0, 4], diff=[0])
+(1e-07, 2e-06, 1e-07)
 ```
 
-Les constantes de classe, utiles pour écrire un script qui reste dans les
-limites :
+Le pilote de pycanum range les voies dans l'ordre croissant, mais applique
+les calibres dans l'ordre où on les donne : `[1, 0]` avec `[10, 0.2]`
+mettait 10 V sur EA0 et 0,2 V sur EA1. La classe range les couples (voie,
+calibre) ensemble avant de les passer au pilote, et rend les lignes dans
+l'ordre demandé.
 
-| Constante | Valeur | Sens |
+Les constantes et méthodes de classe, utiles pour écrire un script qui reste
+dans les limites :
+
+| Nom | Valeur | Sens |
 | --- | --- | --- |
 | `Sysam.TE_MIN_DIRECT` | `1e-7` s | période d'échantillonnage minimale, mode direct |
 | `Sysam.TE_MIN_MULTIPLEX` | `2e-6` s | idem, mode multiplexé |
-| `Sysam.TE_MIN_SORTIE` | `2e-7` s | idem quand une sortie analogique est utilisée en même temps |
-| `Sysam.N_MAX` | `262144` | points au total, toutes voies confondues |
-| `Sysam.CALIBRES` | `[0.2, 1, 5, 10]` | les calibres accessibles |
-| `Sysam.MODULES_ANALOG` | `{0: (0, 4), 1: (1, 5), 2: (2, 6), 3: (3, 7)}` | les modules et leurs deux entrées |
+| `Sysam.TE_MIN_SORTIE` | `2e-7` s | idem quand une sortie analogique est utilisée en même temps ; la période est alors un multiple de 0,2 µs |
+| `Sysam.PAS_TE` | `1e-7` s | la carte compte la période en dixièmes de microseconde |
+| `Sysam.MEMOIRE` | `0x3FFFF` = 262 143 | mots de mémoire, entrées et sorties ensemble |
+| `Sysam.POINTS_SORTIE_MAX` | `0x1FFFF` = 131 071 | points d'une sortie |
+| `Sysam.CALIBRES` | `(0.2, 1, 5, 10)` | les calibres accessibles |
+| `Sysam.MODULES_ANALOG` | `((0, 4), (1, 5), (2, 6), (3, 7))` | les deux entrées de chaque module |
+| `Sysam.n_max(nb_voies, nb_sorties=0)` | `261888` pour une voie, `130944` pour deux, `87296` pour deux voies et une sortie | le nombre de points par voie le plus grand que la mémoire accepte, quand chaque sortie a autant de points que les entrées |
+| `Sysam.te_effectif(te)` | `te` arrondie à 0,1 µs | la période que la carte appliquera |
 
 ## Échantillonner
 
@@ -126,12 +141,22 @@ can.config_echantillon(te, nbpoints)
 | `te` | la période d'échantillonnage, en **secondes** ; la même pour toutes les voies. pycanum la prend en microsecondes, la classe convertit |
 | `nbpoints` | le nombre de points **par voie** |
 
-La période réellement appliquée est un multiple de la période minimale, et
-la carte arrondit : le pas de temps qu'on relit ensuite dans `temps` peut
-différer légèrement de celui qu'on a demandé, et c'est celui-là qu'il faut
-prendre pour tout calcul (`te = temps[0][1] - temps[0][0]`). Le nombre de
-points fois le nombre de voies ne doit pas dépasser `N_MAX` : 131 072 points
-pour deux voies, 65 536 pour quatre.
+La carte compte la période en dixièmes de microseconde : la classe arrondit
+`te` au dixième le plus proche, `can.te` la donne, et c'est le pas qu'on
+relit dans `temps`. (Le pilote de pycanum passe la période en flottant
+32 bits puis la **tronque** : 0,7 µs demandées donnaient 0,6 µs, 1,4 µs
+donnaient 1,3 µs. La classe lui passe la valeur arrondie avec un demi-pas de
+marge.) La période ne descend pas sous `te_min(voies)`, sans quoi pycanum
+refuse.
+
+La mémoire fixe le nombre de points : au plus `MEMOIRE // nombre de voies`,
+soit 131 071 points pour deux voies et 65 535 pour quatre, et moins encore
+si des sorties tournent en même temps (voir plus bas). Au-delà, la carte
+**rend moins de points que demandé**, sans erreur ; la classe le dit :
+
+```text
+[SYSAM] ATTENTION : 150000 points demandés sur 2 voie(s), la mémoire en permet au plus 131071 : la centrale en rendra moins
+```
 
 Le choix se fait toujours de la même façon. On veut assez de points par
 période pour dessiner le signal : une centaine si l'on ajuste point par
@@ -161,7 +186,8 @@ Lance l'acquisition, attend qu'elle soit finie, et rend deux tableaux numpy
 de forme `(nombre de voies, nbpoints)`, en `float64` : `temps[i]` et
 `tensions[i]` sont les instants en secondes et les tensions en volts de la
 i-ième voie de la liste `voies`, dans cet ordre. Le temps commence à zéro. Avec
-`reduction=4`, un point sur quatre est rendu, sans changer l'acquisition.
+`reduction=4`, un point sur quatre est rendu (`nbpoints // 4` points), sans
+changer l'acquisition.
 
 L'appel **bloque** le temps de l'acquisition, et davantage si un
 déclenchement est configuré et que le front attendu ne vient pas : un
@@ -189,8 +215,8 @@ with Sysam(ENTREES, CALIBRE) as can:
 
 print(temps.shape, tensions.shape)
 for ea, t, u in zip(ENTREES, temps, tensions):
-    np.savetxt("essai_EA%d.txt" % ea, [t, u])
-    plt.plot(t * 1e3, u, label="EA%d" % ea)
+    np.savetxt(f"essai_EA{ea}.txt", [t, u])
+    plt.plot(t * 1e3, u, label=f"EA{ea}")
 plt.xlabel("t (ms)")
 plt.ylabel("u (V)")
 plt.legend()
@@ -227,6 +253,11 @@ Le déclenchement se configure **après** les entrées et l'échantillonnage,
 et avant `acquerir`. Il reste en place pour les acquisitions suivantes de la
 même session ; `config_trigger(-1, 0)` le retire.
 
+Le pilote de pycanum code le seuil avec le calibre qu'il trouve à la
+position du numéro de la voie dans sa table, pas avec celui de la voie : EA1
+seule au calibre 1 V, un seuil de 0,5 V déclenchait à 0,05 V. La classe
+corrige le seuil d'autant ; elle connaît la table, qu'elle a remplie.
+
 ```python
 with Sysam([0, 1], 5) as can:
     can.config_echantillon(1 / 200000, 6000)
@@ -255,15 +286,29 @@ d'échantillonnage, qui ne peut alors pas descendre sous `TE_MIN_SORTIE`,
 0,2 µs :
 
 ```python
-temps, tensions = can.acquerir_avec_sorties(sortie1=0, sortie2=0)
+temps, tensions = can.acquerir_avec_sorties(sortie1=None, sortie2=None)
 ```
 
 | Argument | Sens |
 | --- | --- |
-| `sortie1`, `sortie2` | pour chaque sortie SA1 et SA2 : un tableau numpy des tensions à envoyer, en volts, **une par point d'acquisition**, ou un entier pour une tension constante ; `0` par défaut |
+| `sortie1`, `sortie2` | pour chaque sortie SA1 et SA2 : les tensions à envoyer, en volts, un tableau ou une liste, un point par période d'échantillonnage, répétées en boucle ; un nombre pour une tension constante ; `None`, par défaut, pour ne rien générer |
 
-Le retour est celui d'`acquerir`. Le nombre total de points, entrées et
-sorties, est limité par la mémoire de la carte, 262 142.
+Le retour est celui d'`acquerir`. Trois limites, que le simulateur vérifie
+comme la carte :
+
+- la **mémoire est partagée** : voies × points des entrées + points de SA1 +
+  points de SA2 ≤ 262 143. Pour deux voies et une sortie aussi longue que
+  l'acquisition, `Sysam.n_max(2, 1)`, 87 296 points. Au-delà, pycanum lève
+  `Erreur : memoire insuffisante`. Les points d'une sortie restent comptés
+  jusqu'à la fermeture de la centrale, même pour une acquisition suivante
+  sans sortie ;
+- une sortie a au plus 131 071 points ;
+- la période doit être un **multiple de 0,2 µs** : les sorties ne
+  connaissent pas d'autre cadence, et la carte les ferait tourner à une
+  autre période que les entrées. La classe le refuse (`ValueError`).
+
+pycanum ignorait sans rien dire une sortie qui n'était pas un tableau numpy
+de flottants — une liste, un nombre : la classe les convertit.
 
 ```python
 import numpy as np
@@ -271,9 +316,9 @@ from tpllg.sysam import Sysam
 
 N, Np = 20000, 100  # points, points par période
 e1 = 1.7 * np.cos(2 * np.pi * np.arange(N) / Np)  # une sinusoïde d'amplitude 1,7 V
-with Sysam([0, 1], [2, 2]) as can:  # calibres 5 V en pratique
+with Sysam([0, 1], 5) as can:
     can.config_echantillon(1e-5, N)  # 100 points par période à 1 kHz
-    temps, tensions = can.acquerir_avec_sorties(e1, 0)  # SA1 : e1 ; SA2 : 0 V
+    temps, tensions = can.acquerir_avec_sorties(e1)  # SA1 : e1 ; SA2 : rien
 ```
 
 Un câble relie la sortie SA1 à l'entrée EA0 pour lire ce qu'on envoie
@@ -294,7 +339,7 @@ précède :
 | Méthode | Rôle |
 | --- | --- |
 | `config_quantification(nbits)` | nombre de bits de la conversion, 12 au plus ; moins pour montrer la quantification |
-| `temps(reduction)`, `entrees(reduction)` | relire la dernière acquisition |
+| `temps(reduction)`, `entrees(reduction)` | relire la dernière acquisition, dans l'ordre des voies demandées |
 | `entrees_filtrees(reduction)`, `config_filtre(A, B)` | la même après un filtre numérique récursif dont on donne les coefficients |
 | `lancer()`, `stopper_acquisition()`, `nombre_echant()` | lancer sans attendre la fin, arrêter, savoir où l'on en est |
 | `config_echantillon_permanent(te_us, N)`, `acquerir_permanent()`, `lancer_permanent(repetition)`, `paquet(premier, reduction)` | l'acquisition continue, en mémoire circulaire, lue par paquets |
@@ -348,22 +393,32 @@ les tests, `tpllg.sysam` importe `tpllg.sysam_factice` à sa place, et
 l'ouverture l'annonce. Le simulateur a la même interface, et rend des
 données de la même forme : deux tableaux `(voies, nbpoints)` en `float64`,
 le temps en secondes, les tensions en volts, remplies d'un bruit gaussien
-d'un pas de quantification, arrondi au pas. Les méthodes de configuration
-impriment ce qu'elles reçoivent, `acquerir` attend la durée de
+d'un pas de quantification du calibre, arrondi au pas. Les méthodes de
+configuration impriment ce qu'elles ont pris, `acquerir` attend la durée de
 l'acquisition :
 
 ```text
 [SYSAM] ATTENTION : pycanum absent, centrale simulée (tpllg.sysam_factice)
-[SYSAM] Configuration entrées [0, 1] : calibres=[5.0, 5.0], diff=[]
-[SYSAM] Configuration échantillonnage techant=5.0e+00µs, nbpoints=6000
-[SYSAM] Déclenchement sur EA0, seuil 0.0 V, front montant, 50 points avant
+[SYSAM] Entrées EA[0, 1] : calibres [5.0, 5.0] V, différentiel []
+[SYSAM] Échantillonnage : 5.0 µs, 6000 points
+[SYSAM] Déclenchement sur EA0, seuil 0 V, front montant, 50 points avant
 [SYSAM] Acquisition...
 [SYSAM] Terminée.
 ```
 
-Un script écrit pour la centrale tourne donc partout, jusqu'au bout, mais
-sur du bruit. Pour l'essayer sur des données plausibles, c'est au script de
-les fabriquer, comme la centrale les rendrait, derrière un interrupteur :
+Il **refuse ce que la carte refuse**, avec les règles du pilote C de
+pycanum, et lève les mêmes `ValueError` : un calibre au-delà de 10 V, un
+nombre de calibres différent du nombre de voies, une période sous le
+minimum, une mémoire insuffisante, une sortie trop longue ou trop rapide,
+un déclenchement sur une voie non configurée. Il en reproduit aussi les
+arrondis et les silences : la période tronquée au dixième de microseconde,
+le nombre de points arrondi au paquet de la mémoire tampon et plafonné sans
+message, les voies rangées dans l'ordre croissant. Un script qui passe sur
+le simulateur ne découvre donc pas ces erreurs en salle de TP.
+
+Un script écrit pour la centrale tourne partout, jusqu'au bout, mais sur du
+bruit. Pour l'essayer sur des données plausibles, c'est au script de les
+fabriquer, comme la centrale les rendrait, derrière un interrupteur :
 
 ```python
 SIMULATION = True
@@ -374,15 +429,16 @@ else:
     temps, tensions = acquerir(ENTREES, CALIBRE, te, N)
 ```
 
-`exemples/regime_libre.py` et `exemples/spectre_harmoniques.py` font cela ;
-leur `acquisition_simulee` rend deux tableaux `(2, N)` et reproduit ce qui
-fait la difficulté de la vraie mesure, un créneau dont on ne choisit pas la
-phase, un bruit, un offset.
+`exemples/regime_libre.py`, `exemples/spectre_harmoniques.py` et
+`exemples/Bode.py` font cela ; leur simulation reproduit ce qui fait la
+difficulté de la vraie mesure, un créneau dont on ne choisit pas la phase,
+un bruit, un offset, la quantification.
 
 `sysam_factice.VERBOSE = False` avant d'ouvrir tait les messages du
-simulateur. Ce qu'il ne fait pas : l'acquisition permanente, les sorties
-seules, les ports, le compteur ; ces méthodes-là ne font rien et rendent
-`None`.
+simulateur. Ce qu'il ne simule pas — l'acquisition permanente, la lecture
+par paquets, le filtrage, la lecture directe, le compteur, le chronomètre —
+lève `NotImplementedError` ; les ports logiques et les sorties seules ne
+font rien.
 
 ## Cas complets
 
@@ -394,29 +450,31 @@ seules, les ports, le compteur ; ces méthodes-là ne font rien et rendent
 import matplotlib.pyplot as plt
 from tpllg.acquisition import acquerir, sauvegarder
 
-PREFIXE = "essai"
-ENTREES = [0, 1]
-CALIBRE = 5
-fe = 100000.0
-T = 0.05
+PREFIXE = "essai"  # essai_EA0.txt, essai_EA1.txt, essai.pdf
+ENTREES = [0, 1]  # EA0 et EA1 ; [0] pour une seule voie
+CALIBRE = 5  # V : 0.2, 1, 5 ou 10
+fe = 100000.0  # Hz
+T = 0.05  # s
 te, N = 1 / fe, int(fe * T)
 
 temps, tensions = acquerir(ENTREES, CALIBRE, te, N)
 sauvegarder(PREFIXE, ENTREES, temps, tensions)
-print("acquis :", temps.shape, "points par voie, de", temps[0][0], "à", temps[0][-1], "s")
+voies, points = temps.shape
+print(f"acquis : {voies} voie(s) de {points} points, de {temps[0][0]} à {temps[0][-1]} s")
 
-fig, axes = plt.subplots(len(ENTREES), sharex=True)
-for ax, ea, t, u in zip(axes, ENTREES, temps, tensions):
+# squeeze=False : un tableau de repères même pour une seule voie
+fig, axes = plt.subplots(len(ENTREES), 1, sharex=True, squeeze=False)
+for ax, ea, t, u in zip(axes[:, 0], ENTREES, temps, tensions):
     ax.plot(t * 1e3, u)
-    ax.set_ylabel("EA%d (V)" % ea)
+    ax.set_ylabel(f"EA{ea} (V)")
     ax.grid()
-axes[-1].set_xlabel("t (ms)")
+axes[-1, 0].set_xlabel("t (ms)")
 plt.savefig(PREFIXE + ".pdf")
 plt.show()
 ```
 
 ```text
-acquis : (2, 5000) points par voie, de 0.0 à 0.04999 s
+acquis : 2 voie(s) de 5000 points, de 0.0 à 0.04999 s
 ```
 
 ![Les deux voies acquises sans centrale : le bruit du simulateur, arrondi au pas de quantification](images/acquisition_simple.png)
@@ -446,7 +504,8 @@ Le front est vers le point 50 ; l'exploitation est dans
 ### Quatre voies vite
 
 Quatre signaux à 1 MHz d'échantillonnage : EA0 à EA3, un par module, en
-mode direct, 60 000 points par voie pour rester sous `N_MAX`.
+mode direct, 60 000 points par voie, sous les 65 535 que la mémoire permet
+pour quatre voies.
 
 ```python
 temps, tensions = acquerir([0, 1, 2, 3], [10, 10, 1, 1], 1e-6, 60000)
@@ -454,7 +513,8 @@ temps, tensions = acquerir([0, 1, 2, 3], [10, 10, 1, 1], 1e-6, 60000)
 
 Les mêmes voies avec EA4 à la place d'EA3 mettraient la carte en mode
 multiplexé, et `config_echantillon(1e-6, …)` demanderait moins que
-`TE_MIN_MULTIPLEX` : la carte appliquerait 2 µs.
+`TE_MIN_MULTIPLEX` : pycanum refuserait, `Erreur : periode d'echantillonnage
+trop faible`.
 
 ### Une mesure différentielle
 
@@ -480,7 +540,7 @@ resultats = []
 with Sysam([0, 1], 5) as can:
     can.config_echantillon(1e-5, 20000)
     for k in range(5):
-        input("réglage %d prêt ? Entrée pour acquérir" % (k + 1))
+        input(f"réglage {k + 1} prêt ? Entrée pour acquérir")
         temps, tensions = can.acquerir()
         resultats.append(tensions)
 ```
@@ -493,10 +553,12 @@ with Sysam([0, 1], 5) as can:
 | le script se bloque à `acquerir` | un déclenchement attend un front qui ne vient pas : la voie est-elle branchée, le seuil est-il dans l'amplitude du signal ? Acquérir d'abord sans déclenchement |
 | la centrale ne répond plus après une interruption | elle est restée ouverte : redémarrer le noyau, ou toujours ouvrir dans un `with` |
 | `Erreur : voie de trigger non configuree` | la voie de déclenchement n'est pas dans la liste des voies acquises |
+| `Erreur : periode d'echantillonnage trop faible` | sous 0,1 µs, ou sous 2 µs avec deux entrées d'un même module : prendre EA0 à EA3 |
+| `Erreur : memoire insuffisante` | entrées et sorties ensemble dépassent la mémoire : `Sysam.n_max(voies, sorties)` points au plus ; les points d'une sortie déjà utilisée comptent encore |
+| `ValueError: période de … µs : avec des sorties, elle doit être un multiple de 0,2 µs` | les sorties ne tournent qu'à un multiple de 0,2 µs : choisir `te` en conséquence (`choix_echantillonnage` le fait) |
 | le signal est plat au sommet | il dépasse le calibre : le monter. Un signal de ±6 V au calibre 5 V est écrêté à ±5 V, en silence |
 | le signal est en marches d'escalier | calibre trop grand pour un petit signal : le descendre |
-| la période lue diffère de celle demandée | la carte arrondit au multiple de sa période minimale ; relire `te` dans `temps` |
-| la carte ignore la période demandée sous 2 µs | deux entrées d'un même module sont actives : mode multiplexé. Prendre EA0 à EA3 |
-| `nbpoints` refusé, ou acquisition tronquée | le total voies × points dépasse `N_MAX` |
+| la période lue diffère de celle demandée | la carte compte en dixièmes de microseconde ; `can.te` donne la période appliquée |
+| moins de points que demandé, et un message `la centrale en rendra moins` | voies × points dépasse la mémoire |
 | le signal généré par la sortie est déformé | trop peu de points par période, ou trop peu de niveaux pour une petite amplitude |
 | des acquisitions consécutives donnent la même chose | on relit `temps()` et `entrees()` sans avoir relancé `acquerir()` |

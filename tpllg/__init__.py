@@ -1,10 +1,15 @@
 """
 tpllg — acquisition à la Sysam SP5 et exploitation des mesures en TP de physique.
 
-Modules : sysam (la centrale, ou son simulateur), acquisition, ajustement,
-incertitudes, montecarlo, signaux, bode, fft, traitement, fichiers.
-Un TP qui a besoin de fonctions à lui les pose dans un module tpNN.py déposé
-dans la copie du paquet distribuée avec ses scripts — pas ici.
+Modules : sysam (la centrale, ou son simulateur sysam_factice), acquisition,
+ajustement, incertitudes, montecarlo, signaux, bode, fft, traitement,
+harmoniques, fichiers. On les importe un à un : `from tpllg.ajustement import
+curvefit`. Un TP qui a besoin de fonctions à lui les pose dans un module
+tpNN.py déposé dans la copie du paquet distribuée avec ses scripts — pas ici.
+
+Python 3.8 ou plus, numpy, scipy et matplotlib.
 """
 
-__version__ = "2026.9.3"
+__all__ = ["__version__"]
+
+__version__ = "2026.10.0"

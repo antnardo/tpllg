@@ -3,9 +3,10 @@
 `tpllg.fichiers` lit trois formats : un CSV quelconque dont il devine le
 délimiteur et la virgule décimale, l'export CSV de Latis Pro, et l'export de
 Regressi. Les fichiers qu'écrit `tpllg.acquisition.sauvegarder` se relisent
-par numpy directement. Toutes ces fonctions rendent des tableaux numpy, un
-par colonne. `exemples/lecture_fichiers.py` écrit un petit fichier de chaque
-sorte et le relit.
+par numpy directement. Toutes ces fonctions prennent un nom de fichier ou un
+`pathlib.Path`, et rendent des tableaux numpy, un par colonne.
+`exemples/lecture_fichiers.py` écrit un petit fichier de chaque sorte, tous
+préfixés `demo_` pour n'écraser aucune mesure, et le relit.
 
 ## Sommaire
 
@@ -25,14 +26,18 @@ colonnes = readcsv(filename, encoding="utf8", entete=1, dtypes=None)
 
 | Argument | Sens |
 | --- | --- |
-| `filename` | le chemin du fichier |
-| `encoding` | `"utf8"` par défaut ; `"latin1"` pour un fichier écrit sous Windows par un vieux tableur, `"mac_roman"` pour un vieux fichier Mac. Un mauvais encodage se voit à des accents illisibles dans la ligne d'en-tête imprimée |
+| `filename` | le chemin du fichier, un nom ou un `pathlib.Path` |
+| `encoding` | `"utf8"` par défaut ; `"cp1252"` pour un fichier écrit sous Windows par un vieux tableur, `"mac_roman"` pour un vieux fichier Mac. Un mauvais encodage se voit à des accents illisibles dans la ligne d'en-tête imprimée |
 | `entete` | le nombre de lignes à écarter en tête, celles des titres ; 1 par défaut |
 | `dtypes` | la liste des types des colonnes, `float`, `int` ou `str`, une entrée par colonne ; `float` partout par défaut |
 
-Le **délimiteur** est reconnu automatiquement sur les premiers 1024
-caractères, point-virgule, virgule ou tabulation, et la **virgule décimale**
-est convertie. Le retour est une liste de tableaux, un par colonne, dans
+Le **délimiteur** est reconnu sur la première ligne : le premier de
+point-virgule, tabulation, virgule qui s'y trouve — la virgule en dernier,
+puisqu'elle peut être décimale ; aucun, et le fichier n'a qu'une colonne. La
+**virgule décimale** est convertie. Un fichier sans en-tête, à une seule
+colonne et à virgule décimale, est ambigu (`1,5` : deux colonnes ou un
+nombre ?) : on lui donne une ligne de titre. Les lignes vides sont sautées.
+Le retour est une liste de tableaux, un par colonne, dans
 l'ordre du fichier, ce qui permet de les nommer d'un coup. La fonction
 imprime ce qu'elle a compris du fichier, nombre de colonnes, types, ligne
 d'en-tête écartée, ce qui permet de vérifier d'un coup d'œil qu'elle a lu
@@ -56,9 +61,9 @@ print("f =", f, " Vs =", Vs, " phi =", phi)
 
 ```text
 Lecture de mesures.csv
+Entete exclus :  ['f (Hz)', 'Ve (V)', 'Vs (V)', 'phi (deg)']
 4 colonnes
 Formats de conversion :  [<class 'float'>, <class 'float'>, <class 'float'>, <class 'float'>]
-Entete exclus :  ['f (Hz)', 'Ve (V)', 'Vs (V)', 'phi (deg)']
 f = [ 500. 2000. 8000.]  Vs = [0.6 4.8 0.7]  phi = [-98. 178.  97.]
 ```
 
@@ -68,10 +73,12 @@ Une colonne de texte se déclare, sans quoi sa conversion en nombre échoue :
 n, nom, x = readcsv("mixte.csv", dtypes=[int, str, float])
 ```
 
-Une cellule qui ne se convertit pas arrête la lecture, en disant où :
+Une cellule qui ne se convertit pas, ou une ligne qui n'a pas le bon
+nombre de colonnes, arrête la lecture, en disant où :
 
 ```text
 ValueError: file bad.csv, line 3, column 2 : could not convert string to float: 'abc'
+ValueError: file bad.csv, line 4 : 1 colonnes au lieu de 2
 ```
 
 C'est voulu : un tableau à trous se lit avec `import_latispro`, qui met
@@ -98,11 +105,12 @@ colonnes = import_latispro(filename, colonnes=2, delimiter=";")
 | `colonnes` | le nombre de colonnes à lire, en comptant celles de temps |
 | `delimiter` | `";"` par défaut |
 
-Rend une liste de tableaux, un par colonne. Le fichier est lu en ISO 8859,
-l'encodage de Latis Pro. Une cellule vide ou illisible devient `nan` et un
-avertissement nomme la colonne : les courbes exportées ensemble n'ont pas
-toujours le même nombre de points, et les colonnes courtes finissent par
-des cellules vides.
+Rend une liste de tableaux, un par colonne. Le fichier est lu en UTF-8 ou,
+à défaut, dans l'encodage de Windows, celui de Latis Pro. Une cellule vide,
+absente ou illisible devient `nan` et un avertissement nomme la colonne : les
+courbes exportées ensemble n'ont pas toujours le même nombre de points, et
+les colonnes courtes finissent par des cellules vides. Une ligne vide est
+sautée.
 
 ```text
 Temps;EA0;Temps;EA1
@@ -112,7 +120,7 @@ Temps;EA0;Temps;EA1
 ```
 
 ```python
-t0, ea0, t1, ea1 = import_latispro("latispro.csv", colonnes=4)
+t0, ea0, t1, ea1 = import_latispro("demo_latispro.csv", colonnes=4)
 print("t =", t0, " EA0 =", ea0, " EA1 =", ea1)
 ```
 
@@ -121,14 +129,15 @@ t = [0.    0.001 0.002]  EA0 = [1.2 1.3 1.1]  EA1 = [0.5 0.4 0.3]
 ```
 
 Une colonne de moins que le fichier n'en a laisse la dernière de côté ; une
-de plus lève `IndexError` à la première ligne.
+de plus est remplie de `nan`, avec l'avertissement.
 
 ## Regressi
 
 Dans Regressi, Fichier, Enregistrer sous, format CSV, case « vrai CSV »
 cochée. Le fichier a **trois lignes d'en-tête** (le mot Regressi, les noms,
-les unités), une tabulation entre les colonnes, le point décimal, et le
-temps en première colonne.
+les unités), une tabulation entre les colonnes, et le temps en première
+colonne ; le point comme la virgule décimale sont lus, et le fichier, en
+UTF-8 ou dans l'encodage de Windows.
 
 ```python
 from tpllg.fichiers import import_regressi
@@ -151,7 +160,7 @@ s	V	V
 ```
 
 ```python
-t, (Vs, Ve) = import_regressi("regressi.txt", colonnes=2)
+t, (Vs, Ve) = import_regressi("demo_regressi.txt", colonnes=2)
 print("t =", t, " Vs =", Vs, " Ve =", Ve)
 ```
 
@@ -159,7 +168,8 @@ print("t =", t, " Vs =", Vs, " Ve =", Ve)
 t = [0.    0.001]  Vs = [0.5 0.6]  Ve = [1. 1.]
 ```
 
-Les cellules illisibles deviennent `nan`, avec un avertissement.
+Les cellules illisibles ou absentes deviennent `nan`, avec un
+avertissement.
 
 ## Les fichiers de sauvegarder
 
@@ -172,7 +182,7 @@ qu'on dépaquette :
 ```python
 import numpy as np
 
-t, u = np.loadtxt("essai_EA0.txt")
+t, u = np.loadtxt("demo_EA0.txt")
 ```
 
 ```text
@@ -195,7 +205,8 @@ fichier ». Un fichier introuvable donne une erreur qui rappelle où l'on est :
 ValueError: Le fichier absent.csv n'existe pas : vérifiez le dossier d'exécution (actuellement /Users/…/TP3)
 ```
 
-Le plus sûr est de construire le chemin depuis le script :
+Le plus sûr est de construire le chemin depuis le script ; les trois
+fonctions acceptent un `Path` :
 
 ```python
 from pathlib import Path
