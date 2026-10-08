@@ -181,7 +181,7 @@ f0 = 1993.2 ± 3.6 Hz
 Q = 6.67 ± 0.18
 ```
 
-![Le diagramme de Bode que tracer_bode écrit : module et phase, continue de -90° à -270°, les huit mesures et le modèle ajusté](doc/images/bode.png)
+![Le diagramme de Bode que tracer_bode écrit : module et phase, continue de 270° à 90°, les huit mesures et le modèle ajusté](doc/images/bode.png)
 
 ## La documentation
 
@@ -201,7 +201,7 @@ l'autre est dans [CHANGELOG.md](CHANGELOG.md).
 | [doc/spectres.md](doc/spectres.md) | le spectre d'un signal, brut ou fenêtré, et ses phases ; relever les harmoniques ; mesurer une fonction de transfert sur les harmoniques d'un créneau |
 | [doc/harmoniques.md](doc/harmoniques.md) | un signal périodique par ses harmoniques : synthèse, filtrage par le calcul, valeur efficace, analyseur de spectre ; ce que devient `traitementsignal` |
 | [doc/fichiers.md](doc/fichiers.md) | lire un CSV de tableur, un export Latis Pro ou Regressi ; relire ce que `sauvegarder` écrit |
-| [doc/tests.md](doc/tests.md) | ce que vérifient les 269 tests |
+| [doc/tests.md](doc/tests.md) | ce que vérifient les 273 tests |
 
 ## Les modules
 

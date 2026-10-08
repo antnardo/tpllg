@@ -222,6 +222,13 @@ class TestCurveFitComplex:
         sans = curve_fit_complex(gain, f, norm, phase, [-4, 1800, 5], (0.01, 0.01), 1.0, verbose=False)
         assert np.allclose(avec.pfit, sans.pfit, rtol=1e-4) and np.allclose(avec.err, sans.err, rtol=1e-3)
 
+    def test_signe_de_h0_faux_corrige(self, rng):
+        """ln|H| interdit à H0 de passer par zéro : le départ par Re et Im le corrige."""
+        f, norm, phase = mesures_bode(rng)
+        bon = curve_fit_complex(gain, f, norm, phase, [-4, 1800, 5], verbose=False)
+        signe_faux = curve_fit_complex(gain, f, norm, phase, [4, 1800, 5], verbose=False)
+        assert np.allclose(signe_faux.pfit, bon.pfit, rtol=1e-6)
+
     def test_module_nul_refuse(self):
         with pytest.raises(ValueError, match="strictement positifs"):
             curve_fit_complex(gain, [1, 2, 3], [1, 0, 1], [0, 0, 0], [1, 2, 3], verbose=False)

@@ -53,7 +53,8 @@ l'analyse de données de l'oral CCS avait de générique.
   `G, phi = abs(H), np.angle(H)`.
 - **`bode.phase_0_360` est remplacée par `phase_continue(f, phase)`** ;
   `tracer_bode` trace une phase continue, la plus basse fréquence entre
-  -180° et 180° : un passe-bande inverseur va de -90° à -270°.
+  -45° et 315° : un passe-bande inverseur va toujours de 270° à 90°, mais
+  un passe-bande non inverseur ne saute plus de 360° à la résonance.
 - **`Sysam.N_MAX` disparaît** : c'était la mémoire entière, traitée comme
   une limite par voie. `Sysam.n_max(nb_voies, nb_sorties)` la partage.
 - `Sysam.acquerir_avec_sorties(sortie1=None, sortie2=None)` : `None` pour

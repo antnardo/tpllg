@@ -16,7 +16,7 @@ class TestPhaseContinue:
         ("H", "debut", "fin"),
         [
             (passe_bande(F, 5, 2000, 6), 90, -90),  # repliée sur [0, 360[, elle sautait de 55° à 280°
-            (passe_bande(F, -5, 2000, 6), -90, -270),
+            (passe_bande(F, -5, 2000, 6), 270, 90),  # comme le TP le montre : 270° → 180° → 90°
             (1 / (1 + 1j * F / 2000), 0, -90),
             (1 / (1 - (F / 2000) ** 2 + 1j * F / 2000 / 0.7), 0, -180),
         ],
@@ -25,6 +25,12 @@ class TestPhaseContinue:
         phase = phase_continue(F, np.angle(H))
         assert np.abs(np.diff(phase)).max() < 100  # 56° au plus près de la résonance, 360° pour un saut
         assert phase[0] == pytest.approx(debut, abs=10) and phase[-1] == pytest.approx(fin, abs=10)
+
+    @pytest.mark.parametrize("bruit", [-3.0, 0.0, 3.0])
+    def test_inverseur_mesure_sans_modele(self, bruit):
+        """Une première mesure à -90° ± le bruit ne fait pas basculer la courbe d'un tour."""
+        phase = phase_continue([200, 2000, 20000], np.radians([-90 + bruit, 180, 90]))
+        assert np.allclose(phase, [270 + bruit, 180, 90])
 
     def test_mesures_voisines_de_zero(self):
         """± 0,5° autour de 0 se dispersaient entre 0 et 359,5."""
@@ -58,8 +64,10 @@ class TestTracerBode:
         x_ajuste, y_ajuste = ax1.get_lines()[1].get_data()
         assert np.allclose(y_ajuste, np.abs(passe_bande(x_ajuste, *pfit)))
         _, phase_tracee = ax2.get_lines()[0].get_data()
-        assert np.allclose(phase_tracee, np.degrees(np.unwrap(np.angle(H))))  # l'inverseur : de -90° à -270°
-        assert phase_tracee[0] == pytest.approx(-90, abs=1)
+        assert np.allclose(
+            phase_tracee, np.degrees(np.unwrap(np.angle(H))) + 360
+        )  # l'inverseur : de 270° à 90°
+        assert phase_tracee[0] == pytest.approx(270, abs=1)
 
     def test_mesures_au_tour_du_modele(self):
         f = np.geomspace(100, 10000, 15)

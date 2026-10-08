@@ -3,14 +3,16 @@ Diagramme de Bode : le tracé des mesures et, s'il y en a un, du modèle ajusté
 gain au-dessus et phase au-dessous.
 
 La phase est tracée continue : celle du modèle déroulée le long des
-fréquences, en partant de la plus basse prise entre -180° et 180° ; chaque
+fréquences, en partant de la plus basse prise entre -45° et 315° ; chaque
 mesure au tour le plus proche du modèle. Un passe-bas va ainsi de 0 à -90°,
-un passe-bande de 90° à -90°, un passe-bande inverseur de -90° à -270°.
-Replier la phase sur [0, 360[ faisait sauter de 360° celle d'un passe-bande
-non inverseur en pleine résonance, et dispersait entre 0 et 359° des mesures
-voisines de 0°. (Prendre la moyenne entre -180° et 180° ferait basculer
-l'inverseur d'une plage de fréquences à l'autre : sa moyenne est près de
--180°.)
+un passe-bande de 90° à -90°, un passe-bande inverseur de 270° à 90° en
+passant par 180° à la résonance — comme le repli sur [0, 360[ d'avant, mais
+sans ses défauts : il faisait sauter de 360° la phase d'un passe-bande non
+inverseur en pleine résonance, et dispersait entre 0 et 359° des mesures
+voisines de 0°. (Les phases de départ usuelles sont 0, ±90° et 180° : la
+frontière, à -45°, est à mi-chemin, loin du bruit d'une mesure ; à -180°
+ou à -90°, elle passerait sur le départ d'un passe-haut du second ordre ou
+d'un passe-bande inverseur, qui basculeraient d'une mesure à l'autre.)
 
 @author: a. marchand
 """
@@ -28,7 +30,7 @@ def phase_continue(f, phase, reference=None):
     suivante.
 
     Sans `reference` : déroulée dans l'ordre des fréquences, la plus basse
-    prise entre -180° (exclu) et 180°. Avec `reference` (en degrés, une
+    prise entre -45° et 315° (exclu). Avec `reference` (en degrés, une
     valeur par fréquence, celle d'un modèle par exemple) : chaque phase prise
     au tour le plus proche de la référence.
     """
@@ -41,7 +43,7 @@ def phase_continue(f, phase, reference=None):
     deroulee = np.empty_like(phase)
     deroulee[ordre] = np.degrees(np.unwrap(phase[ordre]))
     premiere = deroulee[ordre[0]]
-    return deroulee - 360 * np.ceil((premiere - 180) / 360)
+    return deroulee - 360 * np.floor((premiere + 45) / 360)
 
 
 def tracer_bode(

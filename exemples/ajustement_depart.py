@@ -67,7 +67,7 @@ for colonne, (titre, p0) in enumerate(departs):
     bas.semilogx(f, phase_continue(f, phi, reference), "o", markersize=4)
     bas.semilogx(f_fin, phase_deg(f_fin, passe_bande(f_fin, *p0)), "--", color="gray")
     bas.semilogx(f_fin, modele, color="tab:orange")
-    bas.set_yticks(np.arange(-270, 271, 90))
+    bas.set_yticks(np.arange(-90, 451, 90))
     bas.set_xlabel("f (Hz)")
 axes[0, 0].set_ylabel("|H|")
 axes[1, 0].set_ylabel("phase (°)")

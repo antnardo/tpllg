@@ -59,15 +59,17 @@ sous `f0` à −270° loin au-dessus en passant par −180°, saute alors d'un b
 à l'autre au voisinage de `f0`, où l'on mesure justement le plus de points.
 `phase_continue` rend la phase en degrés, **sans saut** d'une fréquence à la
 suivante : déroulée dans l'ordre des fréquences, la plus basse prise entre
--180° et 180°. Un passe-bas va ainsi de 0 à −90°, un passe-bande de 90° à
-−90°, un passe-bande inverseur de −90° à −270°.
+−45° et 315°. Un passe-bas va ainsi de 0 à −90°, un passe-bande de 90° à
+−90°, un passe-bande inverseur de 270° à 90° en passant par 180° à la
+résonance. (Les phases de départ usuelles sont 0, ±90° et 180° ; la
+frontière, à −45°, est à mi-chemin, loin du bruit d'une mesure.)
 
 ```python
 >>> phase_continue([100, 200, 300, 400], np.radians([-0.5, 0.3, -1.0, 0.4]))
 array([-0.5,  0.3, -1. ,  0.4])
 >>> f = np.array([500, 1000, 1500, 1800, 2000, 2200, 2700, 5000.0])
 >>> np.round(phase_continue(f, np.radians([-95, -97, -106, -122, 176, 126, 104, 96])), 1)
-array([ -95.,  -97., -106., -122., -184., -234., -256., -264.])
+array([265., 263., 254., 238., 176., 126., 104.,  96.])
 ```
 
 Avec `reference`, une valeur en degrés par fréquence — celle d'un modèle —,
@@ -79,10 +81,10 @@ que `tracer_bode` fait des mesures, une fois le modèle déroulé.
 array([370., 190., 175.])
 ```
 
-(La version précédente repliait la phase sur `[0, 360[`. Cela recollait
-l'inverseur, mais faisait sauter de 360° celle d'un passe-bande non
-inverseur en pleine résonance, et dispersait entre 0 et 359,5° des mesures
-voisines de 0°.)
+(La version précédente repliait la phase sur `[0, 360[`. Cela donnait la
+même courbe pour l'inverseur, mais faisait sauter de 360° celle d'un
+passe-bande non inverseur en pleine résonance, et dispersait entre 0 et
+359,5° des mesures voisines de 0°.)
 
 Une phase mesurée en degrés se convertit en radians par `np.radians`
 avant tout ; `tracer_bode` fait la conversion inverse pour l'affichage.
@@ -164,7 +166,7 @@ résidus relatifs sur |H| : écart-type 3.4 %, maximum 10.9 %
 résidus sur phi          : écart-type 2.7°, maximum 6.1°
 ```
 
-![Le diagramme de Bode ajusté : le module en haut, la phase en bas, continue de -90° à -270°, les vingt-trois mesures et la courbe du modèle avec ses paramètres en légende](images/bode_ajustement.png)
+![Le diagramme de Bode ajusté : le module en haut, la phase en bas, continue de 270° à 90°, les vingt-trois mesures et la courbe du modèle avec ses paramètres en légende](images/bode_ajustement.png)
 
 Ces mesures ont été fabriquées avec 3 % de bruit sur les amplitudes et 3°
 sur les phases, autour de `H0 = −5`, `f0 = 1994,6 Hz`, `Q = 6,27`. Ce sont

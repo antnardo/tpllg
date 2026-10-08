@@ -25,7 +25,7 @@ def module_seul(f, H0, f0, Q):
 
 def phase_deg(frequences, z):
     """La phase d'un complexe en degrés, continue le long des fréquences, comme
-    tracer_bode la trace : celle d'un passe-bande inverseur va de -90° à -270°."""
+    tracer_bode la trace : celle d'un passe-bande inverseur va de 270° à 90°."""
     return phase_continue(frequences, np.angle(z))
 
 
@@ -81,10 +81,10 @@ axes[1].plot(
     label="le module seul, si H0 > 0",
 )
 axes[1].set_xscale("log")
-axes[1].set_yticks(np.arange(-270, 91, 90))
+axes[1].set_yticks(np.arange(-90, 271, 90))
 axes[1].set_title("la phase : le signe de H0 se lit ici", fontsize=10)
 axes[2].set_xlim(f_zoom[0], f_zoom[-1])
-axes[2].set_ylim(-260, -100)
+axes[2].set_ylim(100, 260)
 axes[2].set_title(f"autour de la résonance : f0 = {pfit[1]:.0f} Hz ou {pmod[1]:.0f} Hz", fontsize=10)
 for ax in axes:
     ax.set_xlabel("f (Hz)")
@@ -164,7 +164,7 @@ axes[1].set_ylim(2, 5.6)
 axes[1].set_ylabel("|H|")
 axes[1].set_title("autour de la résonance", fontsize=10)
 axes[2].set_xscale("log")
-axes[2].set_yticks(np.arange(-270, -89, 45))
+axes[2].set_yticks(np.arange(90, 271, 45))
 axes[2].set_ylabel("phase (°)")
 axes[2].set_title("la phase, à 3° près", fontsize=10)
 for ax in axes:
