@@ -46,7 +46,7 @@ def ajuster(p0):
 
 
 # 1. le modèle tracé avec les valeurs de départ, puis ce que l'ajustement en fait
-departs = (("un bon départ", [-5, 2000, 6]), ("un mauvais départ", [-1, 1500, 2]))
+departs = (("un bon départ", [-5, 2000, 6]), ("un mauvais départ", [-5, 600, 6]))
 fig, axes = plt.subplots(2, 2, figsize=(12, 7), sharex=True, sharey="row")
 for colonne, (titre, p0) in enumerate(departs):
     pfit = ajuster(p0)
@@ -67,7 +67,7 @@ for colonne, (titre, p0) in enumerate(departs):
     bas.semilogx(f, phase_continue(f, phi, reference), "o", markersize=4)
     bas.semilogx(f_fin, phase_deg(f_fin, passe_bande(f_fin, *p0)), "--", color="gray")
     bas.semilogx(f_fin, modele, color="tab:orange")
-    bas.set_yticks(np.arange(-270, 91, 45))
+    bas.set_yticks(np.arange(-270, 271, 90))
     bas.set_xlabel("f (Hz)")
 axes[0, 0].set_ylabel("|H|")
 axes[1, 0].set_ylabel("phase (°)")

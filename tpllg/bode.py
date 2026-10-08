@@ -33,13 +33,13 @@ def phase_continue(f, phase, reference=None):
     au tour le plus proche de la référence.
     """
     f = np.asarray(f, dtype=float)
-    phase = np.degrees(np.asarray(phase, dtype=float))
+    phase = np.asarray(phase, dtype=float)
     if reference is not None:
         reference = np.asarray(reference, dtype=float)
-        return reference + (phase - reference + 180) % 360 - 180
+        return reference + (np.degrees(phase) - reference + 180) % 360 - 180
     ordre = np.argsort(f)
     deroulee = np.empty_like(phase)
-    deroulee[ordre] = np.unwrap(phase[ordre], period=360)
+    deroulee[ordre] = np.degrees(np.unwrap(phase[ordre]))
     premiere = deroulee[ordre[0]]
     return deroulee - 360 * np.ceil((premiere - 180) / 360)
 

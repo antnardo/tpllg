@@ -362,9 +362,10 @@ def ajuster_modele(modele, x, u_x, y, u_y, p0, N=1000, **kwargs):
 
     Chaque tirage est ajusté par curve_fit avec les poids de l'ajustement des
     mesures ; un tirage qui ne converge pas est remplacé par un autre (et on
-    le dit). Une boucle de N appels à curve_fit, donc de l'ordre d'une seconde
-    pour N = 1000 : pour une droite, SerieLineaire fait la même chose cent
-    fois plus vite. Les mots-clés (maxfev, bounds…) vont à curve_fit."""
+    le dit). Une boucle de N appels à curve_fit, quelques dixièmes de
+    seconde pour N = 1000 sur une dizaine de points : pour une droite,
+    SerieLineaire tire cent fois plus en autant de temps. Les mots-clés
+    (maxfev, bounds…) vont à curve_fit."""
     x, u_x, y, u_y = _tableaux(x, u_x, y, u_y)
     N = int(N)
     reference = curvefit(

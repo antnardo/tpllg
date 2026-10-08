@@ -20,6 +20,7 @@ Ajustements de courbes : outils génériques autour de scipy.optimize.curve_fit.
 """
 
 import math
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -135,6 +136,9 @@ def curvefit(
 
     Pour une droite, des incertitudes constantes ne changent pas pfit, mais
     seulement err et le chi2 ; des incertitudes variables changent aussi pfit.
+    La variance effective itère à poids figés et s'arrête un peu à côté du
+    minimum de sum (y - f(x))²/sigma² : pour une droite, regression_york
+    trouve ce minimum exactement.
     """
     datax = np.asarray(datax, dtype=float)
     datay = np.asarray(datay, dtype=float)
@@ -222,7 +226,9 @@ def curve_fit_complex(
     mesures. (Ajuster les parties réelle et imaginaire mélangerait les deux
     incertitudes et ignorerait leur corrélation : jusqu'à 15 % d'erreur sur
     les incertitudes rendues.) La phase du modèle est prise à moins d'un
-    demi-tour de chaque mesure : une phase à 2 pi près ne gêne pas.
+    demi-tour de chaque mesure : une phase à 2 pi près ne gêne pas. Le
+    départ est d'abord amélioré par un ajustement des parties réelle et
+    imaginaire, qui corrige un signe de H0 faux ou un départ un peu loin.
 
     complex_func(x, *params) doit rendre un tableau complexe ;
     function_derivate, sa dérivée par rapport à x, complexe aussi — ou rien,
@@ -242,6 +248,7 @@ def curve_fit_complex(
         raise ValueError("norm : les modules mesurés doivent être strictement positifs")
     n = datax.size
     f = _vectorisee(complex_func, datax, p0, dtype=complex)
+    p0 = _depart_complexe(f, datax, norm * np.exp(1j * phase), p0, kwargs)
 
     def modele(x, *p):
         H = f(x[:n], *p)
@@ -277,6 +284,29 @@ def curve_fit_complex(
         function_derivate=derivee,
         **kwargs,
     )
+
+
+def _depart_complexe(f, x, mesures, p0, kwargs):
+    """Le départ de curve_fit_complex : un premier ajustement des parties
+    réelle et imaginaire, sans pondération. Il est lisse partout et peut
+    faire passer H0 par zéro, ce que ln|H| interdit : un H0 de signe faux, un
+    départ un peu loin se corrigent ici. Il ne sert que de point de départ ;
+    s'il échoue, on part de p0."""
+    options = {k: v for k, v in kwargs.items() if k not in ("verbose", "n_var_method_max", "chi_limit")}
+
+    def re_im(xx, *p):
+        H = f(x, *p)
+        return np.hstack((H.real, H.imag))
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", optimize.OptimizeWarning)
+            depart = optimize.curve_fit(
+                re_im, np.hstack((x, x)), np.hstack((mesures.real, mesures.imag)), p0=p0, **options
+            )[0]
+    except (RuntimeError, ValueError):
+        return p0
+    return depart if np.all(np.isfinite(depart)) else p0
 
 
 def _york(x, vx, y, vy, iterations=100, tolerance=1e-12):
