@@ -26,3 +26,11 @@ def fermer_les_figures():
     import matplotlib.pyplot as plt
 
     plt.close("all")
+
+
+@pytest.fixture
+def rng():
+    """Des tirages reproductibles, les mêmes à chaque test."""
+    import numpy as np
+
+    return np.random.default_rng(20261008)
