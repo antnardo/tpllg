@@ -1,0 +1,29 @@
+# À la publication d'une release sur GitHub : construire la roue et le sdist
+# avec uv, et les joindre à la release. Pas de PyPI : le paquet s'installe
+# depuis GitHub (pip install git+…) ou par la roue de la release.
+name: Publication
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  artefacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            setup.cfg
+            pyproject.toml
+      - name: Construire la roue et le sdist
+        run: uv build
+      - name: Joindre les artefacts à la release
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

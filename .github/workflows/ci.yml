@@ -1,0 +1,41 @@
+# Tests et qualité du code : à chaque push et pull request, la suite de
+# tests sous les trois Python de référence (3.8, le plus vieux des postes de
+# TP ; 3.11 ; 3.14), tout avertissement compté comme une erreur, puis ruff.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.8", "3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            setup.cfg
+            pyproject.toml
+      - name: Tests sous Python ${{ matrix.python }}
+        run: uv run --no-project --python ${{ matrix.python }} --with pytest --with . python -m pytest -W error
+
+  qualite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            setup.cfg
+            pyproject.toml
+      - name: ruff check
+        run: uvx ruff@0.17.0 check .
+      - name: ruff format
+        run: uvx ruff@0.17.0 format --check .
