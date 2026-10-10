@@ -60,3 +60,20 @@ def test_loi_normale_est_normalisee_quel_que_soit_l_ecart_type(m, s):
 def test_loi_normale_cumulee_est_l_integrale_de_la_densite():
     t = np.linspace(-1.5, 1.5, 300001)
     assert integrale(loi_normale(t), t) == pytest.approx(loi_normale_cumulee(1.5), abs=1e-6)
+
+
+class TestStudentArguments:
+    """student_coef(7, 0.95) rendait nan : les arguments inversés passaient en silence."""
+
+    @pytest.mark.parametrize("n", [0.95, 1, 0, 2.5, -3])
+    def test_n_doit_etre_un_entier_au_moins_egal_a_2(self, n):
+        with pytest.raises(ValueError, match="nombre de mesures, un entier au moins égal à 2"):
+            student_coef(1, n)
+
+    def test_sigma_strictement_positif(self):
+        with pytest.raises(ValueError, match="strictement positif"):
+            student_coef(0, 5)
+
+    def test_deux_mesures_et_un_tableau_passent(self):
+        assert student_coef(1, 2) == pytest.approx(1.837, abs=1e-3)
+        assert student_coef(1, np.array([2, 1e7]))[1] == pytest.approx(1, abs=1e-3)

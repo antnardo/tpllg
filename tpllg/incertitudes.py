@@ -31,10 +31,21 @@ def student_coef(sigma, n):
 
     Pour T de Student à k = n - 1 degrés de liberté, t est tel que
     P(-t < T < t) = loi_normale_cumulee(sigma). Il tend vers sigma quand n
-    grandit. `n` peut être un tableau."""
+    grandit. `n` peut être un tableau. Un `n` qui n'est pas un entier au
+    moins égal à 2 est refusé (ValueError) : c'est le plus souvent les deux
+    arguments inversés, student_coef(n, 0.95)."""
+    n = np.asarray(n)
+    if n.dtype.kind not in "iuf" or np.any(n < 2) or np.any(n != np.floor(n)):
+        raise ValueError(
+            f"student_coef(sigma, n) : n = {n} doit être le nombre de mesures, un entier au moins égal "
+            f"à 2, et sigma = {sigma} le niveau en écarts-types de la loi normale "
+            "(1 pour 68,27 %, 2 pour 95,45 %, 1,96 pour 95 %)"
+        )
+    if not sigma > 0:
+        raise ValueError(f"student_coef(sigma, n) : sigma = {sigma} doit être strictement positif")
     niveau = special.erf(sigma / np.sqrt(2))
     gamma = (1 - niveau) / 2  # la probabilité de tirer au-dessus de t
-    return stats.t(np.asarray(n) - 1).isf(gamma)
+    return stats.t(n - 1).isf(gamma)
 
 
 def incertitudes(liste, sigma=1, advanced=False, debug=False):
