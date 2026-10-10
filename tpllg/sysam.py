@@ -51,7 +51,6 @@ __all__ = ["CAL_DEFAUT", "SYSAM_TYPE", "Sysam"]
 
 SYSAM_TYPE = "SP5"  # et non "PCI", qui n'existe pas au lycée
 CAL_DEFAUT = 10  # calibre par défaut, en volts
-MICROSECONDES = 1e6
 
 
 class _AncienAttribut:
@@ -133,12 +132,6 @@ class Sysam(pycan.Sysam):
         centrale arrondit N au paquet de sa FIFO (255 mots au plus) : on garde
         255 mots de marge."""
         return (cls.MEMOIRE - 255) // (nb_voies + nb_sorties)
-
-    @classmethod
-    def te_effectif(cls, te):
-        """La période (s) que la centrale appliquera : `te` arrondie au dixième
-        de microseconde."""
-        return round(te / cls.PAS_TE) * cls.PAS_TE
 
     def __init__(self, voies=None, calibres=None, diff=None):
         self.voies = []

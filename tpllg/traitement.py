@@ -1,9 +1,9 @@
 """
 Mesurer une fonction de transfert : à une fréquence, par détection synchrone
 de l'entrée et de la sortie (fonction_transfert) ; le choix de
-l'échantillonnage du Bode automatique ; l'interpolation par FFT ; et, sur un
-spectre, les harmoniques d'un signal périodique (indices_plages,
-detecte_maxima_secondaires, valeurs_correspondantes).
+l'échantillonnage du Bode automatique ; et, sur un spectre, les harmoniques
+d'un signal périodique (indices_plages, detecte_maxima_secondaires,
+valeurs_correspondantes).
 
 Les anciens noms de 2026.9, `gain` et `gain_std`, fonctionnent encore et
 rendent (G, phi) comme avant, calculés par fonction_transfert, avec un
@@ -24,7 +24,6 @@ __all__ = [
     "detecte_maxima_secondaires",
     "fonction_transfert",
     "indices_plages",
-    "interpolation_fft",
     "valeurs_correspondantes",
 ]
 
@@ -95,22 +94,6 @@ def valeurs_correspondantes(indexes1, indexes2, delta_indices):
             # il manque un 1, on avance sur 2
             j += 1
     return np.array(indices_final1), np.array(indices_final2)
-
-
-def interpolation_fft(x, n_interpolation):
-    """Interpolation par FFT : N*n_interpolation zéros ajoutés aux hautes
-    fréquences de la FFT du signal, puis FFT inverse — le signal sur
-    N*(n_interpolation + 1) points, exact pour un signal à bande limitée.
-
-    Fonction interpol() de Frédéric Legrand, « Diagramme de Bode »
-    (f-legrand.fr, CC BY-NC-SA 2.0 FR), reprise ici :
-    https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html
-    """
-    N = len(x)
-    tfd = np.fft.fft(x)
-    N1 = N // 2
-    tfd2 = np.concatenate((tfd[0:N1], np.zeros(N * n_interpolation), tfd[N1:N]))
-    return np.real(np.fft.ifft(tfd2)) * (n_interpolation + 1)
 
 
 def fonction_transfert(t, e, s, freq=None):

@@ -9,7 +9,6 @@ from tpllg.traitement import (
     gain,
     gain_std,
     indices_plages,
-    interpolation_fft,
     valeurs_correspondantes,
 )
 
@@ -58,15 +57,6 @@ class TestFonctionTransfert:
     def test_tableaux_mal_formes_refuses(self):
         with pytest.raises(ValueError, match="1D"):
             fonction_transfert(np.zeros(10), np.zeros(10), np.zeros(9), 100.0)
-
-
-def test_interpolation_fft_est_exacte_sur_un_signal_a_bande_limitee():
-    N, k = 64, 3
-    n = np.arange(N)
-    y = interpolation_fft(np.cos(2 * np.pi * 3 * n / N) + 0.5 * np.sin(2 * np.pi * 7 * n / N), k)
-    m = np.arange(N * (k + 1)) / (k + 1)  # les mêmes instants, quatre fois plus fins
-    attendu = np.cos(2 * np.pi * 3 * m / N) + 0.5 * np.sin(2 * np.pi * 7 * m / N)
-    assert y.shape == (N * (k + 1),) and np.allclose(y, attendu, atol=1e-10)
 
 
 class TestChoixEchantillonnage:

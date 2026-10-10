@@ -156,17 +156,6 @@ class Point:
         qu'il aura seul."""
         return self._N if self._N is not None else self.NN
 
-    @property
-    def i(self):
-        """Une valeur tirée, la première."""
-        return self.tirage[0]
-
-    def calc_tirage(self, N=None):
-        """Refait le tirage d'une grandeur mesurée, avec N valeurs. Les
-        résultats déjà calculés avec l'ancien tirage n'y sont plus corrélés."""
-        self._N = int(N) if N is not None else self.N
-        self._tirage = self._tirer(self._N)
-
     def quantiles(self, niveau=0.6827):
         """L'intervalle qui contient `niveau` des tirages, centré en probabilité :
         (bas, haut). À 68,27 % c'est l'équivalent de ± un écart-type, et il
@@ -271,12 +260,6 @@ class Point:
             return tuple(Point(tirage=r) for r in resultat)
         return Point(tirage=resultat)
 
-    def apply_func(self, func, *args, **kwargs):
-        """Un Point dont le tirage est func(tirage, *args, **kwargs), pour une
-        fonction qui n'est pas une fonction numpy élémentaire — np.exp(X),
-        np.log(X), np.sin(X) s'écrivent directement."""
-        return Point(tirage=func(self.tirage, *args, **kwargs))
-
 
 def _tirages(operandes):
     """Les tirages des opérandes, de même longueur : un tableau par Point, le
@@ -308,7 +291,9 @@ class SerieLineaire:
 
     `u_x` et `u_y` sont un nombre, la même incertitude pour tous les points,
     ou une liste, une par point. Les tirages (gaussiens) sont faits à la
-    construction, dans deux tableaux (N, P)."""
+    construction, dans deux tableaux (N, P), x_tirages et y_tirages :
+    x_tirages[0], y_tirages[0] est un jeu de mesures comme on aurait pu
+    l'avoir."""
 
     def __init__(self, x, u_x, y, u_y, N=None):
         self.x, self.u_x, self.y, self.u_y = serie(x, u_x, y, u_y)
@@ -316,30 +301,6 @@ class SerieLineaire:
         self.N = int(N) if N is not None else Point.NN
         self.x_tirages = _generateur.normal(self.x, self.u_x, size=(self.N, self.P))
         self.y_tirages = _generateur.normal(self.y, self.u_y, size=(self.N, self.P))
-
-    @property
-    def Nt(self):
-        return self.N
-
-    @property
-    def xi(self):
-        """Un tirage des x, le premier : un jeu de mesures comme on aurait pu l'avoir."""
-        return self.x_tirages[0]
-
-    @property
-    def yi(self):
-        return self.y_tirages[0]
-
-    @staticmethod
-    def coefs(x, y):
-        """y = a x + b par moindres carrés ordinaires, sans incertitudes :
-        a = Cov(x, y)/V(x), b = <y> - a<x>. Sur des tableaux 1D, ou 2D (un jeu
-        de mesures par ligne)."""
-        x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
-        xm, ym = x.mean(axis=-1), y.mean(axis=-1)
-        dx = x - xm[..., None]  # centré avant de multiplier : stable même pour x ~ 1e8
-        a = (dx * (y - ym[..., None])).sum(axis=-1) / (dx**2).sum(axis=-1)
-        return a, ym - a * xm
 
     def ajuster(self):
         """Rend (a, b), deux Point : leur valeur est la droite de York des

@@ -46,11 +46,9 @@ import time
 
 import numpy as np
 
-__all__ = ["ENTREE_CHRONO", "MEMOIRE", "POINTS_SORTIE_MAX", "SYSAM_PCI", "SYSAM_SP5", "VERBOSE", "Sysam"]
+__all__ = ["MEMOIRE", "POINTS_SORTIE_MAX", "SYSAM_SP5", "VERBOSE", "Sysam"]
 
-SYSAM_SP5 = 1
-SYSAM_PCI = 2
-ENTREE_CHRONO = 16
+SYSAM_SP5 = 1  # le seul modèle du lycée : pas de "PCI"
 
 VERBOSE = True
 
@@ -113,7 +111,7 @@ class Sysam:
         self.verbose = VERBOSE
         print("[SYSAM] ATTENTION : pycanum absent, centrale simulée (tpllg.sysam_factice)")
         self.ouvert = False
-        self.sysamid = {"SP5": SYSAM_SP5, "PCI": SYSAM_PCI}.get(nom, 0)
+        self.sysamid = SYSAM_SP5 if nom == "SP5" else 0
         self.ouvrir()
 
     # --- ouverture
@@ -123,7 +121,7 @@ class Sysam:
                 print(f"[SYSAM] CAN Sysam ouvert ({self.sysamid})")
             return
         if self.sysamid == 0:
-            raise ValueError("Erreur : centrale inconnue (SP5 ou PCI)")
+            raise ValueError("Erreur : centrale inconnue (SP5)")
         self._voies = []
         self._calibres = []
         self._codes_calibre = [0] * 8  # le tableau calibreEA du pilote, indexé par position

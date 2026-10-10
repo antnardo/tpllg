@@ -48,7 +48,7 @@ def student_coef(sigma, n):
     return stats.t(n - 1).isf(gamma)
 
 
-def incertitudes(liste, sigma=1, advanced=False, debug=False):
+def incertitudes(liste, sigma=1, advanced=False):
     """Une série de mesures répétées : rend (m, delta, s), la moyenne,
     l'incertitude sur la moyenne et l'écart-type de la série.
 
@@ -69,7 +69,4 @@ def incertitudes(liste, sigma=1, advanced=False, debug=False):
     s = mesures.std(ddof=1)
     k = student_coef(sigma, n) if advanced else sigma
     delta = k * s / np.sqrt(n)
-    if debug:
-        print(n, mesures)
-        print(m, delta, s, k)
     return m, delta, s

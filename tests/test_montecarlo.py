@@ -46,7 +46,6 @@ class TestOperations:
         assert (np.float64(3.0) - a).val == pytest.approx(2, abs=0.01) and np.add(a, 1).val == pytest.approx(
             2, abs=0.01
         )
-        assert a.apply_func(np.exp).u == pytest.approx(e.u)
         assert (np.exp(a) - np.exp(a)).u == 0  # le même tirage des deux côtés
         frac, ent = np.modf(b)
         assert isinstance(frac, Point) and isinstance(ent, Point)
@@ -75,19 +74,13 @@ class TestNombreDeTirages:
         _ = L + Point(2.0, 0.1)  # l'autre s'aligne sur L, qui garde son tirage
         assert L.N == 1000 and (c - 2 * L).u == 0
         with pytest.raises(ValueError, match="ne se combinent pas"):
-            L + Point(2.0, 0.1, N=5000).apply_func(np.exp)
-
-    def test_un_resultat_ne_se_retire_pas(self):
-        with pytest.raises(ValueError, match="pas de loi"):
-            (Point(1.0, 0.1) * 2).calc_tirage(10)
+            L + np.exp(Point(2.0, 0.1, N=5000))
 
     def test_point_depuis_un_tirage(self):
         p = Point(tirage=[1.0, 2.0, 3.0, 4.0])
-        assert p.val == 2.5 and p.u == pytest.approx(np.sqrt(5 / 3)) and p.N == 4 and p.i == 1.0
+        assert p.val == 2.5 and p.u == pytest.approx(np.sqrt(5 / 3)) and p.N == 4 and p.tirage[0] == 1.0
         q = Point(1.0, 0.1, N=500)
         assert repr(q) == "Point(1, 0.1, N=500)" and len(q.tirage) == 500
-        q.calc_tirage(2000)
-        assert q.N == 2000 and len(q.tirage) == 2000
 
     @pytest.mark.parametrize("arguments", [(1.0,), (1.0, -0.1)])
     def test_point_incomplet_refuse(self, arguments):
@@ -143,7 +136,7 @@ class TestSerieLineaire:
         assert a.val == pytest.approx(2) and b.val == pytest.approx(1)
         assert a.u == pytest.approx(0.3 / np.sqrt(sxx), rel=0.02)
         assert b.u == pytest.approx(0.3 * np.sqrt(1 / x.size + x.mean() ** 2 / sxx), rel=0.02)
-        assert np.array_equal(serie.xi, x) and serie.yi.shape == (11,) and serie.Nt == 200000
+        assert np.array_equal(serie.x_tirages[0], x) and serie.y_tirages.shape == (200000, 11)
         with pytest.raises(ValueError):
             SerieLineaire([1, 2, 3], 0.1, [1, 2], 0.1)
 
@@ -160,14 +153,6 @@ class TestSerieLineaire:
         a, b = SerieLineaire(x_mes, 0.3, y_mes, 0.5).ajuster()
         york = regression_york(x_mes, 0.3, y_mes, 0.5)
         assert np.allclose([a.val, b.val], york.pfit) and np.allclose([a.u, b.u], york.err, rtol=0.05)
-
-    def test_coefs_moindres_carres_stables(self):
-        x = np.linspace(0, 10, 11)
-        assert np.allclose(SerieLineaire.coefs(x, 2 * x + 1), (2, 1))
-        a2, b2 = SerieLineaire.coefs(np.vstack([x, x]), np.vstack([2 * x + 1, -x + 3]))
-        assert np.allclose(a2, [2, -1]) and np.allclose(b2, [1, 3])
-        loin = 1e8 + np.arange(10.0)
-        assert SerieLineaire.coefs(loin, 3 * loin + 1)[0] == pytest.approx(3)
 
 
 class TestAjusterModele:

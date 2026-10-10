@@ -161,3 +161,8 @@ def test_fermee_refuse_tout(can):
 def test_verbeux_des_la_creation(capsys):
     Sysam("SP5")
     assert "centrale simulée" in capsys.readouterr().out
+
+
+def test_seule_la_sp5_est_connue(capsys):
+    with pytest.raises(ValueError, match="centrale inconnue"):
+        Sysam("PCI")

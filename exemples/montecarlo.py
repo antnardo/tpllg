@@ -111,7 +111,7 @@ for k in range(100):
     axes[0].plot(x, pa.tirage[k] * x + pb.tirage[k], color="tab:orange", alpha=0.15)
 axes[0].plot([], [], color="tab:orange", label="100 droites, une par tirage")
 axes[0].errorbar(x_mes, y_mes, xerr=0.2, yerr=0.5, fmt="o", markersize=4, label="mesures")
-axes[0].plot(serie.xi, serie.yi, "k+", label="un tirage des mesures")
+axes[0].plot(serie.x_tirages[0], serie.y_tirages[0], "k+", label="un tirage des mesures")
 axes[0].plot(x, pa.tirage[0] * x + pb.tirage[0], "k", linewidth=0.8, label="sa droite")
 axes[0].set_xlabel("x")
 axes[0].set_ylabel("y")
