@@ -3,8 +3,9 @@ Propagation des incertitudes par la méthode de Monte-Carlo (GUM, supplément
 1) : des tirages aléatoires sur chaque grandeur mesurée, le calcul refait sur
 chaque tirage, et la moyenne et l'écart-type du résultat.
 
-- Point : une grandeur, son incertitude-type et un tirage. Point(val, u) suit
-  une loi normale ; Point.uniforme(val, demi_largeur) une loi uniforme, celle
+- Point : une grandeur, son incertitude-type et un tirage. Point(val, u), ou
+  Point.normale(val, u), suit une loi normale ; Point.uniforme(val,
+  demi_largeur) une loi uniforme, celle
   d'une tolérance de constructeur ou d'une résolution (u = demi-largeur/√3) ;
   Point.triangulaire et Point.arcsinus les deux autres lois du GUM. Les
   opérations entre Point, et avec des nombres, se font sur les tirages, et
@@ -45,7 +46,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import OptimizeWarning, curve_fit
 
-from tpllg.ajustement import _tableau, _vectorisee, _york, curvefit, regression_york
+from tpllg._interne import serie
+from tpllg.ajustement import _vectorisee, _york, curvefit, regression_york
 
 __all__ = ["Point", "SerieLineaire", "ajuster_modele", "fixer_graine", "indices_sobol"]
 
@@ -82,6 +84,12 @@ class Point:
         self._loi = ("normale", self._u)
         self._N = None if N is None else int(N)
         self._tirage = None
+
+    @classmethod
+    def normale(cls, val, u, N=None):
+        """La loi normale de moyenne val et d'écart-type u : ce que Point(val,
+        u) fait, écrit comme les trois autres lois."""
+        return cls(val, u, N)
 
     @classmethod
     def uniforme(cls, val, demi_largeur, N=None):
@@ -289,14 +297,6 @@ def _tirages(operandes):
     return [o.tirage if isinstance(o, Point) else o for o in operandes]
 
 
-def _tableaux(x, u_x, y, u_y):
-    x = np.asarray(x, dtype=float)
-    y = np.asarray(y, dtype=float)
-    if x.shape != y.shape or x.ndim != 1:
-        raise ValueError("x et y doivent être deux tableaux 1D de même longueur")
-    return x, _tableau(u_x, x.shape), y, _tableau(u_y, y.shape)
-
-
 def _recentre(tirage, valeur):
     return tirage - tirage.mean() + valeur
 
@@ -311,7 +311,7 @@ class SerieLineaire:
     construction, dans deux tableaux (N, P)."""
 
     def __init__(self, x, u_x, y, u_y, N=None):
-        self.x, self.u_x, self.y, self.u_y = _tableaux(x, u_x, y, u_y)
+        self.x, self.u_x, self.y, self.u_y = serie(x, u_x, y, u_y)
         self.P = len(self.x)
         self.N = int(N) if N is not None else Point.NN
         self.x_tirages = _generateur.normal(self.x, self.u_x, size=(self.N, self.P))
@@ -366,7 +366,7 @@ def ajuster_modele(modele, x, u_x, y, u_y, p0, N=1000, **kwargs):
     seconde pour N = 1000 sur une dizaine de points : pour une droite,
     SerieLineaire tire cent fois plus en autant de temps. Les mots-clés
     (maxfev, bounds…) vont à curve_fit."""
-    x, u_x, y, u_y = _tableaux(x, u_x, y, u_y)
+    x, u_x, y, u_y = serie(x, u_x, y, u_y)
     N = int(N)
     reference = curvefit(
         modele,

@@ -238,3 +238,10 @@ class TestShow:
         plt.subplots()  # une autre figure devient la courante
         fig, ax, *_ = Point(1.0, 0.1, N=1000).show(ax=ax1)
         assert fig is f1 and ax is ax1
+
+
+class TestPointNormale:
+    def test_normale_est_le_constructeur(self):
+        a, b = Point.normale(2.0, 0.1, N=5000), Point(2.0, 0.1, N=5000)
+        assert (a.val, a.u, a.N, a._loi) == (b.val, b.u, b.N, b._loi)
+        assert a.tirage.std() == pytest.approx(0.1, rel=0.1)
