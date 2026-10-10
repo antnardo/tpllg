@@ -20,9 +20,10 @@ d'un passe-bande inverseur, qui basculeraient d'une mesure à l'autre.)
 import matplotlib.pyplot as plt
 import numpy as np
 
-from tpllg.ajustement import resume_parametres
+from tpllg._interne import deprecie
+from tpllg.ajustement import _radians, resume_parametres
 
-__all__ = ["phase_continue", "tracer_bode"]
+__all__ = ["phase_continue", "phase_repliee", "tracer_bode"]
 
 
 def phase_continue(f, phase, reference=None):
@@ -46,20 +47,36 @@ def phase_continue(f, phase, reference=None):
     return deroulee - 360 * np.floor((premiere + 45) / 360)
 
 
+def phase_repliee(degres):
+    """L'inverse de phase_continue : une phase en degrés, continue ou non,
+    ramenée en radians dans ]-pi, pi], là où np.angle la rend et où
+    curve_fit_complex, residus_complexes et tracer_bode l'attendent."""
+    return np.angle(np.exp(1j * np.radians(np.asarray(degres, dtype=float))))
+
+
+def phase_0_360(phase):
+    """L'ancien nom (2026.9) : la phase (radians) en degrés dans [0, 360[,
+    comme avant. phase_continue(f, phase) la déroule sans saut."""
+    deprecie("bode.phase_0_360", "phase_continue(f, phase)")
+    return np.degrees(phase) % 360
+
+
 def tracer_bode(
     f, norm, phase, modele=None, pfit=None, err=None, noms=None, unites=None, fichier=None, gain_log=True
 ):
     """Les points (f, |H|, phi) et, si `modele` et `pfit` sont donnés, la
     courbe ajustée avec les valeurs des paramètres dans la légende.
 
-    phase en radians, tracée en degrés ; modele(f, *pfit) rend la fonction de
-    transfert complexe ; `err` les incertitudes-types des paramètres, ce que
-    curve_fit_complex rend (une matrice de covariance de curve_fit convient
-    aussi) ; `noms` et `unites` servent à la légende (par ex.
+    phase en radians (refusée au-delà de 2 pi en valeur absolue : elle
+    serait en degrés), tracée en degrés ; modele(f, *pfit) rend la fonction
+    de transfert complexe ; `err` les incertitudes-types des paramètres, ce
+    que curve_fit_complex rend (une matrice de covariance de curve_fit
+    convient aussi) ; `noms` et `unites` servent à la légende (par ex.
     ("$H_0$", "$f_0$", "$Q$") et ("", "Hz", "")). Écrit la figure dans
     `fichier` s'il est donné. Rend la figure.
     """
     f = np.asarray(f, dtype=float)
+    phase = _radians(phase)
     fig, (ax1, ax2) = plt.subplots(2, sharex=True)
     ax1.plot(f, norm, "o", label="mesures")
     ax1.set_ylabel("$|H|$")

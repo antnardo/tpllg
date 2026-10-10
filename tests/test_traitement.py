@@ -6,6 +6,8 @@ from tpllg.traitement import (
     choix_echantillonnage,
     detecte_maxima_secondaires,
     fonction_transfert,
+    gain,
+    gain_std,
     indices_plages,
     interpolation_fft,
     valeurs_correspondantes,
@@ -127,3 +129,24 @@ class TestHarmoniques:
 def test_valeurs_correspondantes_apparie_a_delta_pres():
     i1, i2 = valeurs_correspondantes([100, 300, 500, 700, 900], [101, 299, 700, 901, 1100], 2)
     assert np.array_equal(i1, [100, 300, 700, 900]) and np.array_equal(i2, [101, 299, 700, 901])
+
+
+class TestAnciensNoms:
+    """gain et gain_std rendent (G, phi) comme en 2026.9, par fonction_transfert."""
+
+    def test_gain_std(self):
+        _, t, e, s = entree_sortie(Np=40)
+        with pytest.warns(DeprecationWarning, match="fonction_transfert"):
+            g, phi = gain_std(t, e, s, Np=40)
+        H = fonction_transfert(t, e, s)
+        assert g == abs(H) and phi == np.angle(H)
+        assert g == pytest.approx(G0, abs=1e-6) and phi == pytest.approx(PHI0, abs=1e-6)
+
+    def test_gain(self):
+        f, t, e, s = entree_sortie(Np=40)
+        with pytest.warns(DeprecationWarning, match="fonction_transfert"):
+            g, phi = gain(t, e, s, f, 40, "std")
+        H = fonction_transfert(t, e, s, f)
+        assert (g, phi) == (abs(H), np.angle(H))
+        with pytest.warns(DeprecationWarning), pytest.raises(NotImplementedError):
+            gain(t, e, s, f, 40, "fit")

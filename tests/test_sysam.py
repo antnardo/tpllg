@@ -123,7 +123,7 @@ class TestSorties:
     def test_un_nombre_est_une_tension_constante(self, silence):
         with Sysam([0], 5) as can:
             can.config_echantillon(1e-6, 100)
-            can.acquerir_avec_sorties(2.5, 0)
+            can.acquerir_avec_sorties(2.5, 0.0)
             assert can._ram_sorties == [1, 1]
 
     def test_periode_non_multiple_de_0_2_us_refusee(self, silence):
@@ -148,3 +148,28 @@ class TestDeclenchement:
         with Sysam(voies, calibres) as can:
             can.config_trigger(voie, 0.15)
             assert can.seuil_applique == pytest.approx(0.15, abs=2 * max(calibres) / 4096)
+
+
+class TestAnciensNoms:
+    """Ce que 2026.9 écrivait fonctionne, avec un avertissement."""
+
+    def test_n_max_est_la_memoire_entiere(self, silence):
+        with pytest.warns(DeprecationWarning, match="n_max"):
+            assert Sysam.N_MAX == Sysam.MEMOIRE == 0x3FFFF
+        with Sysam([0]) as can, pytest.warns(DeprecationWarning, match="n_max"):
+            assert can.N_MAX == 0x3FFFF
+
+    def test_l_entier_0_voulait_dire_pas_de_sortie(self, silence):
+        """pycanum ignorait tout ce qui n'était pas un ndarray : 0 ne générait rien."""
+        with Sysam([0], 5) as can:
+            can.config_echantillon(1e-6, 100)
+            with pytest.warns(DeprecationWarning, match="None pour ne rien générer"):
+                can.acquerir_avec_sorties(np.zeros(10), 0)
+            assert can._ram_sorties == [10, 0]
+            can.config_echantillon(7e-7, 100)  # pas un multiple de 0,2 µs : permis sans sortie
+            with pytest.warns(DeprecationWarning):
+                temps, _ = can.acquerir_avec_sorties(0, 0)
+            assert temps.shape == (1, 100) and can._ram_sorties == [10, 0]  # comptés jusqu'à la fermeture
+
+    def test_modules_analog_est_un_dict(self):
+        assert Sysam.MODULES_ANALOG[0] == (0, 4) and list(Sysam.MODULES_ANALOG.items())[3] == (3, (3, 7))

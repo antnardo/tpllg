@@ -21,13 +21,26 @@ source C (SysamSP5Link.c, pysysam.c) — non vérifiés sur la centrale :
   multiple de 0,2 µs (les sorties tournent alors à une autre cadence que les
   entrées) est refusée.
 
+Ces règles et le simulateur reproduisent pycanum 4.x, qui pilote la carte par
+sa DLL. pycanum 5.0 (2024) passe par un serveur HTTP (sysamhttp) et n'a pas
+été vérifié : ses refus et ses arrondis peuvent différer.
+
 Pour plus de détails sur pycanum :
 https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/interpy/interpy.html
+
+Ce qui a changé en 2026.10 fonctionne encore sous son ancien nom, avec un
+avertissement : `Sysam.N_MAX` (la mémoire entière, que `n_max` partage
+maintenant entre voies et sorties), et `acquerir_avec_sorties(signal, 0)`,
+où 0 voulait dire « pas de sortie » (c'est None à présent).
 
 @author: a. marchand
 """
 
+from numbers import Integral
+
 import numpy as np
+
+from tpllg._interne import deprecie
 
 try:
     import pycanum.main as pycan
@@ -39,6 +52,18 @@ __all__ = ["CAL_DEFAUT", "SYSAM_TYPE", "Sysam"]
 SYSAM_TYPE = "SP5"  # et non "PCI", qui n'existe pas au lycée
 CAL_DEFAUT = 10  # calibre par défaut, en volts
 MICROSECONDES = 1e6
+
+
+class _AncienAttribut:
+    """Un attribut de classe de 2026.9, lu avec un avertissement, sur la
+    classe comme sur une instance."""
+
+    def __init__(self, valeur, ancien, remplacant):
+        self.valeur, self.ancien, self.remplacant = valeur, ancien, remplacant
+
+    def __get__(self, instance, proprietaire):
+        deprecie(self.ancien, self.remplacant)
+        return self.valeur
 
 
 class Sysam(pycan.Sysam):
@@ -72,7 +97,11 @@ class Sysam(pycan.Sysam):
     MEMOIRE = 0x3FFFF  # mots de 12 bits, entrées et sorties ensemble
     POINTS_SORTIE_MAX = 0x1FFFF
     CALIBRES = (0.2, 1, 5, 10)
-    MODULES_ANALOG = ((0, 4), (1, 5), (2, 6), (3, 7))  # les deux entrées de chaque module
+    # les deux entrées de chaque module, un dict comme en 2026.9 (on ne le modifie pas)
+    MODULES_ANALOG = {0: (0, 4), 1: (1, 5), 2: (2, 6), 3: (3, 7)}  # noqa: RUF012
+    N_MAX = _AncienAttribut(
+        MEMOIRE, "Sysam.N_MAX", "Sysam.n_max(nb_voies, nb_sorties), qui partage la mémoire"
+    )
 
     @classmethod
     def get_calibre(cls, valeur):
@@ -89,7 +118,7 @@ class Sysam(pycan.Sysam):
         multiplexé) quand les deux entrées d'un même module sont actives en
         mode simple."""
         diff = {d % 4 for d in diff}
-        for module, (a, b) in enumerate(cls.MODULES_ANALOG):
+        for module, (a, b) in cls.MODULES_ANALOG.items():
             if a in voies and b in voies and module not in diff:
                 return cls.TE_MIN_MULTIPLEX
         return cls.TE_MIN_DIRECT
@@ -239,9 +268,11 @@ class Sysam(pycan.Sysam):
 
         sortie1, sortie2 : les tensions (V) à appliquer, échantillon par
             échantillon, répétées en boucle ; None pour ne rien générer, un
-            nombre pour une tension constante. Au plus 0x1FFFF points chacune,
-            et la mémoire est partagée : voies × N + points des sorties ≤
-            0x3FFFF (n_max le calcule).
+            nombre pour une tension constante (l'entier 0 vaut encore « pas de
+            sortie », comme en 2026.9, avec un avertissement : 0.0 pour une
+            tension nulle). Au plus 0x1FFFF points chacune, et la mémoire est
+            partagée : voies × N + points des sorties ≤ 0x3FFFF (n_max le
+            calcule).
 
         La période doit être un multiple de 0,2 µs : les sorties ne connaissent
         pas d'autre cadence."""
@@ -261,6 +292,13 @@ def _sortie(valeurs, numero):
     """Ce que pycanum attend d'une sortie : un tableau 1D de flottants, vide
     pour « pas de sortie »."""
     if valeurs is None:
+        return np.zeros(0)
+    if isinstance(valeurs, Integral) and valeurs == 0:
+        deprecie(
+            f"acquerir_avec_sorties(sortie{numero}=0)",
+            "None pour ne rien générer",
+            " (et 0.0 pour une tension constante nulle)",
+        )
         return np.zeros(0)
     valeurs = np.atleast_1d(np.asarray(valeurs, dtype=float))
     if valeurs.ndim != 1:

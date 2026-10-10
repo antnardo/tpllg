@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from tpllg.ajustement import formater
-from tpllg.bode import phase_continue, tracer_bode
+from tpllg.bode import phase_0_360, phase_continue, phase_repliee, tracer_bode
 
 F = np.geomspace(100, 20000, 60)
 
@@ -72,7 +72,8 @@ class TestTracerBode:
     def test_mesures_au_tour_du_modele(self):
         f = np.geomspace(100, 10000, 15)
         H = passe_bande(f, 5, 2000, 6)
-        phase_mesuree = np.angle(H) + 2 * np.pi * (np.arange(15) % 3 - 1)  # repliées n'importe comment
+        # repliées n'importe comment, un tour sur deux à l'autre tour, sous 2 pi en valeur absolue
+        phase_mesuree = np.angle(H) + np.where(np.angle(H) > 0, -2 * np.pi, 2 * np.pi) * (np.arange(15) % 2)
         fig = tracer_bode(f, np.abs(H), phase_mesuree, passe_bande, [5, 2000, 6])
         _, phase_tracee = fig.axes[1].get_lines()[0].get_data()
         _, phase_modele = fig.axes[1].get_lines()[1].get_data()
@@ -100,3 +101,30 @@ class TestTracerBode:
         H = passe_bande(f, -5, 2000, 6)
         fig = tracer_bode(f, np.abs(H), np.angle(H), gain_log=False)
         assert fig.axes[0].get_yscale() == "linear" and [len(ax.get_lines()) for ax in fig.axes] == [1, 1]
+
+
+class TestPhaseRepliee:
+    def test_inverse_de_phase_continue(self):
+        phase = np.angle(passe_bande(F, -5, 2000, 6))
+        continue_ = phase_continue(F, phase)
+        assert continue_.max() > 180  # déroulée : de 270° à 90°
+        assert np.allclose(phase_repliee(continue_), phase)
+
+    def test_dans_moins_pi_pi(self):
+        attendu = [0, np.pi, np.radians(-170), np.pi, np.radians(-1)]
+        assert np.allclose(phase_repliee([0, 180, -170, 540, 359.0]), attendu)
+        assert phase_repliee(90.0) == pytest.approx(np.pi / 2)
+
+
+class TestPhasesEnRadians:
+    def test_tracer_bode_refuse_des_degres(self):
+        H = passe_bande(F, -5, 2000, 6)
+        with pytest.raises(ValueError, match="les phases doivent être en radians"):
+            tracer_bode(F, np.abs(H), np.degrees(np.angle(H)))
+
+
+class TestAnciensNoms:
+    def test_phase_0_360_comme_avant(self):
+        with pytest.warns(DeprecationWarning, match="phase_continue"):
+            degres = phase_0_360(np.radians([-95, 176, 10, 370]))
+        assert np.allclose(degres, [265, 176, 10, 10])
