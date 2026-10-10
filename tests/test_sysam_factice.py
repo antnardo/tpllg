@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
 
+from tpllg import sysam_factice
+from tpllg._interne import generateur
 from tpllg.sysam_factice import MEMOIRE, POINTS_SORTIE_MAX, Sysam
 
 
@@ -166,3 +168,15 @@ def test_verbeux_des_la_creation(capsys):
 def test_seule_la_sp5_est_connue(capsys):
     with pytest.raises(ValueError, match="centrale inconnue"):
         Sysam("PCI")
+
+
+def test_le_bruit_se_tire_sans_default_rng(can, monkeypatch):
+    """numpy < 1.17 (les postes en Python 3.7) n'a pas default_rng : RandomState le remplace."""
+    monkeypatch.delattr(np.random, "default_rng")
+    monkeypatch.setattr(sysam_factice, "_rng", generateur(1))
+    assert isinstance(sysam_factice._rng, np.random.RandomState)
+    can.config_entrees([0], [5.0])
+    can.config_echantillon(10.0, 100)
+    can.acquerir()
+    tensions = can.entrees()
+    assert tensions.shape == (1, 100) and 0 < abs(tensions).max() <= 5.0

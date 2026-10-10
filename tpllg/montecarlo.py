@@ -46,19 +46,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import OptimizeWarning, curve_fit
 
-from tpllg._interne import serie
+from tpllg._interne import generateur, serie
 from tpllg.ajustement import _vectorisee, _york, curvefit, regression_york
 
 __all__ = ["Point", "SerieLineaire", "ajuster_modele", "fixer_graine", "indices_sobol"]
 
-_generateur = np.random.default_rng()
+_generateur = generateur()
 
 
 def fixer_graine(graine=None):
     """Les tirages qui suivent seront les mêmes d'une exécution à l'autre pour
     une même `graine` (un entier) ; None les rend de nouveau imprévisibles."""
     global _generateur
-    _generateur = np.random.default_rng(graine)
+    _generateur = generateur(graine)
 
 
 class Point:
@@ -131,7 +131,7 @@ class Point:
             return _generateur.uniform(self._val - largeur, self._val + largeur, N)
         if nom == "triangulaire":
             return _generateur.triangular(self._val - largeur, self._val, self._val + largeur, N)
-        return self._val - largeur * np.cos(np.pi * _generateur.random(N))
+        return self._val - largeur * np.cos(np.pi * _generateur.uniform(0.0, 1.0, N))
 
     # --- ce qu'on lit
     @property

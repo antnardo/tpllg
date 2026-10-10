@@ -34,11 +34,12 @@ class TestCalibres:
             assert can.calibres == [5.0, 5.0] and can.voies == [0, 1]
 
     def test_illisible_ou_negatif_donne_10_v(self, silence):
-        with Sysam([0, 4], [np.nan, -1]) as can:
-            assert can.calibres == [10.0, 10.0]
+        with Sysam([0, 4, 1, 5], [np.nan, -1, "dix", None]) as can:
+            assert can.calibres == [10.0, 10.0, 10.0, 10.0]
 
-    def test_au_dela_de_10_v_ramene_a_10_v_en_le_disant(self, silence, capsys):
-        with Sysam([0], 12) as can:
+    @pytest.mark.parametrize("valeur", [12, np.inf])
+    def test_au_dela_de_10_v_ramene_a_10_v_en_le_disant(self, silence, capsys, valeur):
+        with Sysam([0], valeur) as can:
             assert can.calibres == [10.0] and can._calibres == [10.0]
         assert "ramené à 10 V" in capsys.readouterr().out
 

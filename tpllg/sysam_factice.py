@@ -46,6 +46,8 @@ import time
 
 import numpy as np
 
+from tpllg._interne import generateur
+
 __all__ = ["MEMOIRE", "POINTS_SORTIE_MAX", "SYSAM_SP5", "VERBOSE", "Sysam"]
 
 SYSAM_SP5 = 1  # le seul modèle du lycée : pas de "PCI"
@@ -56,7 +58,7 @@ MEMOIRE = 0x3FFFF  # mots de 12 bits, entrées et sorties ensemble
 POINTS_SORTIE_MAX = 0x1FFFF
 TE_MIN_SORTIE_US = 0.2
 
-_rng = np.random.default_rng()
+_rng = generateur()
 
 # Les codes de calibre du pilote et la tension maximale de chacun
 _CALIBRE_DU_CODE = {0: 10.0, 4: 5.0, 5: 1.0, 2: 0.2}

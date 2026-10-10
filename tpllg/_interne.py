@@ -1,12 +1,12 @@
 """
 Ce que plusieurs modules partagent sans que l'utilisateur ait à le voir : la
-mise en forme des tableaux reçus. Rien ici n'est public ; les modules
-l'importent, pas les scripts.
+mise en forme des tableaux reçus, et le générateur de nombres aléatoires.
+Rien ici n'est public ; les modules l'importent, pas les scripts.
 """
 
 import numpy as np
 
-__all__ = ["incertitude", "serie", "voie"]
+__all__ = ["generateur", "incertitude", "serie", "voie"]
 
 
 def voie(t, v, minimum=1):
@@ -36,3 +36,14 @@ def serie(x, u_x, y, u_y):
     if x.shape != y.shape or x.ndim != 1:
         raise ValueError("x et y doivent être deux tableaux 1D de même longueur")
     return x, incertitude(u_x, x.shape), y, incertitude(u_y, y.shape)
+
+
+def generateur(graine=None):
+    """Un générateur de nombres aléatoires, reproductible pour une `graine`
+    entière : np.random.default_rng, ou RandomState sur les postes dont le
+    numpy (< 1.17) ne le connaît pas. Les deux ont normal, uniform et
+    triangular, avec les mêmes arguments."""
+    try:
+        return np.random.default_rng(graine)
+    except AttributeError:  # numpy < 1.17 : pas de Generator
+        return np.random.RandomState(graine)

@@ -230,3 +230,35 @@ class TestPointNormale:
         a, b = Point.normale(2.0, 0.1, N=5000), Point(2.0, 0.1, N=5000)
         assert (a.val, a.u, a.N, a._loi) == (b.val, b.u, b.N, b._loi)
         assert a.tirage.std() == pytest.approx(0.1, rel=0.1)
+
+
+class TestSansDefaultRng:
+    """numpy < 1.17 (les postes en Python 3.7) n'a pas default_rng : RandomState le remplace,
+    avec les mêmes lois et des tirages tout aussi reproductibles."""
+
+    def test_les_quatre_lois_et_la_graine(self, monkeypatch):
+        monkeypatch.delattr(np.random, "default_rng")
+        fixer_graine(5)
+        assert isinstance(montecarlo._generateur, np.random.RandomState)
+        p = Point(1.0, 0.1, N=20000)
+        assert p.tirage.std() == pytest.approx(0.1, rel=0.05) and p.tirage.mean() == pytest.approx(
+            1, abs=0.01
+        )
+        for loi, rapport in (
+            ("uniforme", np.sqrt(3)),
+            ("triangulaire", np.sqrt(6)),
+            ("arcsinus", np.sqrt(2)),
+        ):
+            q = getattr(Point, loi)(0.0, 1.0, N=20000)
+            assert abs(q.tirage).max() <= 1.0 and q.tirage.std() == pytest.approx(1 / rapport, rel=0.05)
+        fixer_graine(5)
+        assert np.array_equal(Point(1.0, 0.1, N=20000).tirage, p.tirage)
+
+    def test_la_droite_et_le_modele(self, monkeypatch):
+        monkeypatch.delattr(np.random, "default_rng")
+        fixer_graine(5)
+        x = np.linspace(0, 10, 10)
+        a, b = SerieLineaire(x, 0.1, 2 * x + 1, 0.3, N=2000).ajuster()
+        assert a.val == pytest.approx(2) and b.val == pytest.approx(1) and a.N == 2000
+        pa, _ = ajuster_modele(droite, x, 0.1, 2 * x + 1, 0.3, p0=[1, 0], N=50)
+        assert pa.val == pytest.approx(2) and pa.N == 50

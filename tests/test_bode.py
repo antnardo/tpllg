@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from tpllg._interne import generateur
 from tpllg.ajustement import formater
 from tpllg.bode import phase_0_360, phase_continue, phase_repliee, tracer_bode
 
@@ -42,7 +43,7 @@ class TestPhaseContinue:
         assert np.allclose(phase, [370, 190, 175])
 
     def test_dans_le_desordre_des_frequences(self):
-        ordre = np.random.default_rng(1).permutation(F.size)
+        ordre = generateur(1).permutation(F.size)
         phase = np.angle(passe_bande(F, -5, 2000, 6))
         assert np.allclose(phase_continue(F[ordre], phase[ordre]), phase_continue(F, phase)[ordre])
 

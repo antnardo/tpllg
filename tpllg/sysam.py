@@ -179,8 +179,11 @@ class Sysam(pycan.Sysam):
 
     @classmethod
     def _calibre(cls, voie, valeur):
-        valeur = float(np.nan_to_num(valeur, nan=CAL_DEFAUT))
-        if valeur <= 0:
+        try:
+            valeur = float(valeur)
+        except (TypeError, ValueError):  # None, un texte : illisible
+            return float(CAL_DEFAUT)
+        if not valeur > 0:  # nul, négatif ou NaN
             return float(CAL_DEFAUT)
         if valeur > max(cls.CALIBRES):
             print(f"[SYSAM] EA{voie} : calibre {valeur:g} V ramené à 10 V, le plus grand")

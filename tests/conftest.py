@@ -30,7 +30,8 @@ def fermer_les_figures():
 
 @pytest.fixture
 def rng():
-    """Des tirages reproductibles, les mêmes à chaque test."""
-    import numpy as np
+    """Des tirages reproductibles, les mêmes à chaque test (un RandomState
+    sous un numpy sans default_rng : il a normal et permutation aussi)."""
+    from tpllg._interne import generateur
 
-    return np.random.default_rng(20261008)
+    return generateur(20261008)
