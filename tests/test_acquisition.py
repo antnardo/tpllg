@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from tpllg import sysam_factice
-from tpllg.acquisition import acquerir, sauvegarder
+from tpllg.acquisition import acquerir, charger, sauvegarder
 
 
 def test_sauvegarder_puis_relire(tmp_path):
@@ -39,3 +39,22 @@ def test_acquerir_rend_les_voies_dans_l_ordre_demande(monkeypatch):
 def test_acquerir_refuse_un_declenchement_mal_forme():
     with pytest.raises(ValueError, match="trigger"):
         acquerir([0], 1, 1e-5, 10, trigger=(0, 0.5))
+
+
+def test_charger_relit_ce_que_sauvegarder_ecrit(tmp_path):
+    temps = np.array([[0, 1e-5, 2e-5], [0, 1e-5, 2e-5]])
+    tensions = np.array([[0.1, -0.2, 0.3], [1.0, 2.0, 3.0]])
+    sauvegarder(str(tmp_path / "essai"), [3, 0], temps, tensions)
+    t, u = charger(str(tmp_path / "essai"), [3, 0])
+    assert np.array_equal(t, temps) and np.array_equal(u, tensions)
+    t, u = charger(tmp_path / "essai", [0])  # un Path, une voie : toujours des tableaux 2D
+    assert t.shape == (1, 3) and np.array_equal(u[0], tensions[1])
+
+
+def test_charger_refuse_des_voies_de_longueurs_differentes(tmp_path):
+    sauvegarder(str(tmp_path / "a"), [0], [[0, 1e-5]], [[0.1, 0.2]])
+    sauvegarder(str(tmp_path / "a"), [1], [[0, 1e-5, 2e-5]], [[0.1, 0.2, 0.3]])
+    with pytest.raises(ValueError, match="même longueur"):
+        charger(str(tmp_path / "a"), [0, 1])
+    with pytest.raises(ValueError, match="aucune voie"):
+        charger(str(tmp_path / "a"), [])

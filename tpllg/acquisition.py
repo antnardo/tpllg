@@ -1,13 +1,13 @@
 """
 Acquisition à la Sysam SP5 en une fonction, déclenchement compris, et
-sauvegarde des voies acquises.
+sauvegarde des voies acquises, qu'on recharge par `charger`.
 
 @author: a. marchand
 """
 
 import numpy as np
 
-__all__ = ["acquerir", "sauvegarder"]
+__all__ = ["acquerir", "charger", "sauvegarder"]
 
 
 def acquerir(voies, calibre, te, nbpoints, trigger=None):
@@ -38,10 +38,26 @@ def acquerir(voies, calibre, te, nbpoints, trigger=None):
 
 def sauvegarder(prefixe, voies, temps, tensions):
     """Un fichier texte par voie, `<prefixe>_EA<n>.txt`, deux lignes : temps
-    et tensions — le format du TP2. np.loadtxt les relit."""
+    et tensions — le format du TP2. `charger(prefixe, voies)` les relit,
+    `np.loadtxt` aussi (t, u = np.loadtxt("essai_EA0.txt"))."""
     if not len(voies) == len(temps) == len(tensions):
         raise ValueError(
             f"{len(voies)} voies pour {len(temps)} lignes de temps et {len(tensions)} de tensions"
         )
     for ea, t, u in zip(voies, temps, tensions):
         np.savetxt(f"{prefixe}_EA{ea}.txt", [t, u])
+
+
+def charger(prefixe, voies):
+    """Ce que sauvegarder a écrit : rend (temps, tensions), deux tableaux 2D,
+    une ligne par voie dans l'ordre de `voies`, comme acquerir les rend.
+    Les voies d'une même acquisition ont le même nombre de points ; des
+    fichiers de longueurs différentes sont refusés."""
+    lignes = [np.loadtxt(f"{prefixe}_EA{ea}.txt") for ea in voies]
+    if not lignes:
+        raise ValueError("charger : aucune voie demandée")
+    if any(ligne.shape != lignes[0].shape or ligne.ndim != 2 or ligne.shape[0] != 2 for ligne in lignes):
+        raise ValueError(
+            f"{prefixe}_EA<n>.txt : des fichiers de deux lignes (temps, tensions) de même longueur"
+        )
+    return np.array([ligne[0] for ligne in lignes]), np.array([ligne[1] for ligne in lignes])
