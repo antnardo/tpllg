@@ -4,6 +4,16 @@ Toutes les modifications notables de `tpllg` sont consignées ici. Le format
 suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; les versions
 sont calendaires, `année.mois.numéro`.
 
+## [2026.10.3] - 2026-10-10
+
+### Corrigé
+
+- `indices_plages` : sous numpy < 2, `round()` d'un scalaire numpy rend un flottant,
+  qui ne peut pas servir d'indice ; `np.rint` puis `int()`.
+- La suite de tests tourne sous Python 3.7, numpy 1.16 et scipy 1.3 (travail CI
+  bloquant) : plus d'`integers` sur `RandomState`, `default_rng` retiré sans erreur
+  quand il n'existe pas, test de biais de `curve_fit_complex` réservé à scipy ≥ 1.5.
+
 ## [2026.10.2] - 2026-10-10
 
 Le lot de suite de la 2026.10.1 : ce que personne n'utilisait est retiré,
