@@ -1,10 +1,39 @@
+# Les métadonnées du paquet (PEP 621) et les réglages des outils de
+# développement. target-version de ruff suit le plus vieux Python des postes
+# de TP (voir README, Prérequis) ; le groupe dev sert à `uv run pytest`.
+
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
-# Les métadonnées du paquet sont dans setup.cfg. Ce qui suit ne règle que les
-# outils de développement ; target-version suit le plus vieux Python des postes
-# de TP (voir README, Prérequis).
+[project]
+name = "tpllg"
+dynamic = ["version"]
+description = "Acquisition à la Sysam SP5 et exploitation des mesures en TP de physique (CPGE)"
+readme = "README.md"
+license = {text = "CC-BY-NC-SA-4.0"}  # la table : la forme en chaîne exige setuptools 77, qui ne tourne pas sous 3.8
+authors = [{name = "Antonin Marchand"}]
+requires-python = ">=3.8"
+dependencies = ["numpy>=1.17", "scipy", "matplotlib"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Intended Audience :: Education",
+    "Natural Language :: French",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+[project.urls]
+Homepage = "https://github.com/antnardo/tpllg"
+
+[tool.setuptools]
+packages = ["tpllg"]
+
+[tool.setuptools.dynamic]
+version = {attr = "tpllg.__version__"}
+
+[dependency-groups]
+dev = ["pytest"]
 
 [tool.ruff]
 line-length = 110

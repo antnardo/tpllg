@@ -16,3 +16,5 @@ exemples/*.csv
 !exemples/donnees/
 *.whl
 *.tar.gz
+.venv/
+uv.lock

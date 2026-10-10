@@ -73,7 +73,10 @@ s'écrivait avant s'écrit encore, avec un avertissement.
   `uv build` et les artefacts joints à la release ; pas de PyPI).
 - `MANIFEST.in` : le sdist embarque `doc/` (fiches et figures),
   `exemples/` et ses données, la licence et ce journal, ce à quoi le README
-  renvoie ; pas les tests. `install_requires` épingle `numpy>=1.17`.
+  renvoie ; pas les tests. Les métadonnées passent de `setup.cfg` à
+  `pyproject.toml` (PEP 621), avec `numpy>=1.17` épinglé et un groupe `dev`
+  pour pytest : `uv run --python 3.8 pytest -W error` installe tout et
+  teste, sans rien préparer.
 - Dans le README : une section « Point ou grandeur ? » qui trace la
   frontière entre `tpllg.montecarlo.Point` (Monte-Carlo, sans unités,
   autonome, pour les postes du lycée et les corrigés) et `grandeurs`

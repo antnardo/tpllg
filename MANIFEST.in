@@ -8,5 +8,6 @@ recursive-include doc/images *.png
 recursive-include exemples *.py
 recursive-include exemples/donnees *
 global-exclude __pycache__ *.pyc .DS_Store
+prune .venv
 
 prune tests

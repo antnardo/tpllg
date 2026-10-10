@@ -18,9 +18,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-          cache-dependency-glob: |
-            setup.cfg
-            pyproject.toml
+          cache-dependency-glob: pyproject.toml
       - name: Construire la roue et le sdist
         run: uv build
       - name: Joindre les artefacts à la release

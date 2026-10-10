@@ -28,7 +28,7 @@ qu'il rend ce qu'il rendait et qu'il prévient :
 Pour lancer les tests sous un Python donné, avec uv :
 
 ```bash
-uv run --no-project --python 3.8 --with pytest --with . python -m pytest -W error
+uv run --python 3.8 pytest -W error
 ```
 
 C'est ce que fait l'intégration continue, `.github/workflows/ci.yml`, à

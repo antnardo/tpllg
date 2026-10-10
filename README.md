@@ -357,11 +357,12 @@ pip install -e .
 python -m pytest
 ```
 
-ou, sans rien installer, sous un Python donné, avec
-[uv](https://docs.astral.sh/uv/) :
+ou, sans rien installer soi-même, sous un Python donné, avec
+[uv](https://docs.astral.sh/uv/), qui installe le paquet et pytest dans un
+environnement à lui (`.venv/`) :
 
 ```bash
-uv run --no-project --python 3.8 --with pytest --with . python -m pytest -W error
+uv run --python 3.8 pytest -W error
 ```
 
 Les tests n'ont pas besoin de la centrale : ils passent par le simulateur.
