@@ -14,17 +14,9 @@ numpy.fft seul : scipy.fft n'apporte rien à ces tailles.
 
 import numpy as np
 
+from tpllg._interne import voie
+
 __all__ = ["calcule_DFT", "spectre"]
-
-
-def _tableaux(temps, valeurs):
-    temps = np.asarray(temps, dtype=float)
-    valeurs = np.asarray(valeurs, dtype=float)
-    if temps.ndim != 1 or temps.shape != valeurs.shape or temps.size < 2:
-        raise ValueError(
-            "temps et valeurs : deux tableaux 1D de même longueur, une seule voie (temps[0] et tensions[0])"
-        )
-    return temps, valeurs
 
 
 def calcule_DFT(temps, valeurs, phases=False):
@@ -41,7 +33,7 @@ def calcule_DFT(temps, valeurs, phases=False):
     composante (f multiple de 1/T) ; sinon le pic s'étale et baisse, et
     spectre() fait mieux.
     """
-    temps, valeurs = _tableaux(temps, valeurs)
+    temps, valeurs = voie(temps, valeurs, minimum=2)
     n = len(valeurs)
     tfd = np.fft.rfft(valeurs)[: (n + 1) // 2]  # sans fe/2, dont l'amplitude se compte autrement
     amplitudes = np.abs(tfd) * 2 / n
@@ -65,7 +57,7 @@ def spectre(temps, valeurs, p=6):
     (f-legrand.fr, CC BY-NC-SA 2.0 FR), reprise ici :
     https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/dephasage/dephasage.html
     """
-    temps, valeurs = _tableaux(temps, valeurs)
+    temps, valeurs = voie(temps, valeurs, minimum=2)
     n = len(valeurs)
     fenetre = np.blackman(n)
     tfd = np.fft.fft(np.concatenate((valeurs * fenetre, np.zeros(p * n))))
