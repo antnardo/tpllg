@@ -5,9 +5,9 @@ l'échantillonnage du Bode automatique ; et, sur un spectre, les harmoniques
 d'un signal périodique (indices_plages, detecte_maxima_secondaires,
 valeurs_correspondantes).
 
-Les anciens noms de 2026.9, `gain` et `gain_std`, fonctionnent encore et
-rendent (G, phi) comme avant, calculés par fonction_transfert, avec un
-avertissement.
+Les anciens noms de 2026.9, `gain` et `gain_std`, fonctionnent toujours,
+sans avertissement, et rendent (G, phi) comme avant, calculés par
+fonction_transfert.
 
 @author: a. marchand
 """
@@ -16,7 +16,6 @@ import math
 
 import numpy as np
 
-from tpllg._interne import deprecie
 from tpllg.signaux import frequence_pic
 
 __all__ = [
@@ -157,7 +156,6 @@ def gain_std(t, e, s, Np=0, ninter=0):
     """L'ancien nom (2026.9) : le gain G et la phase phi (radians) de s par
     rapport à e, comme avant, mais par fonction_transfert, qui n'a besoin ni
     de `Np` ni de `ninter` (ignorés)."""
-    deprecie("traitement.gain_std", "fonction_transfert(t, e, s)", " ; G, phi = abs(H), np.angle(H)")
     H = fonction_transfert(t, e, s)
     return abs(H), np.angle(H)
 
@@ -166,7 +164,6 @@ def gain(t, e, s, freq, Np=0, method="std", **kwargs):
     """L'ancien nom (2026.9) : (G, phi) à la fréquence `freq`, par
     fonction_transfert ; `Np` et les mots-clés sont ignorés, method='fit'
     n'a jamais existé."""
-    deprecie("traitement.gain", "fonction_transfert(t, e, s, freq)", " ; G, phi = abs(H), np.angle(H)")
     if method != "std":
         raise NotImplementedError(f"gain(method={method!r}) n'a jamais été implémentée : seul 'std' l'était")
     H = fonction_transfert(t, e, s, freq)

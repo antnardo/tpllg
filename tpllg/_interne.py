@@ -1,14 +1,12 @@
 """
 Ce que plusieurs modules partagent sans que l'utilisateur ait à le voir : la
-mise en forme des tableaux reçus, et l'avertissement qui accompagne un
-ancien nom. Rien ici n'est public ; les modules l'importent, pas les scripts.
+mise en forme des tableaux reçus. Rien ici n'est public ; les modules
+l'importent, pas les scripts.
 """
-
-import warnings
 
 import numpy as np
 
-__all__ = ["deprecie", "incertitude", "serie", "voie"]
+__all__ = ["incertitude", "serie", "voie"]
 
 
 def voie(t, v, minimum=1):
@@ -38,15 +36,3 @@ def serie(x, u_x, y, u_y):
     if x.shape != y.shape or x.ndim != 1:
         raise ValueError("x et y doivent être deux tableaux 1D de même longueur")
     return x, incertitude(u_x, x.shape), y, incertitude(u_y, y.shape)
-
-
-def deprecie(ancien, remplacant, precision=""):
-    """L'avertissement d'un ancien nom (2026.9) : il dit par quoi le
-    remplacer, et désigne la ligne du script qui l'appelle (stacklevel=3 :
-    la fonction dépréciée est appelée depuis cette ligne et appelle
-    deprecie)."""
-    warnings.warn(
-        f"{ancien} est un ancien nom (2026.9) : utilisez {remplacant}{precision}",
-        DeprecationWarning,
-        stacklevel=3,
-    )

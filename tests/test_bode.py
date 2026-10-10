@@ -124,7 +124,8 @@ class TestPhasesEnRadians:
 
 
 class TestAnciensNoms:
+    """Les noms de 2026.9 fonctionnent sans avertissement (filterwarnings = error)."""
+
     def test_phase_0_360_comme_avant(self):
-        with pytest.warns(DeprecationWarning, match="phase_continue"):
-            degres = phase_0_360(np.radians([-95, 176, 10, 370]))
+        degres = phase_0_360(np.radians([-95, 176, 10, 370]))
         assert np.allclose(degres, [265, 176, 10, 10])

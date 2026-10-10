@@ -28,7 +28,7 @@ sa DLL. pycanum 5.0 (2024) passe par un serveur HTTP (sysamhttp) et n'a pas
 Pour plus de détails sur pycanum :
 https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/interpy/interpy.html
 
-Ce qui a changé en 2026.10 fonctionne encore sous son ancien nom, avec un
+Ce qui a changé en 2026.10 fonctionne toujours sous son ancien nom, sans
 avertissement : `Sysam.N_MAX` (la mémoire entière, que `n_max` partage
 maintenant entre voies et sorties), et `acquerir_avec_sorties(signal, 0)`,
 où 0 voulait dire « pas de sortie » (c'est None à présent).
@@ -40,8 +40,6 @@ from numbers import Integral
 
 import numpy as np
 
-from tpllg._interne import deprecie
-
 try:
     import pycanum.main as pycan
 except ImportError:  # pas de pycanum sur cette machine : centrale simulée
@@ -51,18 +49,6 @@ __all__ = ["CAL_DEFAUT", "SYSAM_TYPE", "Sysam"]
 
 SYSAM_TYPE = "SP5"  # et non "PCI", qui n'existe pas au lycée
 CAL_DEFAUT = 10  # calibre par défaut, en volts
-
-
-class _AncienAttribut:
-    """Un attribut de classe de 2026.9, lu avec un avertissement, sur la
-    classe comme sur une instance."""
-
-    def __init__(self, valeur, ancien, remplacant):
-        self.valeur, self.ancien, self.remplacant = valeur, ancien, remplacant
-
-    def __get__(self, instance, proprietaire):
-        deprecie(self.ancien, self.remplacant)
-        return self.valeur
 
 
 class Sysam(pycan.Sysam):
@@ -98,9 +84,7 @@ class Sysam(pycan.Sysam):
     CALIBRES = (0.2, 1, 5, 10)
     # les deux entrées de chaque module, un dict comme en 2026.9 (on ne le modifie pas)
     MODULES_ANALOG = {0: (0, 4), 1: (1, 5), 2: (2, 6), 3: (3, 7)}  # noqa: RUF012
-    N_MAX = _AncienAttribut(
-        MEMOIRE, "Sysam.N_MAX", "Sysam.n_max(nb_voies, nb_sorties), qui partage la mémoire"
-    )
+    N_MAX = MEMOIRE  # l'ancien nom (2026.9) de la mémoire entière, que n_max partage
 
     @classmethod
     def get_calibre(cls, valeur):
@@ -261,11 +245,10 @@ class Sysam(pycan.Sysam):
 
         sortie1, sortie2 : les tensions (V) à appliquer, échantillon par
             échantillon, répétées en boucle ; None pour ne rien générer, un
-            nombre pour une tension constante (l'entier 0 vaut encore « pas de
-            sortie », comme en 2026.9, avec un avertissement : 0.0 pour une
-            tension nulle). Au plus 0x1FFFF points chacune, et la mémoire est
-            partagée : voies × N + points des sorties ≤ 0x3FFFF (n_max le
-            calcule).
+            nombre pour une tension constante (l'entier 0 vaut toujours « pas
+            de sortie », comme en 2026.9 : 0.0 pour une tension nulle). Au
+            plus 0x1FFFF points chacune, et la mémoire est partagée : voies × N
+            + points des sorties ≤ 0x3FFFF (n_max le calcule).
 
         La période doit être un multiple de 0,2 µs : les sorties ne connaissent
         pas d'autre cadence."""
@@ -286,12 +269,7 @@ def _sortie(valeurs, numero):
     pour « pas de sortie »."""
     if valeurs is None:
         return np.zeros(0)
-    if isinstance(valeurs, Integral) and valeurs == 0:
-        deprecie(
-            f"acquerir_avec_sorties(sortie{numero}=0)",
-            "None pour ne rien générer",
-            " (et 0.0 pour une tension constante nulle)",
-        )
+    if isinstance(valeurs, Integral) and valeurs == 0:  # l'entier 0 de 2026.9 : pas de sortie
         return np.zeros(0)
     valeurs = np.atleast_1d(np.asarray(valeurs, dtype=float))
     if valeurs.ndim != 1:

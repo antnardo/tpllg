@@ -46,3 +46,4 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+filterwarnings = ["error"]  # aucun avertissement, même des anciens noms de 2026.9

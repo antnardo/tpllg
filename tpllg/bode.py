@@ -20,7 +20,6 @@ d'un passe-bande inverseur, qui basculeraient d'une mesure à l'autre.)
 import matplotlib.pyplot as plt
 import numpy as np
 
-from tpllg._interne import deprecie
 from tpllg.ajustement import _radians, resume_parametres
 
 __all__ = ["phase_continue", "phase_repliee", "tracer_bode"]
@@ -57,7 +56,6 @@ def phase_repliee(degres):
 def phase_0_360(phase):
     """L'ancien nom (2026.9) : la phase (radians) en degrés dans [0, 360[,
     comme avant. phase_continue(f, phase) la déroule sans saut."""
-    deprecie("bode.phase_0_360", "phase_continue(f, phase)")
     return np.degrees(phase) % 360
 
 

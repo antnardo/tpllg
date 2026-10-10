@@ -7,9 +7,9 @@ Toutes les fonctions prennent le signal comme l'acquisition le rend, les
 instants `t` (en secondes) puis les tensions `v` : la période
 d'échantillonnage s'en déduit, il n'y a ni te ni fe à passer. Les formes
 de 2026.9, `frequence_pic(v, te)` et `extremums(v, fe, f, offset)`, sont
-encore reconnues (le second argument est alors un nombre) et donnent le
-même résultat, avec un avertissement ; `decrement_logarithmique` est
-l'ancien nom de `taux_amortissement`.
+toujours reconnues (le second argument est alors un nombre) et donnent le
+même résultat, sans avertissement ; `decrement_logarithmique` est l'ancien
+nom de `taux_amortissement`.
 
 @author: a. marchand
 """
@@ -17,7 +17,7 @@ l'ancien nom de `taux_amortissement`.
 import numpy as np
 from scipy.signal import find_peaks
 
-from tpllg._interne import deprecie, voie
+from tpllg._interne import voie
 
 __all__ = [
     "extremums",
@@ -90,14 +90,12 @@ def front_utile(t, t_fronts, fraction=0.45):
     return t_fronts[0], periode
 
 
-def _ancienne_forme(nom, t, v, cadence):
+def _ancienne_forme(t, v, cadence):
     """L'ancienne forme (v, te) ou (v, fe) d'une fonction de 2026.9, reconnue
     au second argument, un nombre : rend (t, v) comme la nouvelle forme les
     attend."""
     if cadence == "te":
-        deprecie(f"signaux.{nom}(v, te)", f"{nom}(t, v)")
         return np.arange(np.size(t)) * float(v), t
-    deprecie(f"signaux.{nom}(v, fe, ...)", f"{nom}(t, v, ...)")
     return np.arange(np.size(t)) / float(v), t
 
 
@@ -105,7 +103,7 @@ def frequence_pic(t, v):
     """La fréquence du pic de la FFT du signal (t, v), moyenne retirée : une
     première estimation de la fréquence d'une oscillation, à 1/durée près."""
     if np.ndim(v) == 0:
-        t, v = _ancienne_forme("frequence_pic", t, v, "te")
+        t, v = _ancienne_forme(t, v, "te")
     t, v = voie(t, v, minimum=2)
     spectre = np.abs(np.fft.rfft(v - v.mean()))
     frequences = np.fft.rfftfreq(len(v), t[1] - t[0])
@@ -126,7 +124,7 @@ def extremums(t, v, f, offset=0.0, seuil=0.0):
     fois l'écart-type du bruit, pour ne pas prendre ses bosses en fin
     d'amortissement, qui aplatiraient l'enveloppe."""
     if np.ndim(v) == 0:
-        t, v = _ancienne_forme("extremums", t, v, "fe")
+        t, v = _ancienne_forme(t, v, "fe")
     t, v = voie(t, v, minimum=2)
     distance = max(1, int(0.4 / (f * (t[1] - t[0]))))
     pics, _ = find_peaks(np.abs(v - offset), distance=distance, height=seuil if seuil > 0 else None)
@@ -148,5 +146,4 @@ def taux_amortissement(t_pics, v_pics, offset=0.0):
 def decrement_logarithmique(t_pics, v_pics, offset=0.0):
     """L'ancien nom (2026.9) de taux_amortissement, qui rend la même chose :
     alpha en s⁻¹, pas le décrément delta = alpha T."""
-    deprecie("signaux.decrement_logarithmique", "taux_amortissement")
     return taux_amortissement(t_pics, v_pics, offset)

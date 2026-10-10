@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -177,37 +178,35 @@ class TestErreurs:
 
 
 class TestAnciensNoms:
-    """Les noms de 2026.9 fonctionnent, avec un avertissement qui nomme le remplaçant."""
+    """Les noms de 2026.9 fonctionnent et rendent ce qu'ils rendaient, sans avertissement."""
 
     def test_readcsv(self, tmp_path):
         f = ecrire(tmp_path / "m.csv", "f;Ve\n500;1,00\n2000;1,50\n")
-        with pytest.warns(DeprecationWarning, match="lire_csv"):
-            freq, ve = readcsv(str(f), "utf8", 1)
+        freq, ve = readcsv(str(f), "utf8", 1)
         assert np.allclose(freq, [500, 2000]) and np.allclose(ve, [1.0, 1.5])
 
     def test_import_latispro_deux_colonnes_par_defaut(self, tmp_path):
         f = ecrire(tmp_path / "l.csv", "Temps;EA0;Temps;EA1\n0;1,2;0;0,5\n")
-        with pytest.warns(DeprecationWarning, match="lire_latispro"):
-            colonnes = import_latispro(f)
+        colonnes = import_latispro(f)
         assert len(colonnes) == 2 and colonnes[1][0] == 1.2
-        with pytest.warns(DeprecationWarning):
-            assert len(import_latispro(f, colonnes=4)) == 4
+        assert len(import_latispro(f, colonnes=4)) == 4
 
     def test_import_regressi_rend_le_temps_puis_la_liste(self, tmp_path):
         f = ecrire(tmp_path / "r.txt", "Regressi\nt\tVs\tVe\ns\tV\tV\n0\t0.5\t1\n0.001\t0.6\t1\n")
-        with pytest.warns(DeprecationWarning, match="lire_regressi"):
-            t, cols = import_regressi(str(f), colonnes=2)
+        t, cols = import_regressi(str(f), colonnes=2)
         assert isinstance(cols, list) and len(cols) == 2
         assert np.allclose(t, [0, 0.001]) and np.allclose(cols[0], [0.5, 0.6])
         assert np.allclose(cols[1], [1, 1])
-        with pytest.warns(DeprecationWarning):
-            t, (theta,) = import_regressi(f, colonnes=1)
+        t, (theta,) = import_regressi(f, colonnes=1)
         assert np.allclose(theta, [0.5, 0.6])
-        with pytest.warns(DeprecationWarning), pytest.raises(ValueError, match="colonnes doit être"):
+        with pytest.raises(ValueError, match="colonnes doit être"):
             import_regressi(f, colonnes=-1)
 
-    def test_l_avertissement_designe_le_script(self, tmp_path):
+    def test_aucun_avertissement(self, tmp_path):
+        """2026.10.1 levait un DeprecationWarning ; les élèves ne doivent rien voir."""
         f = ecrire(tmp_path / "m.csv", "f;Ve\n500;1,00\n")
-        with pytest.warns(DeprecationWarning) as avertissements:
+        with warnings.catch_warnings(record=True) as emis:
+            warnings.simplefilter("always")
             readcsv(f)
-        assert avertissements[0].filename == __file__
+            import_latispro(ecrire(tmp_path / "l.csv", "Temps;EA0\n0;1,2\n"))
+        assert emis == []

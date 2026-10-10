@@ -11,7 +11,7 @@ pathlib.Path, lisent l'UTF-8 comme les fichiers Windows (cp1252), se taisent
 par défaut (verbose=True fait imprimer ce qu'ils ont compris du fichier), et
 lisent toutes les colonnes sauf à en demander un nombre.
 
-Les noms de 2026.9 fonctionnent encore, avec un avertissement : readcsv et
+Les noms de 2026.9 fonctionnent toujours, sans avertissement : readcsv et
 import_latispro rendent la même liste, import_regressi rend (t, [colonnes])
 comme avant, avec `colonnes` le nombre de colonnes après celle du temps.
 
@@ -23,8 +23,6 @@ import warnings
 from pathlib import Path
 
 import numpy as np
-
-from tpllg._interne import deprecie
 
 __all__ = ["ecrire_csv", "lire_csv", "lire_latispro", "lire_regressi"]
 
@@ -228,14 +226,12 @@ def fpointformat(s, dtype):
 
 def readcsv(filename, encoding="utf8", entete=1, dtypes=None, verbose=False):
     """L'ancien nom (2026.9) de lire_csv : mêmes colonnes, même liste."""
-    deprecie("fichiers.readcsv", "lire_csv(filename, entete, dtypes, encoding)")
     return lire_csv(filename, entete=entete, dtypes=dtypes, encoding=encoding, verbose=verbose)
 
 
 def import_latispro(filename, colonnes=2, delimiter=";", verbose=False):
     """L'ancien nom (2026.9) de lire_latispro : les `colonnes` premières
     colonnes, deux par défaut (lire_latispro les lit toutes)."""
-    deprecie("fichiers.import_latispro", "lire_latispro(filename), qui lit toutes les colonnes")
     return lire_latispro(filename, colonnes=colonnes, delimiter=delimiter, verbose=verbose)
 
 
@@ -243,7 +239,6 @@ def import_regressi(filename, colonnes=2, delimiter="\t", verbose=False):
     """L'ancien nom (2026.9) : rend (t, [colonne 1, colonne 2…]) comme avant,
     `colonnes` étant le nombre de colonnes après celle du temps.
     lire_regressi rend une seule liste, le temps en tête."""
-    deprecie("fichiers.import_regressi", "lire_regressi(filename)", ", qui rend [t, colonne 1, colonne 2…]")
     if colonnes < 0:
         raise ValueError("Le nombre de colonnes doit être >= 0")
     t, *reste = lire_regressi(filename, colonnes=colonnes + 1, delimiter=delimiter, verbose=verbose)

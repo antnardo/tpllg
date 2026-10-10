@@ -9,7 +9,7 @@ tpNN.py déposé dans la copie du paquet distribuée avec ses scripts — pas ic
 
 Python 3.8 ou plus, numpy, scipy et matplotlib, et rien d'autre : le paquet
 se copie tel quel dans un dossier de TP. Les noms de 2026.9 fonctionnent
-encore, avec un avertissement qui dit par quoi les remplacer.
+toujours, sans avertissement.
 """
 
 __all__ = ["__version__"]

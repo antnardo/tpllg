@@ -124,23 +124,19 @@ class TestExtremums:
 
 
 class TestAnciennesFormes:
-    """Les formes de 2026.9, reconnues au second argument, un nombre."""
+    """Les formes de 2026.9, reconnues au second argument, un nombre, sans avertissement."""
 
     def test_frequence_pic_v_te(self):
         t, v = oscillation_amortie()
-        with pytest.warns(DeprecationWarning, match=r"frequence_pic\(t, v\)"):
-            ancienne = frequence_pic(v, t[1] - t[0])
-        assert ancienne == frequence_pic(t, v)
+        assert frequence_pic(v, t[1] - t[0]) == frequence_pic(t, v)
 
     def test_extremums_v_fe_f_offset(self):
         t, v = oscillation_amortie(offset=0.3)
-        with pytest.warns(DeprecationWarning, match=r"extremums\(t, v, ...\)"):
-            anciens = extremums(v, 1 / (t[1] - t[0]), 2000.0, 0.3)
+        anciens = extremums(v, 1 / (t[1] - t[0]), 2000.0, 0.3)
         assert np.array_equal(anciens, extremums(t, v, 2000.0, 0.3))
 
     def test_decrement_logarithmique(self):
         t, v = oscillation_amortie()
         pics = extremums(t, v, 2000.0)
-        with pytest.warns(DeprecationWarning, match="taux_amortissement"):
-            alpha = decrement_logarithmique(t[pics], v[pics])
+        alpha = decrement_logarithmique(t[pics], v[pics])
         assert alpha == taux_amortissement(t[pics], v[pics]) == pytest.approx(np.pi * 2000 / 6, rel=1e-3)
