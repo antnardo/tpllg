@@ -404,8 +404,8 @@ Pour comparer au diagramme de Bode du même filtre, voir
 
 ## Anciens noms
 
-Les formes de 2026.9 fonctionnent encore, et rendent ce qu'elles rendaient,
-avec un `DeprecationWarning` qui nomme le remplaçant. L'ancienne forme de
+Les formes de 2026.9 restent valables et rendent ce qu'elles rendaient,
+sans avertissement. L'ancienne forme de
 `frequence_pic` et d'`extremums` est reconnue à son second argument, un
 nombre (`te` ou `fe`) là où la nouvelle attend le tableau `v`.
 

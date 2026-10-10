@@ -4,6 +4,53 @@ Toutes les modifications notables de `tpllg` sont consignées ici. Le format
 suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; les versions
 sont calendaires, `année.mois.numéro`.
 
+## [2026.10.2] - 2026-10-10
+
+Le lot de suite de la 2026.10.1 : ce que personne n'utilisait est retiré,
+les anciens noms se taisent, et le paquet tourne sur les postes du lycée
+restés en Python 3.7.
+
+### Supprimé
+
+Sans alias ni avertissement — aucun script vivant ne s'en servait :
+
+- `montecarlo.SerieLineaire.coefs`, `.Nt`, `.xi`, `.yi` : un tirage des
+  mesures se lit dans `serie.x_tirages[0]`, `serie.y_tirages[0]` ;
+- `montecarlo.Point.i`, `Point.calc_tirage`, `Point.apply_func` : la
+  première valeur est `X.tirage[0]`, un tirage ne se refait pas, et une
+  fonction numpy s'applique directement au `Point` (`np.exp(X)`) ;
+- `Sysam.te_effectif` et `sysam.MICROSECONDES` ;
+- `sysam_factice.SYSAM_PCI` et `ENTREE_CHRONO` : le simulateur ne connaît
+  que la SP5 (`Sysam("PCI")` lève `ValueError`) ;
+- `traitement.interpolation_fft` ;
+- le paramètre `debug=` d'`incertitudes.incertitudes()`.
+
+### Modifié
+
+- **Les anciens noms de 2026.9 ne lèvent plus de `DeprecationWarning`** :
+  ils restent valables, rendent ce qu'ils rendaient, et se taisent — un
+  élève n'a pas à voir d'avertissement. La liste est celle de la 2026.10.1,
+  ci-dessous ; les sections « Anciens noms » des fiches la gardent.
+  L'utilitaire interne `deprecie` disparaît avec.
+- **Python 3.7, numpy 1.16 et scipy 1.3 suffisent au paquet**
+  (`requires-python >= 3.7`, `numpy >= 1.16`, `scipy >= 1.3`), pour les
+  postes du lycée restés là : le générateur aléatoire de `montecarlo` et
+  du simulateur se rabat sur `np.random.RandomState` quand
+  `np.random.default_rng` (numpy 1.17) n'existe pas, avec les mêmes lois et
+  des graines tout aussi reproductibles ; `Sysam` ne passe plus par
+  `np.nan_to_num(nan=…)` (numpy 1.17) pour lire un calibre : un calibre
+  illisible (NaN, texte, None) ou nul donne 10 V, un calibre infini est
+  ramené à 10 V en le disant. Le paquet n'emploie que `numpy.fft`, jamais
+  `scipy.fft` (scipy 1.4), et rien d'autre de plus récent ; ruff le vérifie
+  en cible `py37`. Les exemples restent 3.8 (`f"{x=}"`). uv ne fournit plus
+  de 3.7 : les replis sont testés en simulant l'absence de `default_rng`,
+  et l'intégration continue rejoue la suite dans un conteneur Python 3.7
+  avec numpy 1.16, scipy 1.3 et matplotlib 3.0 (travail non bloquant tant
+  qu'il n'a pas été vu vert).
+- Les tests refusent tout avertissement même hors de la CI
+  (`filterwarnings = error` dans `pyproject.toml`) ; ceux des anciens noms
+  les appellent tels quels, sans `pytest.warns`.
+
 ## [2026.10.1] - 2026-10-10
 
 Les actions de l'audit du 10 octobre 2026 (section « tpllg »), et la

@@ -230,13 +230,11 @@ avec `ddof=1`.
 | `X + Y`, `X - Y`, `X*Y`, `X/Y`, `X**Y` | terme à terme sur les tirages, `Y` un `Point` ou un nombre ; `2*X`, `3 - X`, `2/X`, `2**X` aussi |
 | `-X`, `abs(X)` | idem |
 | `np.exp(X)`, `np.sqrt(X)`, `np.sin(X)`, `np.arctan2(Y, X)`… | toute fonction numpy élémentaire appliquée aux tirages : le résultat est un `Point` |
-| `X.apply_func(f, *args)` | une fonction qui n'est pas une fonction numpy élémentaire, appliquée aux tirages avec ses arguments |
 | `X.val`, `X.u`, `X.N` | la valeur, l'incertitude-type, le nombre de tirages |
 | `X.tirage` | le tableau des tirages, pour un histogramme ou des quantiles |
 | `X.quantiles(niveau=0.6827)` | l'intervalle `(bas, haut)` qui contient `niveau` des tirages, autant de chaque côté ; à 68,27 % c'est l'équivalent de ± un écart-type |
 | `X.intervalle_le_plus_court(niveau=0.95)` | le plus court des intervalles qui contiennent `niveau` des tirages (GUM-S1) |
 | `X.show(ax=None, largeur=5, nbins=1000)` | l'histogramme des tirages, la moyenne, ± l'écart-type, et la loi normale de mêmes moyenne et écart-type, dans le repère `ax` ou une figure neuve |
-| `X.calc_tirage(N)` | refaire le tirage d'une grandeur mesurée, avec `N` valeurs ; les résultats déjà calculés n'y sont plus corrélés |
 
 Pour retrouver les mêmes tirages d'une exécution à l'autre,
 `fixer_graine(0)` en tête de script (un entier quelconque) ;
@@ -416,8 +414,9 @@ a, b = serie.ajuster()
 | `N` | le nombre de tirages |
 
 Les tirages sont faits à la construction, dans `serie.x_tirages` et
-`serie.y_tirages`, deux tableaux `(N, P)` ; `serie.xi`, `serie.yi` en donnent
-un, pour tracer un jeu de mesures comme on aurait pu l'avoir. `ajuster()`
+`serie.y_tirages`, deux tableaux `(N, P)` ; `serie.x_tirages[0]`,
+`serie.y_tirages[0]` en donnent un, pour tracer un jeu de mesures comme on
+aurait pu l'avoir. `ajuster()`
 rend la pente et l'ordonnée à l'origine en deux `Point` : leur **valeur**
 est la droite de York des mesures elles-mêmes, leur **tirage** la droite de
 York de chacun des `N` tirages, recentré sur cette valeur. Ajuster des
@@ -443,8 +442,9 @@ droite en itérant, et rend en plus le χ² réduit.
 ![Les dix points avec leurs barres d'incertitude en x et en y, la droite de Monte-Carlo et celle de curvefit, confondues](images/montecarlo_droite.png)
 
 Et ce que les tirages contiennent : cent des cent mille droites autour des
-mesures, un tirage des mesures (`serie.xi`, `serie.yi`) avec sa droite, puis
-les histogrammes de la pente et de l'ordonnée à l'origine, par `a.show()` et
+mesures, un tirage des mesures (`serie.x_tirages[0]`, `serie.y_tirages[0]`)
+avec sa droite, puis les histogrammes de la pente et de l'ordonnée à
+l'origine, par `a.show()` et
 `b.show()` :
 
 ![Les mesures et cent droites, une par tirage, qui s'ouvrent en éventail aux deux bouts ; l'histogramme des cent mille pentes ; celui des cent mille ordonnées à l'origine](images/montecarlo_droite_tirages.png)

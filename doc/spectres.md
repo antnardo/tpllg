@@ -1,9 +1,9 @@
 # Spectres et harmoniques
 
 `tpllg.fft` calcule le spectre d'amplitude d'un signal acquis, brut ou avec
-une fenêtre ; `tpllg.traitement` y relève les harmoniques, apparie celles
-de deux signaux, et interpole un signal par sa transformée de Fourier. Le
-cas complet est la mesure d'une fonction de transfert sur les harmoniques
+une fenêtre ; `tpllg.traitement` y relève les harmoniques et apparie celles
+de deux signaux. Le cas complet est la mesure d'une fonction de transfert
+sur les harmoniques
 d'un créneau. Le gain d'un filtre mesuré sur une sinusoïde et le Bode
 automatique sont dans [bode.md](bode.md) ; le chemin inverse, construire un
 signal à partir de ses harmoniques et le filtrer par le calcul, dans
@@ -15,7 +15,6 @@ signal à partir de ses harmoniques et le filtrer par le calcul, dans
 - [Le spectre fenêtré : spectre](#le-spectre-fenêtré--spectre)
 - [Relever les harmoniques](#relever-les-harmoniques)
 - [Apparier deux relevés](#apparier-deux-relevés)
-- [Interpoler par la FFT](#interpoler-par-la-fft)
 - [Une fonction de transfert sur les harmoniques](#une-fonction-de-transfert-sur-les-harmoniques)
 
 ## Le spectre brut : calcule_DFT
@@ -219,23 +218,6 @@ les deux listes réduites aux indices qui se correspondent à
 Le 20 de la première liste n'a pas de vis-à-vis, le 55 de la seconde non
 plus ; les trois autres paires sont appariées. En pratique `delta_indices`
 vaut un dixième de fondamental en points, `int(0.1*fondamental/df) + 1`.
-
-## Interpoler par la FFT
-
-```python
-from tpllg.traitement import interpolation_fft
-
-y = interpolation_fft(x, n_interpolation)
-```
-
-Rend le signal `x` avec `n_interpolation + 1` fois plus de points, en
-ajoutant des zéros aux hautes fréquences de sa transformée puis en revenant
-au temps : c'est l'interpolation exacte d'un signal à bande limitée, pour
-tracer finement un signal échantillonné juste au-dessus de Shannon. Le
-signal doit être périodique sur sa durée pour que les bords ne se déforment
-pas. La fonction vient de `interpol()`, dans le
-[Diagramme de Bode](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html)
-de Frédéric Legrand.
 
 ## Une fonction de transfert sur les harmoniques
 

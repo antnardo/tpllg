@@ -63,7 +63,7 @@ pip install git+https://github.com/antnardo/tpllg
 chaque [release](https://github.com/antnardo/tpllg/releases) porte un
 fichier `tpllg-<version>-py3-none-any.whl` (et le sdist `.tar.gz`, avec
 `doc/` et `exemples/`), qui s'installe par
-`pip install tpllg-2026.10.1-py3-none-any.whl`.
+`pip install tpllg-2026.10.2-py3-none-any.whl`.
 
 **Pour développer**, une installation éditable depuis un clone :
 
@@ -74,12 +74,15 @@ pip install -e tpllg
 
 ## Prérequis
 
-Python 3.8 ou plus, avec numpy (1.17 ou plus), scipy et matplotlib : une
-distribution Anaconda suffit. Le paquet et ses exemples sont testés sous Python 3.8
-(numpy 1.24, scipy 1.10, matplotlib 3.7), 3.11 et 3.14 (numpy 2.5,
-scipy 1.18, matplotlib 3.11). Python 3.8 est le minimum réel : les exemples
-écrivent `f"{x=}"`, qu'il a introduit, et le paquet n'emploie rien de plus
-récent.
+Le paquet demande Python 3.7 ou plus, avec numpy (1.16 ou plus), scipy (1.3
+ou plus) et matplotlib : une distribution Anaconda suffit, et les postes du
+lycée restés en Python 3.7 avec un numpy antérieur à 1.17 sont servis (le
+générateur aléatoire s'y rabat sur `RandomState`). Les exemples, eux,
+écrivent `f"{x=}"`, que Python 3.8 a introduit : paquet 3.7+, exemples 3.8+.
+Le tout est testé sous Python 3.8 (numpy 1.24, scipy 1.10, matplotlib 3.7),
+3.11 et 3.14 (numpy 2.5, scipy 1.18, matplotlib 3.11) ; l'intégration
+continue rejoue la suite sous 3.7 avec numpy 1.16, scipy 1.3 et
+matplotlib 3.0.
 
 La centrale nécessite le module **pycanum** installé, le module Python de
 Frédéric Legrand pour la Sysam SP5, disponible sous Windows :
@@ -214,13 +217,13 @@ l'autre est dans [CHANGELOG.md](CHANGELOG.md).
 | [doc/spectres.md](doc/spectres.md) | le spectre d'un signal, brut ou fenêtré, et ses phases ; relever les harmoniques ; mesurer une fonction de transfert sur les harmoniques d'un créneau |
 | [doc/harmoniques.md](doc/harmoniques.md) | un signal périodique par ses harmoniques : synthèse, filtrage par le calcul, valeur efficace, analyseur de spectre ; ce que devient `traitementsignal` |
 | [doc/fichiers.md](doc/fichiers.md) | lire un CSV de tableur, un export Latis Pro ou Regressi, tous rendus de la même façon ; écrire un CSV ; relire ce que `sauvegarder` écrit |
-| [doc/tests.md](doc/tests.md) | ce que vérifient les 320 tests |
+| [doc/tests.md](doc/tests.md) | ce que vérifient les 322 tests |
 
 ## Les modules
 
 | Module | Contenu |
 | --- | --- |
-| `tpllg.sysam` | `Sysam`, la classe de pycanum avec un `with`, des calibres simples, des temps en secondes et des acquisitions qui rendent directement temps et tensions ; `n_max`, `te_min`, `te_effectif`, `get_calibre` pour rester dans les limites ; se rabat sur le simulateur sans pycanum (règles de pycanum 4.x) |
+| `tpllg.sysam` | `Sysam`, la classe de pycanum avec un `with`, des calibres simples, des temps en secondes et des acquisitions qui rendent directement temps et tensions ; `n_max`, `te_min`, `get_calibre` pour rester dans les limites ; se rabat sur le simulateur sans pycanum (règles de pycanum 4.x) |
 | `tpllg.sysam_factice` | le simulateur : même interface, mêmes formes de données, mêmes refus que la centrale, sans matériel |
 | `tpllg.acquisition` | `acquerir(voies, calibre, te, nbpoints, trigger=…)` en une ligne, déclenchement compris ; `sauvegarder` et `charger`, un fichier par voie |
 | `tpllg.ajustement` | `curvefit` (incertitudes sur y, ou sur x et y par la variance effective, χ² réduit), `curve_fit_complex` (module et phase ajustés ensemble, en radians, refusés au-delà de 2π), `regression_york` (une droite, x et y incertains), `Ajustement` (le résultat), `ecarts_types`, `formater` (deux chiffres sur l'incertitude, notation scientifique hors de [10⁻³, 10⁵[), `resume_parametres`, `residus_complexes` |
@@ -229,7 +232,7 @@ l'autre est dans [CHANGELOG.md](CHANGELOG.md).
 | `tpllg.signaux` | `fronts_montants`, `fronts_descendants`, `front_utile`, `fenetre`, `frequence_pic`, `extremums`, `taux_amortissement`, tous en `(t, v)` |
 | `tpllg.bode` | `tracer_bode`, `phase_continue` et son inverse `phase_repliee` |
 | `tpllg.fft` | `calcule_DFT`, `spectre` |
-| `tpllg.traitement` | `fonction_transfert`, `choix_echantillonnage`, `interpolation_fft`, `indices_plages`, `detecte_maxima_secondaires`, `valeurs_correspondantes` |
+| `tpllg.traitement` | `fonction_transfert`, `choix_echantillonnage`, `indices_plages`, `detecte_maxima_secondaires`, `valeurs_correspondantes` |
 | `tpllg.harmoniques` | `Signal`, `spectre_carre`, `spectre_triangle`, `spectre_dent_de_scie`, `passe_bas_1`, `passe_haut_1`, `passe_bas_2`, `passe_haut_2`, `passe_bande`, `coupe_bande` |
 | `tpllg.fichiers` | `lire_csv`, `lire_latispro`, `lire_regressi`, qui rendent tous une liste de tableaux, un par colonne ; `ecrire_csv` |
 
@@ -237,9 +240,9 @@ Chaque module ne dépend que de numpy, scipy et matplotlib, jamais d'un
 autre paquet : `tpllg` se copie seul dans un dossier de TP. Les noms de la
 version 2026.9 (`readcsv`, `gain_std`, `phase_0_360`,
 `decrement_logarithmique`, `frequence_pic(v, te)`, `Sysam.N_MAX`…)
-fonctionnent encore et rendent ce qu'ils rendaient, avec un
-`DeprecationWarning` qui nomme le remplaçant ; la liste est dans le
-[CHANGELOG](CHANGELOG.md) et dans la section « Anciens noms » de chaque fiche.
+restent valables et rendent ce qu'ils rendaient, sans avertissement ; la
+liste est dans le [CHANGELOG](CHANGELOG.md) et dans la section « Anciens
+noms » de chaque fiche.
 
 ## Point ou grandeur ?
 
@@ -344,11 +347,13 @@ tableaux de la bonne forme, remplis de bruit ; un script qui veut s'essayer avec
 des données plausibles les fabrique lui-même derrière un interrupteur
 `SIMULATION`, comme le font les exemples.
 
-**Un ancien script affiche un `DeprecationWarning`.** Les noms de 2026.9
-(`gain_std`, `phase_0_360`, `decrement_logarithmique`, `frequence_pic(v,
-te)`, `readcsv`, `Sysam.N_MAX`…) fonctionnent encore et rendent ce qu'ils
-rendaient ; l'avertissement désigne la ligne du script et dit par quoi
-remplacer le nom. Le [CHANGELOG](CHANGELOG.md) en donne la liste.
+**Un script de 2026.9 tourne tel quel.** Ses noms (`gain_std`,
+`phase_0_360`, `decrement_logarithmique`, `frequence_pic(v, te)`,
+`readcsv`, `Sysam.N_MAX`…) restent valables, rendent ce qu'ils rendaient
+et n'affichent aucun avertissement ; le [CHANGELOG](CHANGELOG.md) en donne
+la liste, avec l'écriture d'aujourd'hui en regard. Ce qui a disparu en
+2026.10.2 (`interpolation_fft`, `Point.apply_func`, `SerieLineaire.xi`…)
+n'était employé par aucun script : le CHANGELOG le dit aussi.
 
 ## Tester
 
@@ -365,14 +370,17 @@ environnement à lui (`.venv/`) :
 uv run --python 3.8 pytest -W error
 ```
 
-Les tests n'ont pas besoin de la centrale : ils passent par le simulateur.
-`ruff format` et `ruff check` (réglés dans `pyproject.toml`) gardent le code
-et les exemples propres. La description des tests est dans la documentation
+Les tests n'ont pas besoin de la centrale : ils passent par le simulateur,
+et aucun avertissement n'y est toléré (`filterwarnings = error` dans
+`pyproject.toml`). `ruff format` et `ruff check` (réglés dans
+`pyproject.toml`, cible Python 3.7) gardent le code et les exemples
+propres. La description des tests est dans la documentation
 [doc/tests.md](doc/tests.md). L'intégration continue
 (`.github/workflows/ci.yml`) rejoue tout cela à chaque push, sous Python
-3.8, 3.11 et 3.14, tout avertissement compté comme une erreur ; à chaque
-release publiée, `publish.yml` construit la roue et le sdist et les joint à
-la release.
+3.8, 3.11 et 3.14, puis sous 3.7 avec numpy 1.16, scipy 1.3 et
+matplotlib 3.0 dans un conteneur, ce que uv ne sait plus installer ; à
+chaque release publiée, `publish.yml` construit la roue et le sdist et les
+joint à la release.
 
 ## Licence
 
@@ -390,13 +398,13 @@ et `exemples/Bode.py` dérivent de ses exemples, publiés sur son site sous
 [Enregistrement d'un signal](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pyacquis/pyacquis.html)
 et
 [Diagramme de Bode](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html).
-Trois fonctions du paquet lui sont dues aussi, réécrites ici et créditées dans
-leur docstring : `interpolation_fft` et `choix_echantillonnage`
-(`tpllg.traitement`), venues du même « Diagramme de Bode », et le spectre
-fenêtré `spectre` (`tpllg.fft`), venu de
+Deux fonctions du paquet lui sont dues aussi, réécrites ici et créditées dans
+leur docstring : `choix_echantillonnage` (`tpllg.traitement`), venue du même
+« Diagramme de Bode », et le spectre fenêtré `spectre` (`tpllg.fft`), venu de
 [Mesure de déphasage](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/dephasage/dephasage.html).
 La mesure du gain du « Diagramme de Bode », `gain_std`, a été remplacée par une
-détection synchrone, `fonction_transfert`. La 2.0 FR permet de diffuser une
+détection synchrone, `fonction_transfert`, et son interpolation par FFT,
+`interpolation_fft`, retirée en 2026.10.2. La 2.0 FR permet de diffuser une
 adaptation sous une version ultérieure aux mêmes options : ces emprunts sont
 donc sous CC BY-NC-SA 4.0, comme le reste.
 

@@ -264,9 +264,9 @@ f, Ve, Vs, phi = lire_csv(DOSSIER / "mesures.csv")
 
 ## Anciens noms
 
-Les noms de 2026.9 fonctionnent encore, et rendent ce qu'ils rendaient,
-avec un `DeprecationWarning` qui nomme le remplaçant. Ils ne sont pas dans
-`__all__` : `from tpllg.fichiers import *` ne les donne pas.
+Les noms de 2026.9 restent valables et rendent ce qu'ils rendaient, sans
+avertissement. Ils ne sont pas dans `__all__` :
+`from tpllg.fichiers import *` ne les donne pas.
 
 | Ancien nom | Rendait | Remplaçant |
 | --- | --- | --- |

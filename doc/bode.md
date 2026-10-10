@@ -258,8 +258,7 @@ de Frédéric Legrand, prenait la phase dans la moyenne du produit
 `s(t) (e(t) - j e(t - T/4))`, le quart de période arrondi au point : la
 phase était biaisée de 0,15° pour cent points par période à 3° pour dix, de
 0,6° pour des signaux non centrés, et valait toujours −45° ou 135° avec
-`Np=0`, la valeur par défaut. `interpolation_fft` et `choix_echantillonnage`
-viennent du même exemple.
+`Np=0`, la valeur par défaut. `choix_echantillonnage` vient du même exemple.
 
 ## Choisir l'échantillonnage
 
@@ -370,9 +369,8 @@ Le résultat s'ajuste ensuite exactement comme des mesures à la main,
 
 ## Anciens noms
 
-Les noms de 2026.9 fonctionnent encore, et rendent ce qu'ils rendaient,
-avec un `DeprecationWarning` qui nomme le remplaçant. Ils ne sont pas dans
-`__all__`.
+Les noms de 2026.9 restent valables et rendent ce qu'ils rendaient, sans
+avertissement. Ils ne sont pas dans `__all__`.
 
 | Ancien nom | Rendait | Remplaçant |
 | --- | --- | --- |

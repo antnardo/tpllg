@@ -129,7 +129,6 @@ dans les limites :
 | `Sysam.CALIBRES` | `(0.2, 1, 5, 10)` | les calibres accessibles |
 | `Sysam.MODULES_ANALOG` | `{0: (0, 4), 1: (1, 5), 2: (2, 6), 3: (3, 7)}` | les deux entrées de chaque module, par numéro de module |
 | `Sysam.n_max(nb_voies, nb_sorties=0)` | `261888` pour une voie, `130944` pour deux, `87296` pour deux voies et une sortie | le nombre de points par voie le plus grand que la mémoire accepte, quand chaque sortie a autant de points que les entrées |
-| `Sysam.te_effectif(te)` | `te` arrondie à 0,1 µs | la période que la carte appliquera |
 
 ## Échantillonner
 
@@ -575,8 +574,8 @@ with Sysam([0, 1], 5) as can:
 
 ## Anciens noms
 
-Ce que 2026.9 écrivait fonctionne encore, avec un `DeprecationWarning` qui
-nomme le remplaçant.
+Ce que 2026.9 écrivait fonctionne toujours, sans avertissement : ces
+écritures restent valables.
 
 | Ancienne écriture | Valait | Remplaçant |
 | --- | --- | --- |
