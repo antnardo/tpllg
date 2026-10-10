@@ -1,6 +1,10 @@
 # Tests et qualité du code : à chaque push et pull request, la suite de
-# tests sous les trois Python de référence (3.8, le plus vieux des postes de
-# TP ; 3.11 ; 3.14), tout avertissement compté comme une erreur, puis ruff.
+# tests sous les trois Python que uv fournit (3.8, 3.11, 3.14), tout
+# avertissement compté comme une erreur, puis ruff. Et, dans un conteneur
+# Python 3.7 avec les plus vieux numpy, scipy et matplotlib déclarés — ce
+# qu'ont les postes du lycée —, la même suite, sans compter leurs propres
+# avertissements de dépréciation : ce dernier travail n'est pas bloquant
+# tant qu'il n'a pas été vu vert.
 name: CI
 
 on:
@@ -22,6 +26,17 @@ jobs:
           cache-dependency-glob: pyproject.toml
       - name: Tests sous Python ${{ matrix.python }}
         run: uv run --python ${{ matrix.python }} pytest -W error
+
+  python37:
+    runs-on: ubuntu-latest
+    container: python:3.7-slim
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: numpy 1.16, scipy 1.3, matplotlib 3.0, pytest 7
+        run: pip install "numpy==1.16.*" "scipy==1.3.*" "matplotlib==3.0.*" "pytest==7.4.*"
+      - name: Tests sous Python 3.7
+        run: python -m pytest -W "ignore::DeprecationWarning" -W "ignore::PendingDeprecationWarning"
 
   qualite:
     runs-on: ubuntu-latest
