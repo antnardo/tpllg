@@ -172,7 +172,7 @@ def test_seule_la_sp5_est_connue(capsys):
 
 def test_le_bruit_se_tire_sans_default_rng(can, monkeypatch):
     """numpy < 1.17 (les postes en Python 3.7) n'a pas default_rng : RandomState le remplace."""
-    monkeypatch.delattr(np.random, "default_rng")
+    monkeypatch.delattr(np.random, "default_rng", raising=False)
     monkeypatch.setattr(sysam_factice, "_rng", generateur(1))
     assert isinstance(sysam_factice._rng, np.random.RandomState)
     can.config_entrees([0], [5.0])

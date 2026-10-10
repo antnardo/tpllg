@@ -48,7 +48,8 @@ def indices_plages(freq, fondamental, delta_freq):
     plages = []
     rang = 1
     while True:
-        centre = round((rang * fondamental - freq[0]) / df)
+        # int() : avant numpy 2, round() d'un scalaire numpy rend un flottant
+        centre = int(round((rang * fondamental - freq[0]) / df))
         if centre >= n:
             return plages
         plages.append((max(0, centre - demi), min(centre + demi, n)))

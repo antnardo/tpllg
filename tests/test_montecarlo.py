@@ -237,7 +237,7 @@ class TestSansDefaultRng:
     avec les mêmes lois et des tirages tout aussi reproductibles."""
 
     def test_les_quatre_lois_et_la_graine(self, monkeypatch):
-        monkeypatch.delattr(np.random, "default_rng")
+        monkeypatch.delattr(np.random, "default_rng", raising=False)
         fixer_graine(5)
         assert isinstance(montecarlo._generateur, np.random.RandomState)
         p = Point(1.0, 0.1, N=20000)
@@ -255,7 +255,7 @@ class TestSansDefaultRng:
         assert np.array_equal(Point(1.0, 0.1, N=20000).tirage, p.tirage)
 
     def test_la_droite_et_le_modele(self, monkeypatch):
-        monkeypatch.delattr(np.random, "default_rng")
+        monkeypatch.delattr(np.random, "default_rng", raising=False)
         fixer_graine(5)
         x = np.linspace(0, 10, 10)
         a, b = SerieLineaire(x, 0.1, 2 * x + 1, 0.3, N=2000).ajuster()
