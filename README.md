@@ -63,7 +63,7 @@ pip install git+https://github.com/antnardo/tpllg
 chaque [release](https://github.com/antnardo/tpllg/releases) porte un
 fichier `tpllg-<version>-py3-none-any.whl` (et le sdist `.tar.gz`, avec
 `doc/` et `exemples/`), qui s'installe par
-`pip install tpllg-2026.10.2-py3-none-any.whl`.
+`pip install tpllg-<version>-py3-none-any.whl`.
 
 **Pour développer**, une installation éditable depuis un clone :
 
