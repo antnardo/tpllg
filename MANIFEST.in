@@ -1,0 +1,12 @@
+# Ce qui entre dans le sdist en plus du paquet : la licence, le journal, les
+# fiches et leurs figures, les exemples et leurs données — ce à quoi le README
+# renvoie. Pas les tests ni les sorties générées.
+include LICENSE
+include CHANGELOG.md
+recursive-include doc *.md
+recursive-include doc/images *.png
+recursive-include exemples *.py
+recursive-include exemples/donnees *
+global-exclude __pycache__ *.pyc .DS_Store
+
+prune tests

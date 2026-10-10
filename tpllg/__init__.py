@@ -7,9 +7,11 @@ harmoniques, fichiers. On les importe un à un : `from tpllg.ajustement import
 curvefit`. Un TP qui a besoin de fonctions à lui les pose dans un module
 tpNN.py déposé dans la copie du paquet distribuée avec ses scripts — pas ici.
 
-Python 3.8 ou plus, numpy, scipy et matplotlib.
+Python 3.8 ou plus, numpy, scipy et matplotlib, et rien d'autre : le paquet
+se copie tel quel dans un dossier de TP. Les noms de 2026.9 fonctionnent
+encore, avec un avertissement qui dit par quoi les remplacer.
 """
 
 __all__ = ["__version__"]
 
-__version__ = "2026.10.0"
+__version__ = "2026.10.1"

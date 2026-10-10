@@ -12,3 +12,7 @@ exemples/*.pdf
 doc/*.pdf
 exemples/*.txt
 exemples/demo_*
+exemples/*.csv
+!exemples/donnees/
+*.whl
+*.tar.gz
