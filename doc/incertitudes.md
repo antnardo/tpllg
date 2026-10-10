@@ -137,7 +137,10 @@ ddof=1)` — il élargit l'intervalle de confiance sur la **moyenne**, parce que
 `s` est lui-même estimé sur ces mêmes `N` mesures, et d'autant moins bien
 connu que `N` est petit. `sigma` dit le niveau, en nombre d'écarts-types
 d'une loi normale : 1 pour 68,27 %, 2 pour 95,45 % (pour 95 % tout rond,
-`sigma = 1.96`). `t` tend vers `sigma` quand `N` grandit :
+`sigma = 1.96`). `t` tend vers `sigma` quand `N` grandit. `n` doit être un
+entier au moins égal à 2 (`n` peut être un tableau) et `sigma` strictement
+positif, sans quoi `ValueError` rappelle l'ordre des arguments :
+`student_coef(7, 0.95)`, les deux inversés, rendait `nan` en silence.
 
 | `N` | à 68,27 % (`sigma=1`) | à 95,45 % (`sigma=2`) |
 | --- | --- | --- |
@@ -309,7 +312,7 @@ d'incertitude-type `demi-largeur/√3`, et c'est ce que tirent :
 
 | Constructeur | Loi | Incertitude-type |
 | --- | --- | --- |
-| `Point(val, u)` | normale, d'écart-type `u` | `u` |
+| `Point(val, u)`, ou `Point.normale(val, u)` | normale, d'écart-type `u` | `u` |
 | `Point.uniforme(val, demi_largeur)` | uniforme sur `val ± demi_largeur` : une tolérance, une résolution (demi-largeur d'un demi-digit) | `demi_largeur/√3` |
 | `Point.triangulaire(val, demi_largeur)` | triangulaire de sommet `val` | `demi_largeur/√6` |
 | `Point.arcsinus(val, demi_largeur)` | celle d'une grandeur qui oscille sinusoïdalement entre les deux bornes, lue à un instant quelconque | `demi_largeur/√2` |

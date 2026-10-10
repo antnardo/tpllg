@@ -5,7 +5,7 @@ rapidement sans passer son temps à écrire du code.
 
 - Acquisition à la centrale **Sysam SP5** ;
 - Import facilité de données numériques exportées depuis _Latis Pro_,
-  _Regressi_...
+  _Regressi_ ou un tableur, et export d'un CSV que ces logiciels ouvrent ;
 - Exploitation des mesures avec
   - ajustement des données, y compris une droite quand x et y sont
     incertains (régression de York) ;
@@ -35,6 +35,7 @@ refuserait.
 - [Prise en main](#prise-en-main-rapide)
 - [La documentation](#la-documentation)
 - [Les modules](#les-modules)
+- [Point ou grandeur ?](#point-ou-grandeur-)
 - [Les exemples](#les-exemples)
 - [Erreurs courantes](#erreurs-courantes)
 - [Développer, tester](#tester)
@@ -42,7 +43,7 @@ refuserait.
 
 ## Installation
 
-Trois façons, selon le poste.
+Quatre façons, selon le poste.
 
 **Copier le dossier**, au lycée ou chez soi, sans pip ni réseau : le dossier
 `tpllg/` de ce dépôt (celui qui contient `sysam.py`) se pose à côté des scripts,
@@ -51,12 +52,18 @@ et `from tpllg.sysam import Sysam` fonctionne, à condition d'exécuter le scrip
 fichier »). C'est ce que font les dossiers distribués aux élèves : les
 scripts et `tpllg/` ensemble, rien à installer.
 
-**Avec pip**, quand le réseau et pip sont disponibles, et que les droits
-d'installation sont acquis :
+**Avec pip depuis GitHub**, quand le réseau et pip sont disponibles, et que
+les droits d'installation sont acquis :
 
 ```bash
 pip install git+https://github.com/antnardo/tpllg
 ```
+
+**Avec la roue d'une release**, pour un poste qui a pip mais pas git :
+chaque [release](https://github.com/antnardo/tpllg/releases) porte un
+fichier `tpllg-<version>-py3-none-any.whl` (et le sdist `.tar.gz`, avec
+`doc/` et `exemples/`), qui s'installe par
+`pip install tpllg-2026.10.1-py3-none-any.whl`.
 
 **Pour développer**, une installation éditable depuis un clone :
 
@@ -92,6 +99,11 @@ découvre pas ces erreurs en salle de TP. Sur un poste qui a la centrale, le
 message ci-dessus signifie que pycanum n'est pas installé pour ce Python-là
 (pour cette distribution, il peut y avoir plusieurs distributions sur un même
 poste), pas que le script est cassé.
+
+Le simulateur, et les quatre corrections que `tpllg.sysam` apporte au
+pilote, reproduisent les règles de **pycanum 4.x**, lues dans son source C.
+pycanum 5.0 (2024) pilote la carte par un serveur HTTP et n'a pas encore
+été vérifié sur un poste : ses refus et ses arrondis peuvent différer.
 
 ## Prise en main rapide
 
@@ -131,16 +143,18 @@ pfit, err, chi2 = curvefit(modele, x, y, p0=[1, 0], datayerrors=0.15)
 print(resume_parametres(("a", "b"), pfit, err))
 ```
 
-La fonction `curvefit` est bavarde (comme beaucoup de fonctions ici), elle
-indique la méthode choisie pour trouver les paramètres selon les données qu'on
-lui donne, et la fonction `resume_parametres` permet de mettre en forme
-facilement les résultats :
+`curvefit` rend les paramètres, leurs incertitudes-types et le χ² réduit
+(`verbose=True` lui fait annoncer la méthode employée, moindres carrés ou
+variance effective), et `resume_parametres` met en forme les résultats,
+deux chiffres significatifs sur l'incertitude :
 
 ```text
-Least square method
 a = 2.010 ± 0.083
 b = -1.006 ± 0.095
 ```
+
+`datayerrors` s'écrit aussi `u_y`, et `dataxerrors` `u_x`, les noms de
+`regression_york` et de `tpllg.montecarlo`.
 
 Ajuster une fonction de transfert sur un diagramme de Bode mesuré, gain et phase
 ensemble, et tracer :
@@ -175,7 +189,6 @@ tracer_bode(
 ```
 
 ```text
-Least square method
 H0 = -5.26 ± 0.13
 f0 = 1993.2 ± 3.6 Hz
 Q = 6.67 ± 0.18
@@ -200,25 +213,51 @@ l'autre est dans [CHANGELOG.md](CHANGELOG.md).
 | [doc/bode.md](doc/bode.md) | tracer un diagramme de Bode, mesures et modèle, avec une phase continue ; la chaîne complète mesures, ajustement, figure ; la fonction de transfert mesurée par détection synchrone ; le Bode automatique par la centrale |
 | [doc/spectres.md](doc/spectres.md) | le spectre d'un signal, brut ou fenêtré, et ses phases ; relever les harmoniques ; mesurer une fonction de transfert sur les harmoniques d'un créneau |
 | [doc/harmoniques.md](doc/harmoniques.md) | un signal périodique par ses harmoniques : synthèse, filtrage par le calcul, valeur efficace, analyseur de spectre ; ce que devient `traitementsignal` |
-| [doc/fichiers.md](doc/fichiers.md) | lire un CSV de tableur, un export Latis Pro ou Regressi ; relire ce que `sauvegarder` écrit |
-| [doc/tests.md](doc/tests.md) | ce que vérifient les 273 tests |
+| [doc/fichiers.md](doc/fichiers.md) | lire un CSV de tableur, un export Latis Pro ou Regressi, tous rendus de la même façon ; écrire un CSV ; relire ce que `sauvegarder` écrit |
+| [doc/tests.md](doc/tests.md) | ce que vérifient les 320 tests |
 
 ## Les modules
 
 | Module | Contenu |
 | --- | --- |
-| `tpllg.sysam` | `Sysam`, la classe de pycanum avec un `with`, des calibres simples, des temps en secondes et des acquisitions qui rendent directement temps et tensions ; `n_max`, `te_min`, `te_effectif`, `get_calibre` pour rester dans les limites ; se rabat sur le simulateur sans pycanum |
+| `tpllg.sysam` | `Sysam`, la classe de pycanum avec un `with`, des calibres simples, des temps en secondes et des acquisitions qui rendent directement temps et tensions ; `n_max`, `te_min`, `te_effectif`, `get_calibre` pour rester dans les limites ; se rabat sur le simulateur sans pycanum (règles de pycanum 4.x) |
 | `tpllg.sysam_factice` | le simulateur : même interface, mêmes formes de données, mêmes refus que la centrale, sans matériel |
-| `tpllg.acquisition` | `acquerir(voies, calibre, te, nbpoints, trigger=…)` en une ligne, déclenchement compris ; `sauvegarder` |
-| `tpllg.ajustement` | `curvefit` (incertitudes sur y, ou sur x et y par la variance effective, χ² réduit), `curve_fit_complex` (module et phase ajustés ensemble), `regression_york` (une droite, x et y incertains), `Ajustement` (le résultat), `ecarts_types`, `formater`, `resume_parametres`, `residus_complexes` |
+| `tpllg.acquisition` | `acquerir(voies, calibre, te, nbpoints, trigger=…)` en une ligne, déclenchement compris ; `sauvegarder` et `charger`, un fichier par voie |
+| `tpllg.ajustement` | `curvefit` (incertitudes sur y, ou sur x et y par la variance effective, χ² réduit), `curve_fit_complex` (module et phase ajustés ensemble, en radians, refusés au-delà de 2π), `regression_york` (une droite, x et y incertains), `Ajustement` (le résultat), `ecarts_types`, `formater` (deux chiffres sur l'incertitude, notation scientifique hors de [10⁻³, 10⁵[), `resume_parametres`, `residus_complexes` |
 | `tpllg.incertitudes` | `incertitudes` (moyenne, incertitude de la moyenne, écart-type estimé), `student_coef`, `loi_normale`, `loi_normale_cumulee` |
-| `tpllg.montecarlo` | `Point` (lois normale, uniforme, triangulaire, arcsinus), `SerieLineaire`, `ajuster_modele`, `indices_sobol`, `fixer_graine` : la propagation des incertitudes par tirages, la droite sans boucle |
+| `tpllg.montecarlo` | `Point` (lois `normale`, `uniforme`, `triangulaire`, `arcsinus`), `SerieLineaire`, `ajuster_modele`, `indices_sobol`, `fixer_graine` : la propagation des incertitudes par tirages, la droite sans boucle |
 | `tpllg.signaux` | `fronts_montants`, `fronts_descendants`, `front_utile`, `fenetre`, `frequence_pic`, `extremums`, `taux_amortissement`, tous en `(t, v)` |
-| `tpllg.bode` | `tracer_bode`, `phase_continue` |
+| `tpllg.bode` | `tracer_bode`, `phase_continue` et son inverse `phase_repliee` |
 | `tpllg.fft` | `calcule_DFT`, `spectre` |
 | `tpllg.traitement` | `fonction_transfert`, `choix_echantillonnage`, `interpolation_fft`, `indices_plages`, `detecte_maxima_secondaires`, `valeurs_correspondantes` |
 | `tpllg.harmoniques` | `Signal`, `spectre_carre`, `spectre_triangle`, `spectre_dent_de_scie`, `passe_bas_1`, `passe_haut_1`, `passe_bas_2`, `passe_haut_2`, `passe_bande`, `coupe_bande` |
-| `tpllg.fichiers` | `readcsv`, `import_latispro`, `import_regressi` |
+| `tpllg.fichiers` | `lire_csv`, `lire_latispro`, `lire_regressi`, qui rendent tous une liste de tableaux, un par colonne ; `ecrire_csv` |
+
+Chaque module ne dépend que de numpy, scipy et matplotlib, jamais d'un
+autre paquet : `tpllg` se copie seul dans un dossier de TP. Les noms de la
+version 2026.9 (`readcsv`, `gain_std`, `phase_0_360`,
+`decrement_logarithmique`, `frequence_pic(v, te)`, `Sysam.N_MAX`…)
+fonctionnent encore et rendent ce qu'ils rendaient, avec un
+`DeprecationWarning` qui nomme le remplaçant ; la liste est dans le
+[CHANGELOG](CHANGELOG.md) et dans la section « Anciens noms » de chaque fiche.
+
+## Point ou grandeur ?
+
+Deux objets « valeur ± incertitude » existent dans le même écosystème, et
+ne font pas la même chose :
+
+| | `tpllg.montecarlo.Point` | `grandeurs.grandeur` (dépôt `grandeursphy`) |
+| --- | --- | --- |
+| Propagation | par **Monte-Carlo** : des tirages sur chaque grandeur, le calcul refait sur chaque tirage ; juste pour les lois non linéaires, les quotients à queue lourde, les tolérances (lois uniforme, triangulaire, arcsinus) | **linéaire** (dérivées partielles, loi de propagation du GUM), par `uncertainties` |
+| Unités | aucune : des nombres, l'unité est dans la tête et dans `formater(val, u, "Hz")` | avec unités (`pint`) : les conversions et la cohérence dimensionnelle sont vérifiées |
+| Sortie | texte et figures matplotlib : `formater`, `show`, les histogrammes | `siunitx` pour pythontex : les valeurs tombent directement dans un corrigé LaTeX |
+| Dépendances | numpy, scipy, matplotlib : tourne sur les postes du lycée et dans une copie du dossier | pint, uncertainties : un environnement à installer |
+| Pour | les scripts de TP, les corrigés calculés en Python, les figures qui montrent la dispersion | les corrigés et les cours compilés par pythontex, les tableaux de constantes |
+
+Les deux ne s'importent pas l'un l'autre, et ne le feront pas : `tpllg` doit
+vivre seul, copié dans un dossier de TP, et `grandeurs` a besoin de pint. Le
+passage de l'un à l'autre se fait par les nombres : `Point(val, u)` depuis
+une grandeur, `formater` ou `(X.val, X.u)` vers l'autre.
 
 ## Les exemples
 
@@ -257,6 +296,14 @@ ceux des fiches.
 | `incertitudes_loi_normale.py` | la loi normale et son cumul sur le même graphe |
 | `montecarlo.py` | g par un pendule, un quotient à loi dissymétrique et son intervalle le plus court, une droite ajustée sur cent mille tirages face à York et à `curvefit`, une exponentielle ajustée par tirages, une résistance par la loi d'Ohm avec les tolérances des multimètres et la part de chacun, la valeur absolue d'une différence ; l'histogramme de chaque grandeur |
 | `Acquisition.py`, `Bode.py` | deux scripts dérivés des exemples de Frédéric Legrand, « Enregistrement d'un signal » et « Diagramme de Bode » (voir [Licence](#licence)) : l'acquisition avec spectre, le Bode automatique |
+| `regression_lineaire.py` | une droite par `np.polyfit`, par `curve_fit` et par `curvefit` : ce que chacun rend, et `formater` |
+| `ajustement_incertitudes_x_y.py` | la même droite sans incertitudes, avec celles de y, avec celles de x et de y, quand le bruit est constant puis quand il ne l'est pas |
+| `importer_donnees.py` | trois façons de lire un fichier de mesures : le module `csv`, `np.loadtxt`, `lire_csv` ; `np.save` pour conserver un tableau |
+| `boussole_champ_terrestre.py` | la composante horizontale du champ magnétique terrestre par la période d'une boussole dans le champ de bobines : deux droites ajustées, un résultat formaté |
+| `frequence_defilement_franges.py` | la fréquence d'un défilement de franges par comptage, par le pic de la DFT, et par le spectre fenêtré |
+| `spectre_signal_periodique.py` | un signal périodique construit par ses harmoniques (`Signal`), échantillonné, et son spectre par `calcule_DFT`, exact quand les pics tombent sur la grille |
+| `ecarts_moyennes_correcteurs.py` | combien de copies pour comparer les moyennes de plusieurs correcteurs : une simulation de Monte-Carlo sur deux distributions de notes, avec `loi_normale` |
+| `loi_student_incertitudes.py` | l'histogramme de trente mesures et l'intervalle de confiance sur la moyenne, la probabilité de sortir de ±t écarts-types, les lois de Student et leurs coefficients |
 
 ## Erreurs courantes
 
@@ -282,8 +329,10 @@ points par voie à ne pas dépasser.
 `residus_complexes`) et en degrés dans les résultats lisibles
 (`residus_complexes` les rend en degrés, `tracer_bode` les affiche en degrés,
 continues d'une fréquence à l'autre). Une phase mesurée en degrés se
-convertit par `np.radians` avant d'ajuster ; oubliée, l'ajustement ne
-converge pas ou rend n'importe quoi.
+convertit par `np.radians` avant d'ajuster ; oubliée, elle est refusée dès
+qu'elle dépasse 2π (`ValueError: les phases doivent être en radians`), au
+lieu de donner un ajustement faux en silence. Une phase déroulée sur plus
+d'un tour se replie par `phase_repliee`.
 
 **Les valeurs de départ se lisent sur un tracé** avant tout ajustement : les
 valeurs initiales d'un ajustement doivent être testées graphiquement avant de
@@ -295,10 +344,11 @@ tableaux de la bonne forme, remplis de bruit ; un script qui veut s'essayer avec
 des données plausibles les fabrique lui-même derrière un interrupteur
 `SIMULATION`, comme le font les exemples.
 
-**Un ancien script ne marche plus ?** Les noms qui ont changé en 2026.10.0
+**Un ancien script affiche un `DeprecationWarning`.** Les noms de 2026.9
 (`gain_std`, `phase_0_360`, `decrement_logarithmique`, `frequence_pic(v,
-te)`…) échouent en le disant au lieu de se tromper en silence ; le
-[CHANGELOG](CHANGELOG.md) dit par quoi les remplacer.
+te)`, `readcsv`, `Sysam.N_MAX`…) fonctionnent encore et rendent ce qu'ils
+rendaient ; l'avertissement désigne la ligne du script et dit par quoi
+remplacer le nom. Le [CHANGELOG](CHANGELOG.md) en donne la liste.
 
 ## Tester
 
@@ -307,10 +357,21 @@ pip install -e .
 python -m pytest
 ```
 
+ou, sans rien installer, sous un Python donné, avec
+[uv](https://docs.astral.sh/uv/) :
+
+```bash
+uv run --no-project --python 3.8 --with pytest --with . python -m pytest -W error
+```
+
 Les tests n'ont pas besoin de la centrale : ils passent par le simulateur.
 `ruff format` et `ruff check` (réglés dans `pyproject.toml`) gardent le code
 et les exemples propres. La description des tests est dans la documentation
-[doc/tests.md](doc/tests.md).
+[doc/tests.md](doc/tests.md). L'intégration continue
+(`.github/workflows/ci.yml`) rejoue tout cela à chaque push, sous Python
+3.8, 3.11 et 3.14, tout avertissement compté comme une erreur ; à chaque
+release publiée, `publish.yml` construit la roue et le sdist et les joint à
+la release.
 
 ## Licence
 

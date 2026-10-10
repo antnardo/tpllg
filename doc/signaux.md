@@ -19,6 +19,7 @@ Une seule voie à la fois — `temps[0]` et `tensions[0]`, pas `temps` et
 - [Les extremums](#les-extremums)
 - [Le taux d'amortissement et le décrément logarithmique](#le-taux-damortissement-et-le-décrément-logarithmique)
 - [Le régime libre après un front](#le-régime-libre-après-un-front)
+- [Anciens noms](#anciens-noms)
 
 ## Les fronts d'un créneau
 
@@ -400,3 +401,19 @@ le premier extremum, qui donne la valeur de départ, est négatif.
 Pour comparer au diagramme de Bode du même filtre, voir
 [bode.md](bode.md) ; pour ce que valent les incertitudes rendues par
 `curve_fit`, [ajustement.md](ajustement.md#ce-que-curve_fit-fait).
+
+## Anciens noms
+
+Les formes de 2026.9 fonctionnent encore, et rendent ce qu'elles rendaient,
+avec un `DeprecationWarning` qui nomme le remplaçant. L'ancienne forme de
+`frequence_pic` et d'`extremums` est reconnue à son second argument, un
+nombre (`te` ou `fe`) là où la nouvelle attend le tableau `v`.
+
+| Ancienne forme | Remplaçant |
+| --- | --- |
+| `frequence_pic(v, te)` | `frequence_pic(t, v)` |
+| `extremums(v, fe, f, offset=0.0)` | `extremums(t, v, f, offset=0.0, seuil=0.0)` |
+| `decrement_logarithmique(t_pics, v_pics, offset=0.0)` | `taux_amortissement(t_pics, v_pics, offset=0.0)`, même résultat, `alpha` en s⁻¹ |
+
+`decrement_logarithmique` n'est pas dans `__all__` : `from tpllg.signaux
+import *` ne la donne pas.

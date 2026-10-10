@@ -24,6 +24,7 @@ refusant ce que la centrale refuse.
 - [Sans centrale : le simulateur](#sans-centrale--le-simulateur)
 - [Cas complets](#cas-complets)
 - [Quand ça ne marche pas](#quand-ça-ne-marche-pas)
+- [Anciens noms](#anciens-noms)
 
 ## Ce qu'est la centrale
 
@@ -126,7 +127,7 @@ dans les limites :
 | `Sysam.MEMOIRE` | `0x3FFFF` = 262 143 | mots de mémoire, entrées et sorties ensemble |
 | `Sysam.POINTS_SORTIE_MAX` | `0x1FFFF` = 131 071 | points d'une sortie |
 | `Sysam.CALIBRES` | `(0.2, 1, 5, 10)` | les calibres accessibles |
-| `Sysam.MODULES_ANALOG` | `((0, 4), (1, 5), (2, 6), (3, 7))` | les deux entrées de chaque module |
+| `Sysam.MODULES_ANALOG` | `{0: (0, 4), 1: (1, 5), 2: (2, 6), 3: (3, 7)}` | les deux entrées de chaque module, par numéro de module |
 | `Sysam.n_max(nb_voies, nb_sorties=0)` | `261888` pour une voie, `130944` pour deux, `87296` pour deux voies et une sortie | le nombre de points par voie le plus grand que la mémoire accepte, quand chaque sortie a autant de points que les entrées |
 | `Sysam.te_effectif(te)` | `te` arrondie à 0,1 µs | la période que la carte appliquera |
 
@@ -291,7 +292,7 @@ temps, tensions = can.acquerir_avec_sorties(sortie1=None, sortie2=None)
 
 | Argument | Sens |
 | --- | --- |
-| `sortie1`, `sortie2` | pour chaque sortie SA1 et SA2 : les tensions à envoyer, en volts, un tableau ou une liste, un point par période d'échantillonnage, répétées en boucle ; un nombre pour une tension constante ; `None`, par défaut, pour ne rien générer |
+| `sortie1`, `sortie2` | pour chaque sortie SA1 et SA2 : les tensions à envoyer, en volts, un tableau ou une liste, un point par période d'échantillonnage, répétées en boucle ; un nombre pour une tension constante ; `None`, par défaut, pour ne rien générer. L'entier `0` vaut encore « pas de sortie », comme en 2026.9, avec un avertissement : `0.0` pour une tension nulle |
 
 Le retour est celui d'`acquerir`. Trois limites, que le simulateur vérifie
 comme la carte :
@@ -360,10 +361,11 @@ d'Eurosmart.
 ## En une ligne : tpllg.acquisition
 
 ```python
-from tpllg.acquisition import acquerir, sauvegarder
+from tpllg.acquisition import acquerir, charger, sauvegarder
 
 temps, tensions = acquerir(voies, calibre, te, nbpoints, trigger=None)
 sauvegarder(prefixe, voies, temps, tensions)
+temps, tensions = charger(prefixe, voies)
 ```
 
 `acquerir` ouvre la centrale, configure les voies, l'échantillonnage et le
@@ -373,13 +375,15 @@ arguments sont ceux de `Sysam` et de `config_echantillon` ; `trigger` est
 front montant, ou `(voie, seuil, pretrigger, montant)`.
 
 `sauvegarder` écrit un fichier texte par voie, `<prefixe>_EA<n>.txt`, deux
-lignes, le temps puis les tensions ; `np.loadtxt` les relit :
+lignes, le temps puis les tensions ; `charger` les relit et rend ce
+qu'`acquerir` avait rendu, et `np.loadtxt` relit un fichier :
 
 ```python
 temps, tensions = acquerir([0, 1], 5, 1 / 200000, 6000, trigger=(0, 0.0, 50))
 sauvegarder("echelon", [0, 1], temps, tensions)  # echelon_EA0.txt, echelon_EA1.txt
 
-t, u = np.loadtxt("echelon_EA1.txt")  # plus tard, sans centrale
+temps, tensions = charger("echelon", [0, 1])  # plus tard, sans centrale : (2, 6000)
+t, u = np.loadtxt("echelon_EA1.txt")  # une voie, directement
 ```
 
 Une acquisition par appel : `acquerir` rouvre la centrale à chaque fois.
@@ -415,6 +419,12 @@ arrondis et les silences : la période tronquée au dixième de microseconde,
 le nombre de points arrondi au paquet de la mémoire tampon et plafonné sans
 message, les voies rangées dans l'ordre croissant. Un script qui passe sur
 le simulateur ne découvre donc pas ces erreurs en salle de TP.
+
+Ces règles sont celles de **pycanum 4.x**, lues dans son source C
+(`SysamSP5Link.c`, `pysysam.c`), qui pilote la carte par sa DLL. pycanum
+5.0 (2024) passe par un serveur HTTP (`sysamhttp`) ; ses refus et ses
+arrondis n'ont pas été vérifiés sur un poste et peuvent différer : le
+simulateur et les quatre corrections de `Sysam` sont ceux de la 4.x.
 
 Un script écrit pour la centrale tourne partout, jusqu'au bout, mais sur du
 bruit. Pour l'essayer sur des données plausibles, c'est au script de les
@@ -562,3 +572,14 @@ with Sysam([0, 1], 5) as can:
 | moins de points que demandé, et un message `la centrale en rendra moins` | voies × points dépasse la mémoire |
 | le signal généré par la sortie est déformé | trop peu de points par période, ou trop peu de niveaux pour une petite amplitude |
 | des acquisitions consécutives donnent la même chose | on relit `temps()` et `entrees()` sans avoir relancé `acquerir()` |
+
+## Anciens noms
+
+Ce que 2026.9 écrivait fonctionne encore, avec un `DeprecationWarning` qui
+nomme le remplaçant.
+
+| Ancienne écriture | Valait | Remplaçant |
+| --- | --- | --- |
+| `Sysam.N_MAX` | 262 144, la mémoire entière, prise comme une limite par voie | `Sysam.n_max(nb_voies, nb_sorties)`, qui partage la mémoire ; `N_MAX` vaut maintenant `Sysam.MEMOIRE`, 262 143, lu sur la classe ou sur une instance |
+| `can.acquerir_avec_sorties(signal, 0)` | l'entier `0` passait à pycanum, qui l'ignorait : pas de sortie | `can.acquerir_avec_sorties(signal, None)` ; `0.0` génère une tension nulle |
+| `Sysam.MODULES_ANALOG` | un dictionnaire `{0: (0, 4), …}` | inchangé : 2026.10.0 en avait fait un tuple, c'est de nouveau un dictionnaire |

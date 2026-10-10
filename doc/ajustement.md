@@ -98,7 +98,9 @@ pfit, err, chi2 = curvefit(
     function_derivate=None,
     n_var_method_max=10,
     chi_limit=0.01,
-    verbose=True,
+    verbose=False,
+    u_y=None,
+    u_x=None,
     **kwargs,
 )
 ```
@@ -108,11 +110,11 @@ pfit, err, chi2 = curvefit(
 | `function` | le modèle, `function(x, a, b, …)`, un paramètre par argument après `x`. Vectorisé en `x` de préférence ; s'il ne l'est pas (un `math.exp`), `curvefit` s'en aperçoit et l'appelle point par point |
 | `datax`, `datay` | les mesures, tableaux ou listes de même longueur |
 | `p0` | les valeurs de départ, une par paramètre, dans l'ordre de `function` |
-| `datayerrors` | les incertitudes-types sur `y` : un nombre, la même pour tous les points, ou un tableau de même longueur ; strictement positives (une incertitude nulle est refusée). Sans elles, tous les points pèsent pareil, `pcov` est mise à l'échelle des résidus comme le fait `curve_fit`, et le χ² réduit rendu n'est que la variance des résidus |
-| `dataxerrors` | les incertitudes-types sur `x`, un nombre ou un tableau de même façon ; seules, ou avec `datayerrors` |
+| `datayerrors`, ou `u_y` | les incertitudes-types sur `y` : un nombre, la même pour tous les points, ou un tableau de même longueur ; strictement positives (une incertitude nulle est refusée). Sans elles, tous les points pèsent pareil, `pcov` est mise à l'échelle des résidus comme le fait `curve_fit`, et le χ² réduit rendu n'est que la variance des résidus |
+| `dataxerrors`, ou `u_x` | les incertitudes-types sur `x`, un nombre ou un tableau de même façon ; seules, ou avec `datayerrors`. `u_x` et `u_y` sont les noms courts, ceux de `regression_york` et de `montecarlo` ; les deux écritures valent, pas ensemble |
 | `function_derivate` | facultatif : la dérivée du modèle par rapport à `x`, `function_derivate(x, a, b, …)`, mêmes arguments que `function`. Elle peut rendre un nombre quand elle est constante — `return a` pour une droite — et n'a pas besoin d'être vectorisée non plus. Sans elle, la pente est prise sur le modèle lui-même, `(f(x + sigma_x) - f(x - sigma_x))/2` |
 | `n_var_method_max`, `chi_limit` | la boucle de la variance effective : au plus tant d'itérations, arrêt quand le χ² réduit ne baisse plus que de tant |
-| `verbose` | `False` pour taire la ligne qui annonce la méthode employée |
+| `verbose` | `True` pour imprimer la ligne qui annonce la méthode employée, « Moindres carrés » ou « Variance effective » ; muet par défaut |
 | `**kwargs` | transmis à `curve_fit` : `maxfev` (nombre d'évaluations, si l'ajustement s'arrête faute d'itérations), `bounds` (des bornes sur les paramètres) |
 
 Retour : un `Ajustement`, qui se dépaquette en `pfit` les paramètres, `err`
@@ -381,7 +383,17 @@ en un seul vecteur de `2N` valeurs :
 from tpllg.ajustement import curve_fit_complex
 
 pfit, err, chi2 = curve_fit_complex(
-    complex_func, datax, norm, phase, p0, datayerrors=None, dataxerrors=None, function_derivate=None, **kwargs
+    complex_func,
+    datax,
+    norm,
+    phase,
+    p0,
+    datayerrors=None,
+    dataxerrors=None,
+    function_derivate=None,
+    u_y=None,
+    u_x=None,
+    **kwargs,
 )
 ```
 
@@ -390,10 +402,10 @@ pfit, err, chi2 = curve_fit_complex(
 | `complex_func` | le modèle, `complex_func(x, *params)`, qui rend un tableau **complexe** ; s'écrit avec `1j` |
 | `datax` | les abscisses, la fréquence en général |
 | `norm` | les modules mesurés, `Vs/Ve` |
-| `phase` | les phases mesurées, en **radians**. Le tour complet ne pose aucun problème : la phase du modèle est prise, pour chaque mesure, à moins d'un demi-tour d'elle, et un saut de 360° dans les mesures est invisible |
+| `phase` | les phases mesurées, en **radians**, celles de `np.angle` ou d'un oscilloscope converties par `np.radians`. Le tour complet ne pose aucun problème : la phase du modèle est prise, pour chaque mesure, à moins d'un demi-tour d'elle, et un saut de 360° dans les mesures est invisible. Une phase qui dépasse 2π en valeur absolue est refusée (`ValueError: les phases doivent être en radians`) : elle est en degrés, et passait auparavant en silence, avec un résultat faux. Une phase déroulée au-delà d'un tour se replie par `tpllg.bode.phase_repliee` |
 | `p0` | les valeurs de départ, indispensables |
-| `datayerrors` | les incertitudes-types sur les mesures, **un couple** `(u_norm, u_phase)` : celle du module et celle de la phase, en radians, chacune un nombre ou un tableau. `u_norm/norm` pèse l'écart sur `ln\|H\|`, `u_phase` celui sur la phase |
-| `dataxerrors`, `function_derivate` | comme pour `curvefit` ; la dérivée du modèle est complexe, comme lui |
+| `datayerrors`, ou `u_y` | les incertitudes-types sur les mesures, **un couple** `(u_norm, u_phase)` : celle du module et celle de la phase, en radians, chacune un nombre ou un tableau. `u_norm/norm` pèse l'écart sur `ln\|H\|`, `u_phase` celui sur la phase |
+| `dataxerrors` (ou `u_x`), `function_derivate` | comme pour `curvefit` ; la dérivée du modèle est complexe, comme lui |
 | `**kwargs` | transmis à `curvefit` : `verbose`, et pour `curve_fit` `maxfev`, `bounds` |
 
 Retour : un `Ajustement` (`pfit`, `err`, `chi2`, `pcov`), exactement comme
@@ -438,7 +450,6 @@ print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
 ```
 
 ```text
-Least square method
 H0 = -5.121 ± 0.098
 f0 = 1989.7 ± 2.9 Hz
 Q = 6.49 ± 0.14
@@ -561,7 +572,9 @@ res_norm, res_phase = residus_complexes(complex_func, x, norm, phase, pfit)
 
 L'écart des mesures au modèle ajusté, point par point : l'écart **relatif**
 sur le module, `(|H|_mesuré - |H|_modèle)/|H|_mesuré`, et l'écart de phase en
-**degrés**, `φ_mesuré - φ_modèle`, ramené dans `]-180, 180]`.
+**degrés**, `φ_mesuré - φ_modèle`, ramené dans `]-180, 180]`. La phase
+mesurée est en radians, comme pour `curve_fit_complex`, et refusée au-delà
+de 2π.
 
 ```python
 res_H, res_phi = residus_complexes(passe_bande, f, H, phi, pfit)
@@ -619,19 +632,31 @@ décade : 0,0996 donne 0,10, pas 0,100. Sans incertitude, ou avec une
 incertitude nulle, quatre chiffres significatifs ; une incertitude infinie
 ou indéfinie s'écrit telle quelle, une incertitude négative est refusée.
 
+Hors de `[10⁻³, 10⁵[`, la **notation scientifique**, avec une puissance de
+dix commune à la valeur et à l'incertitude, celle de la valeur (celle de
+l'incertitude si la valeur est nulle) : `(6.6260 ± 0.0010) × 10⁻³⁴`, et
+non quarante zéros. La puissance s'écrit en exposants Unicode, lisibles
+dans une console comme dans une légende matplotlib.
+
 ```python
 >>> formater(1993.489, 1.875, "Hz")
 '1993.5 ± 1.9 Hz'
 >>> formater(6.609, 0.156)
 '6.61 ± 0.16'
+>>> formater(0.001234, 0.000047, "s")
+'0.001234 ± 0.000047 s'
 >>> formater(0.000123456, 0.0000047, "s")
-'0.0001235 ± 0.0000047 s'
+'(1.235 ± 0.047) × 10⁻⁴ s'
 >>> formater(1234567.0, 5432.0, "Hz")
-'1234600 ± 5400 Hz'
+'(1.2346 ± 0.0054) × 10⁶ Hz'
+>>> formater(6.626e-34, 1e-37, "J s")
+'(6.6260 ± 0.0010) × 10⁻³⁴ J s'
 >>> formater(1.0, 0.0996)
 '1.00 ± 0.10'
 >>> formater(2.5, None, "V")
 '2.5 V'
+>>> formater(6.626e-34, None, "J s")
+'6.626 × 10⁻³⁴ J s'
 >>> formater(2.5, float("inf"), "V")
 '2.5 ± inf V'
 ```
@@ -692,7 +717,6 @@ simulée, constante de temps 8,3 ms et bruit de 5 mV :
 
 ```text
 valeurs de départ : U0 = 2.049 V   tau = 0.00854 s   u_inf = 0.0535 V
-Least square method
 U0 = 2.04790 ± 0.00036 V
 tau = 0.0082936 ± 0.0000028 s
 u_inf = 0.04028 ± 0.00012 V
@@ -805,7 +829,7 @@ Le cas complet, mesures, ajustement, résidus, figure, est dans
 | Symptôme | Cause, remède |
 | --- | --- |
 | `RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev` | pas convergé : valeurs de départ à revoir, ou `maxfev=20000` si elles sont bonnes et le modèle raide |
-| les paramètres sont absurdes, sans erreur | un minimum local : valeurs de départ lues sur un tracé ; vérifier les unités (Hz et non kHz, radians et non degrés) |
+| les paramètres sont absurdes, sans erreur | un minimum local : valeurs de départ lues sur un tracé ; vérifier les unités (Hz et non kHz) |
 | `pcov` pleine de `inf`, incertitudes infinies | un paramètre n'est pas déterminé par les données (deux paramètres redondants, une amplitude nulle), ou moins de points que de paramètres |
 | `TypeError: … only 0-dimensional arrays can be converted` | le modèle n'est pas vectorisé ; `curvefit` et `curve_fit_complex` s'en accommodent, `curve_fit` non : écrire `np.exp` plutôt que `math.exp` |
 | `ValueError: incertitude nulle, négative ou non définie au point …` | une incertitude à zéro dans `datayerrors` : un point n'a jamais une incertitude nulle |
@@ -814,4 +838,6 @@ Le cas complet, mesures, ajustement, résidus, figure, est dans
 | χ² réduit très petit | incertitudes surestimées |
 | `curve_fit_complex` rend `Q` négatif ou `f0` hors de la plage mesurée | phase en degrés, ou signe de la phase inversé (entrée moins sortie au lieu de sortie moins entrée), ou `p0` loin ; `f0` et `Q` négatifs ensemble, c'est le bon résultat, écrit autrement |
 | `ValueError: norm : les modules mesurés doivent être strictement positifs` | un module nul ou négatif : `ln\|H\|` n'existe pas ; le retirer ou le corriger |
-| `ValueError: array must not contain infs or NaNs` | un `nan` dans les mesures (une cellule vide lue par `import_latispro`) : les retirer par `masque = ~np.isnan(y)` |
+| `ValueError: array must not contain infs or NaNs` | un `nan` dans les mesures (une cellule vide lue par `lire_latispro`) : les retirer par `masque = ~np.isnan(y)` |
+| `ValueError: les phases doivent être en radians` | `curve_fit_complex`, `residus_complexes` ou `tracer_bode` ont reçu une phase qui dépasse 2π : des degrés, à convertir par `np.radians` ; ou une phase déroulée sur plus d'un tour, à replier par `tpllg.bode.phase_repliee` |
+| `ValueError: datayerrors et u_y sont la même chose` | les deux noms de la même incertitude donnés ensemble : n'en garder qu'un |

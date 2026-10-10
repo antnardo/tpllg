@@ -10,10 +10,12 @@ automatique.
 
 - [Tracer un diagramme de Bode](#tracer-un-diagramme-de-bode)
 - [Une phase continue](#une-phase-continue)
+- [Replier une phase](#replier-une-phase)
 - [Des mesures à la figure](#des-mesures-à-la-figure)
 - [Mesurer la fonction de transfert sur les signaux](#mesurer-la-fonction-de-transfert-sur-les-signaux)
 - [Choisir l'échantillonnage](#choisir-léchantillonnage)
 - [Le Bode automatique](#le-bode-automatique)
+- [Anciens noms](#anciens-noms)
 
 ## Tracer un diagramme de Bode
 
@@ -29,7 +31,7 @@ fig = tracer_bode(
 | --- | --- |
 | `f` | les fréquences, en Hz |
 | `norm` | le module de la fonction de transfert à chaque fréquence, `Vs/Ve` |
-| `phase` | la phase, en **radians** |
+| `phase` | la phase, en **radians** ; au-delà de 2π en valeur absolue elle est refusée (`ValueError: les phases doivent être en radians`) : des degrés se convertissent par `np.radians`, une phase déroulée se replie par `phase_repliee` |
 | `modele` | facultatif : la fonction de transfert complexe, `modele(f, *pfit)`, celle qu'on a ajustée |
 | `pfit`, `err` | les paramètres ajustés et leurs incertitudes-types, ce que `curve_fit_complex` rend ; `err` est facultatif, il ajoute les incertitudes à la légende (la matrice de covariance de `curve_fit` convient aussi) |
 | `noms`, `unites` | les noms des paramètres pour la légende, en LaTeX si l'on veut, `("$H_0$", "$f_0$", "$Q$")`, et leurs unités, `("", "Hz", "")` |
@@ -88,6 +90,29 @@ passe-bande non inverseur en pleine résonance, et dispersait entre 0 et
 
 Une phase mesurée en degrés se convertit en radians par `np.radians`
 avant tout ; `tracer_bode` fait la conversion inverse pour l'affichage.
+
+## Replier une phase
+
+```python
+from tpllg.bode import phase_repliee
+
+radians = phase_repliee(degres)
+```
+
+L'inverse de `phase_continue` : une phase en degrés, continue ou non,
+ramenée en radians dans `]-π, π]`, là où `np.angle` la rend et où
+`curve_fit_complex`, `residus_complexes` et `tracer_bode` l'attendent. C'est
+`np.radians` suivi du repli d'un tour ; on s'en sert pour une phase lue sur
+un oscilloscope, ou déroulée sur plus d'un tour par un filtre d'ordre élevé,
+que ces fonctions refuseraient (elles refusent, au-delà de 2π, ce qui ne
+peut être que des degrés).
+
+```python
+>>> phase_repliee([265, 176, 10, 370])
+array([-1.65806279,  3.07177948,  0.17453293,  0.17453293])
+>>> np.allclose(phase_repliee(phase_continue(f, phase)), phase)
+True
+```
 
 ## Des mesures à la figure
 
@@ -157,7 +182,6 @@ plt.show()
 ```
 
 ```text
-Least square method
 H0 = -5.080 ± 0.072
 f0 = 1993.2 ± 2.7 Hz
 Q = 6.42 ± 0.11
@@ -227,8 +251,8 @@ print(abs(H), np.angle(H))
 0.49999999977035825 -0.9999999997443219
 ```
 
-La fonction remplace `gain_std` et `gain`. `gain_std`, d'après la fonction
-`mesure()` de l'exemple
+La fonction remplace `gain_std` et `gain` (voir [Anciens noms](#anciens-noms)).
+`gain_std`, d'après la fonction `mesure()` de l'exemple
 [Diagramme de Bode](https://www.f-legrand.fr/scidoc/docmml/sciphys/caneurosmart/pybode/pybode.html)
 de Frédéric Legrand, prenait la phase dans la moyenne du produit
 `s(t) (e(t) - j e(t - T/4))`, le quart de période arrondi au point : la
@@ -343,3 +367,15 @@ le gain à 0,03 % et la phase à 0,1° près.
 Le résultat s'ajuste ensuite exactement comme des mesures à la main,
 `curve_fit_complex(modele, f, abs(H), np.angle(H), p0=...)`, puis
 `tracer_bode`.
+
+## Anciens noms
+
+Les noms de 2026.9 fonctionnent encore, et rendent ce qu'ils rendaient,
+avec un `DeprecationWarning` qui nomme le remplaçant. Ils ne sont pas dans
+`__all__`.
+
+| Ancien nom | Rendait | Remplaçant |
+| --- | --- | --- |
+| `bode.phase_0_360(phase)` | la phase (radians) en degrés dans `[0, 360[`, toujours | `phase_continue(f, phase)`, sans saut d'une fréquence à l'autre |
+| `traitement.gain_std(t, e, s, Np=0, ninter=0)` | `(G, phi)`, mesurés par le quart de période ; rend maintenant `(abs(H), np.angle(H))` de `fonction_transfert(t, e, s)`, juste, `Np` et `ninter` ignorés | `H = fonction_transfert(t, e, s)` |
+| `traitement.gain(t, e, s, freq, Np, method, **kwargs)` | `(G, phi)` par `gain_std` pour `method="std"` ; rend maintenant ceux de `fonction_transfert(t, e, s, freq)` ; `method="fit"` n'a jamais existé (`NotImplementedError`) | `H = fonction_transfert(t, e, s, freq)` |
