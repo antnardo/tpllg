@@ -26,6 +26,8 @@ from dataclasses import dataclass
 import numpy as np
 from scipy import optimize
 
+from tpllg._interne import incertitude
+
 __all__ = [
     "Ajustement",
     "curve_fit_complex",
@@ -62,12 +64,6 @@ class Ajustement:
 
     def __len__(self):
         return 3
-
-
-def _tableau(valeur, forme):
-    """Une incertitude ramenée à la forme des données : un nombre vaut pour
-    tous les points, un tableau est rendu tel quel."""
-    return np.broadcast_to(np.asarray(valeur, dtype=float), forme)
 
 
 def _vectorisee(f, datax, p0, dtype=float):
@@ -109,7 +105,9 @@ def curvefit(
     function_derivate=None,
     n_var_method_max=10,
     chi_limit=0.01,
-    verbose=True,
+    verbose=False,
+    u_y=None,
+    u_x=None,
     **kwargs,
 ):
     """Ajuste function(x, *p) aux mesures (datax, datay) par curve_fit, avec
@@ -118,12 +116,12 @@ def curvefit(
     function : appelée function(x, a, b…) avec p0 = [a, b…] ; vectorisée en x
         ou non — une fonction écrite avec math.exp est appelée point par point ;
     p0 : les valeurs de départ, à lire sur un tracé avant d'ajuster ;
-    datayerrors : les incertitudes-types sur y, un nombre pour tous les
-        points ou un tableau ; sans elles, pcov est mise à l'échelle des
+    datayerrors, ou u_y : les incertitudes-types sur y, un nombre pour tous
+        les points ou un tableau ; sans elles, pcov est mise à l'échelle des
         résidus (comme le fait curve_fit) et le chi2 rendu est la variance des
         résidus, pas un chi2 ;
-    dataxerrors : les incertitudes-types sur x. Elles sont ramenées en y par
-        la pente du modèle — la variance effective,
+    dataxerrors, ou u_x : les incertitudes-types sur x. Elles sont ramenées
+        en y par la pente du modèle — la variance effective,
         sigma² = sigma_y² + (f'(x) sigma_x)² (J. Orear, Am. J. Phys. 50, 912,
         1982) — que l'on recalcule à chaque ajustement, au plus
         n_var_method_max fois, jusqu'à ce que le chi2 réduit ne baisse plus de
@@ -131,8 +129,12 @@ def curvefit(
     function_derivate : la dérivée de function par rapport à x, mêmes
         arguments (`return a` suffit pour une droite). Sans elle, la pente est
         prise sur le modèle lui-même, (f(x + sigma_x) - f(x - sigma_x))/2 ;
-    verbose : False pour taire la méthode employée ;
+    verbose : True pour imprimer la méthode employée ;
     les autres mots-clés (maxfev, bounds…) vont à scipy.optimize.curve_fit.
+
+    `u_x` et `u_y` sont les noms courts de `dataxerrors` et `datayerrors`,
+    ceux de regression_york et de montecarlo ; les deux écritures valent,
+    pas ensemble.
 
     Pour une droite, des incertitudes constantes ne changent pas pfit, mais
     seulement err et le chi2 ; des incertitudes variables changent aussi pfit.
@@ -143,14 +145,15 @@ def curvefit(
     datax = np.asarray(datax, dtype=float)
     datay = np.asarray(datay, dtype=float)
     p0 = np.asarray(p0, dtype=float)
+    datayerrors, dataxerrors = _un_seul_nom(datayerrors, u_y, "y"), _un_seul_nom(dataxerrors, u_x, "x")
     if isinstance(n_var_method_max, bool) or not isinstance(n_var_method_max, int) or n_var_method_max < 1:
         raise ValueError(f"n_var_method_max = {n_var_method_max!r} : un entier au moins égal à 1")
     function = _vectorisee(function, datax, p0)
-    sigma_y = None if datayerrors is None else _tableau(datayerrors, datax.shape)
+    sigma_y = None if datayerrors is None else incertitude(datayerrors, datax.shape)
 
     if dataxerrors is None:
         if verbose:
-            print("Least square method")
+            print("Moindres carrés" + (" pondérés par les incertitudes sur y" if sigma_y is not None else ""))
         _verifier_sigma(sigma_y)
         # sans incertitudes fournies, pcov est mise à l'échelle des résidus,
         # comme le fait curve_fit ; avec, elle est absolue
@@ -161,8 +164,8 @@ def curvefit(
         return Ajustement(pfit, ecarts_types(pcov), chi2, pcov)
 
     if verbose:
-        print("Effective variance method")
-    sigma_x = _tableau(dataxerrors, datax.shape)
+        print("Variance effective : les incertitudes sur x ramenées en y par la pente du modèle")
+    sigma_x = incertitude(dataxerrors, datax.shape)
     variance_y = 0.0 if sigma_y is None else sigma_y**2
     if function_derivate is not None:
         derivee = _vectorisee(function_derivate, datax, p0)
@@ -203,6 +206,25 @@ def curvefit(
     return dernier
 
 
+def _un_seul_nom(long, court, axe):
+    """dataxerrors ou u_x, datayerrors ou u_y : la valeur donnée, et pas les deux."""
+    if long is not None and court is not None:
+        raise ValueError(f"data{axe}errors et u_{axe} sont la même chose : n'en donnez qu'un")
+    return court if long is None else long
+
+
+def _radians(phase):
+    """Les phases en radians, comme np.angle les rend : une phase en degrés
+    passerait en silence et fausserait tout, on refuse ce qui dépasse 2 pi."""
+    phase = np.asarray(phase, dtype=float)
+    if phase.size and np.nanmax(np.abs(phase)) > 2 * np.pi:
+        raise ValueError(
+            f"les phases doivent être en radians : max|phase| = {np.nanmax(np.abs(phase)):.3g} > 2 pi "
+            "(np.radians convertit des degrés ; tpllg.bode.phase_repliee replie une phase déroulée)"
+        )
+    return phase
+
+
 def _rang(chi2):
     """Un chi2 indéfini compte comme le pire."""
     return math.inf if math.isnan(chi2) else chi2
@@ -215,7 +237,17 @@ def _verifier_sigma(sigma):
 
 
 def curve_fit_complex(
-    complex_func, datax, norm, phase, p0, datayerrors=None, dataxerrors=None, function_derivate=None, **kwargs
+    complex_func,
+    datax,
+    norm,
+    phase,
+    p0,
+    datayerrors=None,
+    dataxerrors=None,
+    function_derivate=None,
+    u_y=None,
+    u_x=None,
+    **kwargs,
 ):
     """Ajuste un modèle complexe à des mesures données par leur module `norm`
     et leur phase `phase` (radians), par curvefit, dont c'est l'interface :
@@ -234,16 +266,19 @@ def curve_fit_complex(
     function_derivate, sa dérivée par rapport à x, complexe aussi — ou rien,
     la pente est alors prise sur le modèle. datayerrors est le couple
     (u_norm, u_phase) des incertitudes-types sur le module et sur la phase
-    (radians), chacune un nombre ou un tableau. Les autres mots-clés (verbose,
-    maxfev…) vont à curvefit.
+    (radians), chacune un nombre ou un tableau ; u_y et u_x en sont les noms
+    courts. Les autres mots-clés (verbose, maxfev…) vont à curvefit.
 
     Sans incertitudes, un écart de 1 % sur le module pèse autant qu'un écart
-    de 0,01 rad (0,6°) sur la phase.
+    de 0,01 rad (0,6°) sur la phase. Une phase qui dépasse 2 pi en valeur
+    absolue est refusée (ValueError) : elle est en degrés, np.radians la
+    convertit.
     """
     datax = np.asarray(datax, dtype=float)
     norm = np.asarray(norm, dtype=float)
-    phase = np.asarray(phase, dtype=float)
+    phase = _radians(phase)
     p0 = np.asarray(p0, dtype=float)
+    datayerrors, dataxerrors = _un_seul_nom(datayerrors, u_y, "y"), _un_seul_nom(dataxerrors, u_x, "x")
     if not np.all(norm > 0):
         raise ValueError("norm : les modules mesurés doivent être strictement positifs")
     n = datax.size
@@ -265,7 +300,7 @@ def curve_fit_complex(
     erreurs = None
     if datayerrors is not None:
         try:
-            u_norm, u_phase = (_tableau(u, norm.shape) for u in datayerrors)
+            u_norm, u_phase = (incertitude(u, norm.shape) for u in datayerrors)
         except (TypeError, ValueError):
             raise ValueError(
                 "datayerrors : le couple (u_norm, u_phase) des incertitudes sur le "
@@ -273,7 +308,7 @@ def curve_fit_complex(
             ) from None
         erreurs = np.hstack((u_norm / norm, u_phase))
     if dataxerrors is not None:
-        dataxerrors = np.hstack([_tableau(dataxerrors, datax.shape)] * 2)
+        dataxerrors = np.hstack([incertitude(dataxerrors, datax.shape)] * 2)
     return curvefit(
         modele,
         np.hstack((datax, datax)),
@@ -369,7 +404,7 @@ def regression_york(x, u_x, y, u_y):
     y = np.asarray(y, dtype=float)
     if x.shape != y.shape or x.ndim != 1 or x.size < 3:
         raise ValueError("x et y : deux tableaux 1D de même longueur, au moins trois points")
-    u_x, u_y = _tableau(u_x, x.shape), _tableau(u_y, y.shape)
+    u_x, u_y = incertitude(u_x, x.shape), incertitude(u_y, y.shape)
     if not (np.all(u_x >= 0) and np.all(u_y >= 0)) or np.any((u_x == 0) & (u_y == 0)):
         raise ValueError("u_x et u_y : positives, et pas nulles toutes les deux en un même point")
     vx, vy = u_x**2, u_y**2
@@ -384,22 +419,62 @@ def ecarts_types(pcov):
     return np.sqrt(np.diag(pcov))
 
 
-def formater(valeur, sigma=None, unite=""):
-    """« 1993.5 ± 1.9 Hz » : l'incertitude à deux chiffres significatifs, la
-    valeur arrondie au même rang. Sans incertitude (None ou 0), quatre
-    chiffres ; une incertitude infinie ou indéfinie s'écrit telle quelle."""
-    unite = f" {unite}" if unite else ""
-    if sigma is None or sigma == 0:
-        return f"{valeur:.4g}{unite}"
-    if not np.isfinite(sigma):
-        return f"{valeur:.4g} ± {sigma}{unite}"
-    if sigma < 0:
-        raise ValueError(f"incertitude négative : {sigma}")
+_EXPOSANTS = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
+_SCIENTIFIQUE_SOUS, _SCIENTIFIQUE_DES = 1e-3, 1e5  # en deçà et à partir de là, « × 10ⁿ »
+
+
+def _exposant(reference):
+    """L'exposant de la notation scientifique pour une grandeur de l'ordre de
+    `reference`, ou None dans [1e-3, 1e5[, où l'on écrit le nombre tel quel."""
+    reference = abs(reference)
+    if reference == 0 or _SCIENTIFIQUE_SOUS <= reference < _SCIENTIFIQUE_DES:
+        return None
+    return math.floor(math.log10(reference))
+
+
+def _puissance(exposant):
+    return "10" + str(exposant).translate(_EXPOSANTS)
+
+
+def _arrondis(valeur, sigma):
+    """La valeur et l'incertitude arrondies au rang du second chiffre
+    significatif de l'incertitude, en texte, et le nombre de décimales."""
     sigma = float(f"{sigma:.2g}")  # deux chiffres : 0.0996 devient 0.10, pas 0.100
     decimales = 1 - math.floor(math.log10(sigma))  # négatif au-delà de 100
     valeur, sigma = round(valeur, decimales), round(sigma, decimales)
     decimales = max(0, decimales)
-    return f"{valeur:.{decimales}f} ± {sigma:.{decimales}f}{unite}"
+    return f"{valeur:.{decimales}f}", f"{sigma:.{decimales}f}", valeur
+
+
+def formater(valeur, sigma=None, unite=""):
+    """« 1993.5 ± 1.9 Hz » : l'incertitude à deux chiffres significatifs, la
+    valeur arrondie au même rang. Sans incertitude (None ou 0), quatre
+    chiffres ; une incertitude infinie ou indéfinie s'écrit telle quelle.
+
+    Hors de [10⁻³, 10⁵[, la notation scientifique, avec une puissance de dix
+    commune à la valeur et à l'incertitude, celle de la valeur :
+    « (6.6260 ± 0.0010) × 10⁻³⁴ J s ». Pour une valeur nulle, la puissance
+    est celle de l'incertitude."""
+    unite = f" {unite}" if unite else ""
+    valeur = float(valeur)
+    if sigma is None or sigma == 0:
+        exposant = _exposant(valeur)
+        if exposant is None:
+            return f"{valeur:.4g}{unite}"
+        return f"{valeur / 10**exposant:.4g} × {_puissance(exposant)}{unite}"
+    if not np.isfinite(sigma):
+        return f"{valeur:.4g} ± {sigma}{unite}"
+    if sigma < 0:
+        raise ValueError(f"incertitude négative : {sigma}")
+    exposant = _exposant(valeur if valeur != 0 else sigma)
+    if exposant is None:
+        v, s, _ = _arrondis(valeur, sigma)
+        return f"{v} ± {s}{unite}"
+    v, s, arrondie = _arrondis(valeur / 10**exposant, sigma / 10**exposant)
+    if abs(arrondie) >= 10:  # 9.9999 arrondi à 10.00 : une décade de plus
+        exposant += 1
+        v, s, _ = _arrondis(valeur / 10**exposant, sigma / 10**exposant)
+    return f"({v} ± {s}) × {_puissance(exposant)}{unite}"
 
 
 def resume_parametres(noms, pfit, err=None, unites=None):
@@ -423,10 +498,11 @@ def resume_parametres(noms, pfit, err=None, unites=None):
 
 def residus_complexes(complex_func, x, norm, phase, pfit):
     """L'écart des mesures au modèle ajusté : (écart relatif sur le module,
-    écart de phase en degrés, ramené entre -180 et 180)."""
+    écart de phase en degrés, ramené entre -180 et 180). La phase mesurée est
+    en radians ; au-delà de 2 pi en valeur absolue, elle est refusée."""
     y = complex_func(np.asarray(x, dtype=float), *pfit)
     norm = np.asarray(norm, dtype=float)
-    phase = np.asarray(phase, dtype=float)
+    phase = _radians(phase)
     res_norm = (norm - np.abs(y)) / norm
     res_phase = np.degrees(np.angle(np.exp(1j * phase) * np.abs(y) / y))
     return res_norm, res_phase

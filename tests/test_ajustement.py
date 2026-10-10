@@ -148,11 +148,29 @@ class TestCurvefit:
         )  # fmt: skip
         assert np.allclose(pfit, [2, 1.5], atol=1e-6)
 
-    def test_annonce_la_methode(self, capsys):
+    def test_se_tait_par_defaut_et_annonce_la_methode_en_francais(self, capsys):
         x = np.linspace(0, 1, 5)
         curvefit(droite, x, 2 * x, [1, 0])
         curvefit(droite, x, 2 * x, [1, 0], 0.1, 0.1)
-        assert capsys.readouterr().out == "Least square method\nEffective variance method\n"
+        assert capsys.readouterr().out == ""
+        curvefit(droite, x, 2 * x, [1, 0], verbose=True)
+        curvefit(droite, x, 2 * x, [1, 0], 0.1, verbose=True)
+        curvefit(droite, x, 2 * x, [1, 0], 0.1, 0.1, verbose=True)
+        lignes = capsys.readouterr().out.splitlines()
+        assert lignes[0] == "Moindres carrés" and lignes[1].startswith("Moindres carrés pondérés")
+        assert lignes[2].startswith("Variance effective") and "Least" not in lignes[2]
+
+    def test_u_x_et_u_y_sont_dataxerrors_et_datayerrors(self):
+        x = np.linspace(0, 1, 8)
+        y = 2 * x + 1 + 0.02 * np.sin(7 * x)
+        longs = curvefit(droite, x, y, [1, 0], datayerrors=0.05, dataxerrors=0.03)
+        courts = curvefit(droite, x, y, [1, 0], u_y=0.05, u_x=0.03)
+        assert np.allclose(longs.pfit, courts.pfit) and np.allclose(longs.err, courts.err)
+        assert curvefit(droite, x, y, [1, 0], u_y=0.05).chi2 == curvefit(droite, x, y, [1, 0], 0.05).chi2
+        with pytest.raises(ValueError, match="datayerrors et u_y"):
+            curvefit(droite, x, y, [1, 0], datayerrors=0.05, u_y=0.05)
+        with pytest.raises(ValueError, match="dataxerrors et u_x"):
+            curvefit(droite, x, y, [1, 0], 0.05, dataxerrors=0.03, u_x=0.03)
 
 
 class TestCurveFitComplex:
@@ -164,11 +182,11 @@ class TestCurveFitComplex:
         assert res_norm.std() < 0.02 and res_phase.std() < 1
 
     def test_une_phase_a_2_pi_pres_ne_change_rien(self, rng):
+        """Chaque phase prise à l'autre tour, en restant sous 2 pi en valeur absolue."""
         f, norm, phase = mesures_bode(rng)
         a = curve_fit_complex(gain, f, norm, phase, [-4, 1800, 5], verbose=False)
-        b = curve_fit_complex(
-            gain, f, norm, phase + 2 * np.pi * rng.integers(-2, 3, f.size), [-4, 1800, 5], verbose=False
-        )
+        autre_tour = phase + 2 * np.pi * np.where(phase > 0, -1, 1) * rng.integers(0, 2, f.size)
+        b = curve_fit_complex(gain, f, norm, autre_tour, [-4, 1800, 5], verbose=False)
         assert np.allclose(a.pfit, b.pfit, rtol=1e-6) and np.allclose(a.err, b.err, rtol=1e-6)
 
     def test_avec_les_incertitudes_du_module_et_de_la_phase(self, rng):
@@ -301,8 +319,9 @@ class TestFormater:
             (6.609, 0.156, "", "6.61 ± 0.16"),
             (1.0, 0.0996, "", "1.00 ± 0.10"),
             (1.0, 9.96, "", "1 ± 10"),
-            (1234567.0, 5432.0, "Hz", "1234600 ± 5400 Hz"),
             (12345.6, 234.0, "", "12350 ± 230"),
+            (99999.6, 1.0, "", "99999.6 ± 1.0"),
+            (0.001234, 0.000047, "s", "0.001234 ± 0.000047 s"),
             (2.5, None, "V", "2.5 V"),
             (2.5, 0, "", "2.5"),
             (2.5, math.inf, "V", "2.5 ± inf V"),
@@ -310,6 +329,24 @@ class TestFormater:
         ],
     )
     def test_deux_chiffres_sur_l_incertitude(self, valeur, sigma, unite, texte):
+        assert formater(valeur, sigma, unite) == texte
+
+    @pytest.mark.parametrize(
+        ("valeur", "sigma", "unite", "texte"),
+        [
+            (6.626e-34, 1e-37, "J s", "(6.6260 ± 0.0010) × 10⁻³⁴ J s"),
+            (1234567.0, 5432.0, "Hz", "(1.2346 ± 0.0054) × 10⁶ Hz"),
+            (0.000123456, 0.0000047, "s", "(1.235 ± 0.047) × 10⁻⁴ s"),
+            (-3.2e8, 4e6, "", "(-3.200 ± 0.040) × 10⁸"),
+            (9.99999e5, 1000.0, "", "(1.0000 ± 0.0010) × 10⁶"),
+            (0.0, 1e-5, "", "(0.0 ± 1.0) × 10⁻⁵"),
+            (6.626e-34, None, "J s", "6.626 × 10⁻³⁴ J s"),
+            (123456.0, 0, "", "1.235 × 10⁵"),
+            (100000.0, 0.5, "", "(1.0000000 ± 0.0000050) × 10⁵"),
+        ],
+    )
+    def test_notation_scientifique_hors_de_1e_3_a_1e5(self, valeur, sigma, unite, texte):
+        """formater(6.626e-34, 1e-37) imprimait quarante zéros."""
         assert formater(valeur, sigma, unite) == texte
 
     def test_incertitude_negative_refusee(self):
@@ -330,3 +367,28 @@ class TestResumeParametres:
     def test_longueurs_differentes_refusees(self):
         with pytest.raises(ValueError, match="autant de chaque"):
             resume_parametres(("H0", "f0", "Q"), [1, 2000, 6], [0.1, 2, 0.2], unites=("", "Hz"))
+
+
+class TestPhasesEnRadians:
+    """Une phase en degrés passait en silence et rendait H0 = 7,3 au lieu de -5,26."""
+
+    def test_curve_fit_complex_refuse_des_degres(self, rng):
+        f, norm, phase = mesures_bode(rng)
+        with pytest.raises(ValueError, match="les phases doivent être en radians"):
+            curve_fit_complex(gain, f, norm, np.degrees(phase), [-4, 1800, 5])
+        with pytest.raises(ValueError, match="u_y"):
+            curve_fit_complex(gain, f, norm, phase, [-4, 1800, 5], datayerrors=(0.1, 0.1), u_y=(0.1, 0.1))
+
+    def test_residus_complexes_refusent_des_degres(self):
+        f = np.array([500, 1000, 2000.0])
+        H = gain(f, -5, 2000, 6)
+        with pytest.raises(ValueError, match="radians"):
+            residus_complexes(gain, f, np.abs(H), np.degrees(np.angle(H)), [-5, 2000, 6])
+
+    def test_u_x_et_u_y_dans_curve_fit_complex(self, rng):
+        f, norm, phase = mesures_bode(rng)
+        longs = curve_fit_complex(
+            gain, f, norm, phase, [-4, 1800, 5], datayerrors=(0.02, 0.02), dataxerrors=1.0
+        )
+        courts = curve_fit_complex(gain, f, norm, phase, [-4, 1800, 5], u_y=(0.02, 0.02), u_x=1.0)
+        assert np.allclose(longs.pfit, courts.pfit) and np.allclose(longs.err, courts.err)
