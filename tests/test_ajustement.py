@@ -317,55 +317,85 @@ def test_residus_complexes_nuls_sur_le_modele():
 
 
 class TestFormater:
+    """formater écrit l'incertitude élargie 2u (k = 2) ; `sigma` est
+    l'incertitude-type u."""
+
     @pytest.mark.parametrize(
         ("valeur", "sigma", "unite", "texte"),
         [
-            (1993.489, 1.875, "Hz", "1993.5 ± 1.9 Hz"),
-            (-5.0823, 0.0631, "", "-5.082 ± 0.063"),
-            (6.609, 0.156, "", "6.61 ± 0.16"),
-            (1.0, 0.0996, "", "1.00 ± 0.10"),
-            (1.0, 9.96, "", "1 ± 10"),
-            (12345.6, 234.0, "", "12350 ± 230"),
-            (99999.6, 1.0, "", "99999.6 ± 1.0"),
-            (0.001234, 0.000047, "s", "0.001234 ± 0.000047 s"),
+            (1993.489, 1.875, "Hz", "1993.5 ± 3.8 Hz"),
+            (-5.0823, 0.0631, "", "-5.08 ± 0.13"),
+            (6.609, 0.156, "", "6.61 ± 0.31"),
+            (1.0, 0.0498, "", "1.00 ± 0.10"),
+            (1.0, 4.98, "", "1 ± 10"),
+            (12345.6, 234.0, "", "12350 ± 470"),
+            (99999.6, 1.0, "", "99999.6 ± 2.0"),
+            (0.001234, 0.000047, "s", "0.001234 ± 0.000094 s"),
             (2.5, None, "V", "2.5 V"),
             (2.5, 0, "", "2.5"),
             (2.5, math.inf, "V", "2.5 ± inf V"),
             (2.5, math.nan, "", "2.5 ± nan"),
         ],
     )
-    def test_deux_chiffres_sur_l_incertitude(self, valeur, sigma, unite, texte):
+    def test_deux_chiffres_sur_l_incertitude_elargie(self, valeur, sigma, unite, texte):
         assert formater(valeur, sigma, unite) == texte
 
     @pytest.mark.parametrize(
         ("valeur", "sigma", "unite", "texte"),
         [
-            (6.626e-34, 1e-37, "J s", "(6.6260 ± 0.0010) × 10⁻³⁴ J s"),
-            (1234567.0, 5432.0, "Hz", "(1.2346 ± 0.0054) × 10⁶ Hz"),
-            (0.000123456, 0.0000047, "s", "(1.235 ± 0.047) × 10⁻⁴ s"),
-            (-3.2e8, 4e6, "", "(-3.200 ± 0.040) × 10⁸"),
-            (9.99999e5, 1000.0, "", "(1.0000 ± 0.0010) × 10⁶"),
-            (0.0, 1e-5, "", "(0.0 ± 1.0) × 10⁻⁵"),
+            (6.626e-34, 1e-37, "J s", "(6.6260 ± 0.0020) × 10⁻³⁴ J s"),
+            (1234567.0, 5432.0, "Hz", "(1.235 ± 0.011) × 10⁶ Hz"),
+            (0.000123456, 0.0000047, "s", "(1.235 ± 0.094) × 10⁻⁴ s"),
+            (-3.2e8, 4e6, "", "(-3.200 ± 0.080) × 10⁸"),
+            (9.99999e5, 1000.0, "", "(1.0000 ± 0.0020) × 10⁶"),
+            (0.0, 1e-5, "", "(0.0 ± 2.0) × 10⁻⁵"),
             (6.626e-34, None, "J s", "6.626 × 10⁻³⁴ J s"),
             (123456.0, 0, "", "1.235 × 10⁵"),
-            (100000.0, 0.5, "", "(1.0000000 ± 0.0000050) × 10⁵"),
+            (100000.0, 0.5, "", "(1.000000 ± 0.000010) × 10⁵"),
         ],
     )
     def test_notation_scientifique_hors_de_1e_3_a_1e5(self, valeur, sigma, unite, texte):
         """formater(6.626e-34, 1e-37) imprimait quarante zéros."""
         assert formater(valeur, sigma, unite) == texte
 
+    @pytest.mark.parametrize(
+        ("valeur", "sigma", "unite", "texte"),
+        [
+            (1993.489, 1.875, "Hz", "1993.5 ± 1.9 Hz"),
+            (-5.0823, 0.0631, "", "-5.082 ± 0.063"),
+            (1.0, 0.0996, "", "1.00 ± 0.10"),
+            (12345.6, 234.0, "", "12350 ± 230"),
+            (6.626e-34, 1e-37, "J s", "(6.6260 ± 0.0010) × 10⁻³⁴ J s"),
+            (9.99999e5, 1000.0, "", "(1.0000 ± 0.0010) × 10⁶"),
+            (100000.0, 0.5, "", "(1.0000000 ± 0.0000050) × 10⁵"),
+        ],
+    )
+    def test_k_1_ecrit_l_incertitude_type(self, valeur, sigma, unite, texte):
+        assert formater(valeur, sigma, unite, k=1) == texte
+
+    def test_k_quelconque(self):
+        assert formater(10.0, 0.1, k=3) == "10.00 ± 0.30"
+
     def test_incertitude_negative_refusee(self):
         with pytest.raises(ValueError, match="négative"):
             formater(1.0, -0.1)
+
+    @pytest.mark.parametrize("k", [0, -2])
+    def test_facteur_nul_ou_negatif_refuse(self, k):
+        with pytest.raises(ValueError, match="élargissement"):
+            formater(1.0, 0.1, k=k)
 
 
 class TestResumeParametres:
     def test_depuis_err_ou_pcov(self):
         assert np.array_equal(ecarts_types([[4.0, 1.0], [1.0, 9.0]]), [2.0, 3.0])
-        attendu = "a = 2.00 ± 0.10 V\nb = -1.00 ± 0.20"
+        attendu = "a = 2.00 ± 0.20 V\nb = -1.00 ± 0.40"
         assert resume_parametres(("a", "b"), [2.0, -1.0], [0.1, 0.2], unites=("V", "")) == attendu
         assert resume_parametres(("a", "b"), [2.0, -1.0], np.diag([0.01, 0.04]), unites=("V", "")) == attendu
+
+    def test_k_1(self):
+        attendu = "a = 2.00 ± 0.10 V\nb = -1.00 ± 0.20"
+        assert resume_parametres(("a", "b"), [2.0, -1.0], [0.1, 0.2], unites=("V", ""), k=1) == attendu
 
     def test_sans_incertitude(self):
         assert resume_parametres(("a", "b"), [2.5, 1.0]) == "a = 2.5\nb = 1"

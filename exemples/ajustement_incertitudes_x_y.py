@@ -21,7 +21,7 @@ changent aussi les paramètres. Deux figures : bruit constant, bruit variable.
 import matplotlib.pyplot as plt
 import numpy as np
 
-from tpllg.ajustement import curvefit
+from tpllg.ajustement import curvefit, formater
 
 
 def modele(x, a, b):
@@ -55,7 +55,7 @@ cas = [
 for nom_cas, titre, xm, ym, sx, sy in cas:
     plt.figure(figsize=(8, 6))
     plt.title(f"{nom_cas} en x et y : {titre}", fontsize=9)
-    plt.errorbar(xm, ym, xerr=sx, yerr=sy, fmt="o", capthick=2)
+    plt.errorbar(xm, ym, xerr=2 * sx, yerr=2 * sy, fmt="o", capthick=2, label="les mesures, ± 2u")
     ajustements = [
         ("sans incertitudes", curvefit(modele, xm, ym, p0=[1, 0])),
         ("incertitudes sur y", curvefit(modele, xm, ym, p0=[1, 0], u_y=sy)),
@@ -65,9 +65,9 @@ for nom_cas, titre, xm, ym, sx, sy in cas:
         ),
     ]
     for nom, (pfit, err, chi2) in ajustements:
-        etiquette = (
-            f"a = {pfit[0]:.3f} ± {err[0]:.3f}, b = {pfit[1]:.3f} ± {err[1]:.3f}, chi2 réduit = {chi2:.1f}"
-        )
+        # formater écrit l'incertitude élargie 2u (k = 2, environ 95 %)
+        a, b = formater(pfit[0], err[0]), formater(pfit[1], err[1])
+        etiquette = f"a = {a}, b = {b}, chi2 réduit = {chi2:.1f}"
         plt.plot(x_trace, modele(x_trace, *pfit), label=f"{nom}\n{etiquette}")
         print(f"{nom_cas}, {nom} : {etiquette}")
     plt.xlabel("x")

@@ -5,10 +5,14 @@ tpllg.incertitudes. Voir doc/incertitudes.md.
 Pour n mesures d'une même grandeur, de moyenne m et d'écart-type expérimental
 s, l'incertitude sur la moyenne au niveau de confiance de la loi normale à
 ± k sigma vaut t s/sqrt(n), où le coefficient de Student t dépend de n - 1
-degrés de liberté (il tend vers k quand n est grand). Trois figures :
+degrés de liberté (il tend vers k quand n est grand). incertitudes rend
+l'incertitude-type s/sqrt(n) ; t est le facteur d'élargissement qu'on donne à
+formater, k=student_coef(1, n) pour 68 %, k=student_coef(2, n) pour 95 %.
+Trois figures :
 
 - l'histogramme de 30 tirages normaux, la moyenne et l'écart-type estimés,
-  et l'intervalle à 68 % sur la moyenne (incertitudes) ;
+  et l'incertitude sur la moyenne avec Student, à 68 % et à 95 % côte à côte
+  (incertitudes, student_coef, formater) ;
 - la probabilité de sortir de ± t écarts-types pour la loi normale
   (loi_normale_cumulee) ;
 - les lois de Student pour différents n, et les coefficients t à 68 %
@@ -19,6 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import special, stats
 
+from tpllg.ajustement import formater
 from tpllg.incertitudes import incertitudes, loi_normale, loi_normale_cumulee, student_coef
 
 rng = np.random.default_rng(30)
@@ -27,8 +32,11 @@ rng = np.random.default_rng(30)
 def histogramme(N=30, B=20):
     """N tirages de la loi normale centrée réduite : ce qu'on en estime."""
     mesures = rng.standard_normal(N)
-    m, delta, s = incertitudes(mesures, advanced=True)
-    print(f"{N} mesures : moyenne {m:.3f} ± {delta:.3f} (68 %, Student), écart-type {s:.3f}")
+    m, delta, s = incertitudes(mesures)  # delta : l'incertitude-type sur la moyenne, s/sqrt(N)
+    t68, t95 = student_coef(1, N), student_coef(2, N)  # les facteurs d'élargissement de Student
+    print(f"{N} mesures : écart-type {s:.3f}, incertitude-type sur la moyenne {delta:.3f}")
+    print(f"moyenne {formater(m, delta, k=t68)} (68 %, Student, t = {t68:.3f})")
+    print(f"moyenne {formater(m, delta, k=t95)} (95 %, Student, t = {t95:.3f})")
     x = np.linspace(-4, 4, 500)
 
     effectifs, bords = np.histogram(mesures, bins=min(B, N))
@@ -47,8 +55,9 @@ def histogramme(N=30, B=20):
     plt.plot([m, m], [0, h], "r--", label="moyenne et écart-type estimés")
     plt.plot([m + s, m + s], [0, h], "r-.")
     plt.plot([m - s, m - s], [0, h], "r-.")
-    plt.plot([m + delta, m + delta], [0, h], "g--", label="incertitude sur la moyenne, 68 % (Student)")
-    plt.plot([m - delta, m - delta], [0, h], "g--")
+    for t, niveau, style in ((t68, "68 %", "g--"), (t95, "95 %", "m:")):
+        plt.plot([m + t * delta] * 2, [0, h], style, label=f"incertitude sur la moyenne, {niveau}, Student")
+        plt.plot([m - t * delta] * 2, [0, h], style)
     plt.legend(fontsize=8)
     plt.tight_layout()
 

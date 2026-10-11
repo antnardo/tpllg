@@ -65,7 +65,9 @@ haut.set_ylabel("theta (rad)")
 haut.legend(fontsize=8, loc="lower left")
 for modele, resultat, nom in ((pendule, non_lineaire, "non linéaire"), (sinusoide, lineaire, "sinusoïde")):
     bas.plot(t, theta - modele(t, *resultat.pfit), ".", markersize=3, label=f"résidus, {nom}")
-bas.axhspan(-U_THETA, U_THETA, color="gray", alpha=0.3, label="± l'incertitude")
+bas.axhspan(
+    -2 * U_THETA, 2 * U_THETA, color="gray", alpha=0.3, label="± 2u : l'incertitude élargie sur un angle"
+)
 bas.set_xlabel("t (s)")
 bas.set_ylabel("résidus (rad)")
 bas.legend(fontsize=8, loc="lower left")

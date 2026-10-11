@@ -42,13 +42,14 @@ for colonne, sigma in enumerate((0.02, 0.005, 0.08)):
         f"  chi2 réduit = {chi2:.2f}",
     )
     haut, bas = axes[0, colonne], axes[1, colonne]
-    haut.errorbar(x, y, yerr=sigma, fmt="o", markersize=3, capsize=2, label="les mesures")
+    # les barres : ± 2 sigma, l'incertitude élargie (k = 2)
+    haut.errorbar(x, y, yerr=2 * sigma, fmt="o", markersize=3, capsize=2, label="les mesures, ± 2 sigma")
     haut.plot(x_fin, exponentielle(x_fin, *pfit), color="tab:orange", label="l'ajustement")
     haut.set_title(f"sigma annoncé = {sigma:g} V : chi2 réduit = {chi2:.2f}", fontsize=10)
     haut.legend(fontsize=8)
     # les résidus, avec la même barre : c'est là qu'on voit si elle est à la bonne taille
     bas.axhline(0, color="tab:orange")
-    bas.errorbar(x, y - exponentielle(x, *pfit), yerr=sigma, fmt="o", markersize=3, capsize=2)
+    bas.errorbar(x, y - exponentielle(x, *pfit), yerr=2 * sigma, fmt="o", markersize=3, capsize=2)
     bas.set_xlabel("x")
 axes[0, 0].set_ylabel("y (V)")
 axes[1, 0].set_ylabel("y - modèle (V)")
@@ -63,13 +64,13 @@ print(
     f"  chi2 réduit = {chi2:.1f}",
 )
 fig, (haut, bas) = plt.subplots(2, 1, figsize=(7, 6), sharex=True, gridspec_kw={"height_ratios": [3, 2]})
-haut.errorbar(x, y, yerr=BRUIT, fmt="o", markersize=3, capsize=2, label="les mesures")
+haut.errorbar(x, y, yerr=2 * BRUIT, fmt="o", markersize=3, capsize=2, label="les mesures, ± 2 sigma")
 haut.plot(x_fin, droite(x_fin, *pfit), color="tab:orange", label="la droite ajustée")
 haut.set_title(f"un modèle faux, des incertitudes justes : chi2 réduit = {chi2:.1f}", fontsize=10)
 haut.set_ylabel("y (V)")
 haut.legend(fontsize=8)
 bas.axhline(0, color="tab:orange")
-bas.errorbar(x, y - droite(x, *pfit), yerr=BRUIT, fmt="o", markersize=3, capsize=2)
+bas.errorbar(x, y - droite(x, *pfit), yerr=2 * BRUIT, fmt="o", markersize=3, capsize=2)
 bas.set_xlabel("x")
 bas.set_ylabel("y - modèle (V)")
 fig.tight_layout()
@@ -111,7 +112,7 @@ ax.axvspan(
     color="tab:orange",
     alpha=0.3,
     zorder=0,
-    label=f"1 ± sqrt(2/(N - p)) = 1 ± {largeur:.2f}",
+    label=f"1 ± sqrt(2/(N - p)) = 1 ± {largeur:.2f} : un écart-type de sa loi",
 )
 ax.axvline(1, color="darkred", label="1")
 ax.set_xlabel("chi2 réduit")

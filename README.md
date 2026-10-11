@@ -148,12 +148,14 @@ print(resume_parametres(("a", "b"), pfit, err))
 
 `curvefit` rend les paramètres, leurs incertitudes-types et le χ² réduit
 (`verbose=True` lui fait annoncer la méthode employée, moindres carrés ou
-variance effective), et `resume_parametres` met en forme les résultats,
-deux chiffres significatifs sur l'incertitude :
+variance effective), et `resume_parametres` met en forme les résultats :
+derrière le `±`, l'incertitude élargie `2u` (facteur d'élargissement
+`k = 2`, environ 95 %), à deux chiffres significatifs ; `k=1` écrirait
+l'incertitude-type :
 
 ```text
-a = 2.010 ± 0.083
-b = -1.006 ± 0.095
+a = 2.01 ± 0.17
+b = -1.01 ± 0.19
 ```
 
 `datayerrors` s'écrit aussi `u_y`, et `dataxerrors` `u_x`, les noms de
@@ -192,9 +194,9 @@ tracer_bode(
 ```
 
 ```text
-H0 = -5.26 ± 0.13
-f0 = 1993.2 ± 3.6 Hz
-Q = 6.67 ± 0.18
+H0 = -5.26 ± 0.25
+f0 = 1993.2 ± 7.2 Hz
+Q = 6.67 ± 0.37
 ```
 
 ![Le diagramme de Bode que tracer_bode écrit : module et phase, continue de 270° à 90°, les huit mesures et le modèle ajusté](doc/images/bode.png)
@@ -215,9 +217,9 @@ l'autre est dans [CHANGELOG.md](CHANGELOG.md).
 | [doc/signaux.md](doc/signaux.md) | repérer les fronts d'un créneau, découper une fenêtre, estimer une fréquence, les extremums et le taux d'amortissement d'une oscillation amortie ; le régime libre d'un filtre après un front, ajusté |
 | [doc/bode.md](doc/bode.md) | tracer un diagramme de Bode, mesures et modèle, avec une phase continue ; la chaîne complète mesures, ajustement, figure ; la fonction de transfert mesurée par détection synchrone ; le Bode automatique par la centrale |
 | [doc/spectres.md](doc/spectres.md) | le spectre d'un signal, brut ou fenêtré, et ses phases ; relever les harmoniques ; mesurer une fonction de transfert sur les harmoniques d'un créneau |
-| [doc/harmoniques.md](doc/harmoniques.md) | un signal périodique par ses harmoniques : synthèse, filtrage par le calcul, valeur efficace, analyseur de spectre ; ce que devient `traitementsignal` |
+| [doc/harmoniques.md](doc/harmoniques.md) | un signal périodique par ses harmoniques : synthèse, filtrage par le calcul, valeur efficace, analyseur de spectre |
 | [doc/fichiers.md](doc/fichiers.md) | lire un CSV de tableur, un export Latis Pro ou Regressi, tous rendus de la même façon ; écrire un CSV ; relire ce que `sauvegarder` écrit |
-| [doc/tests.md](doc/tests.md) | ce que vérifient les 322 tests |
+| [doc/tests.md](doc/tests.md) | ce que vérifient les 339 tests |
 
 ## Les modules
 
@@ -226,8 +228,8 @@ l'autre est dans [CHANGELOG.md](CHANGELOG.md).
 | `tpllg.sysam` | `Sysam`, la classe de pycanum avec un `with`, des calibres simples, des temps en secondes et des acquisitions qui rendent directement temps et tensions ; `n_max`, `te_min`, `get_calibre` pour rester dans les limites ; se rabat sur le simulateur sans pycanum (règles de pycanum 4.x) |
 | `tpllg.sysam_factice` | le simulateur : même interface, mêmes formes de données, mêmes refus que la centrale, sans matériel |
 | `tpllg.acquisition` | `acquerir(voies, calibre, te, nbpoints, trigger=…)` en une ligne, déclenchement compris ; `sauvegarder` et `charger`, un fichier par voie |
-| `tpllg.ajustement` | `curvefit` (incertitudes sur y, ou sur x et y par la variance effective, χ² réduit), `curve_fit_complex` (module et phase ajustés ensemble, en radians, refusés au-delà de 2π), `regression_york` (une droite, x et y incertains), `Ajustement` (le résultat), `ecarts_types`, `formater` (deux chiffres sur l'incertitude, notation scientifique hors de [10⁻³, 10⁵[), `resume_parametres`, `residus_complexes` |
-| `tpllg.incertitudes` | `incertitudes` (moyenne, incertitude de la moyenne, écart-type estimé), `student_coef`, `loi_normale`, `loi_normale_cumulee` |
+| `tpllg.ajustement` | `curvefit` (incertitudes sur y, ou sur x et y par la variance effective, χ² réduit), `curve_fit_complex` (module et phase ajustés ensemble, en radians, refusés au-delà de 2π), `regression_york` (une droite, x et y incertains), `Ajustement` (le résultat), `ecarts_types`, `formater` (valeur ± incertitude élargie 2u, deux chiffres sur l'incertitude écrite, notation scientifique hors de [10⁻³, 10⁵[), `resume_parametres`, `residus_complexes` |
+| `tpllg.incertitudes` | `incertitudes` (moyenne, incertitude-type de la moyenne, écart-type estimé), `student_coef`, `loi_normale`, `loi_normale_cumulee` |
 | `tpllg.montecarlo` | `Point` (lois `normale`, `uniforme`, `triangulaire`, `arcsinus`), `SerieLineaire`, `ajuster_modele`, `indices_sobol`, `fixer_graine` : la propagation des incertitudes par tirages, la droite sans boucle |
 | `tpllg.signaux` | `fronts_montants`, `fronts_descendants`, `front_utile`, `fenetre`, `frequence_pic`, `extremums`, `taux_amortissement`, tous en `(t, v)` |
 | `tpllg.bode` | `tracer_bode`, `phase_continue` et son inverse `phase_repliee` |
@@ -306,7 +308,7 @@ ceux des fiches.
 | `frequence_defilement_franges.py` | la fréquence d'un défilement de franges par comptage, par le pic de la DFT, et par le spectre fenêtré |
 | `spectre_signal_periodique.py` | un signal périodique construit par ses harmoniques (`Signal`), échantillonné, et son spectre par `calcule_DFT`, exact quand les pics tombent sur la grille |
 | `ecarts_moyennes_correcteurs.py` | combien de copies pour comparer les moyennes de plusieurs correcteurs : une simulation de Monte-Carlo sur deux distributions de notes, avec `loi_normale` |
-| `loi_student_incertitudes.py` | l'histogramme de trente mesures et l'intervalle de confiance sur la moyenne, la probabilité de sortir de ±t écarts-types, les lois de Student et leurs coefficients |
+| `loi_student_incertitudes.py` | l'histogramme de trente mesures et l'intervalle de Student sur la moyenne, à 68 % et à 95 %, la probabilité de sortir de ±t écarts-types, les lois de Student et leurs coefficients |
 
 ## Erreurs courantes
 

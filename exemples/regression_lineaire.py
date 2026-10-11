@@ -45,7 +45,7 @@ print(f"curve_fit : a = {formater(pfit[0], u_a2)}, b = {formater(pfit[1], u_b2)}
 print(f"tpllg : a = {formater(a3, u_a3)}, b = {formater(b3, u_b3)}, chi2 réduit = {chi2:.2f}")
 
 plt.figure("Régression linéaire")
-plt.errorbar(x, y_exp, yerr=sigma_y, fmt="o", capthick=2, label="mesures")
+plt.errorbar(x, y_exp, yerr=2 * sigma_y, fmt="o", capthick=2, label="mesures, ± 2u")
 plt.plot(x, modele(x, a3, b3), label=f"a = {formater(a3, u_a3)}, b = {formater(b3, u_b3)}")
 plt.xlabel("x")
 plt.ylabel("y")

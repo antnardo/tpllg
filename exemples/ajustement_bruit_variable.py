@@ -49,7 +49,10 @@ ajustements = (
 
 x_fin = np.linspace(0, 2.1, 100)
 fig, ax = plt.subplots(figsize=(8, 5.5))
-ax.errorbar(x, y, xerr=sigma_x, yerr=sigma_y, fmt="o", capsize=2, color="k", label="les mesures")
+# les barres : ± 2u, l'incertitude élargie (k = 2)
+ax.errorbar(
+    x, y, xerr=2 * sigma_x, yerr=2 * sigma_y, fmt="o", capsize=2, color="k", label="les mesures, ± 2u"
+)
 for nom, (pfit, err, chi2), trait in ajustements:
     resume = resume_parametres(("a", "b"), pfit, err).replace("\n", "   ")
     suite = f"chi2 réduit = {chi2:.2f}" if nom != "sans incertitudes" else "chi2 réduit : sans objet"

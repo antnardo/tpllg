@@ -182,9 +182,9 @@ plt.show()
 ```
 
 ```text
-H0 = -5.080 ± 0.072
-f0 = 1993.2 ± 2.7 Hz
-Q = 6.42 ± 0.11
+H0 = -5.08 ± 0.14
+f0 = 1993.2 ± 5.4 Hz
+Q = 6.42 ± 0.22
 chi2 réduit = 1.25
 résidus relatifs sur |H| : écart-type 3.4 %, maximum 10.9 %
 résidus sur phi          : écart-type 2.7°, maximum 6.1°
@@ -198,8 +198,9 @@ ces incertitudes-là qu'on a données à l'ajustement, et les résidus les
 retrouvent ; le maximum de 11 % sur le module est un point à 0,09 V lu à
 0,01 V près. Le χ² réduit de 1,25 dit que les incertitudes déclarées rendent
 compte des écarts, donc que les incertitudes rendues sont crédibles : `f0`
-sort à 1,4 Hz de la vraie valeur pour 2,7 Hz annoncés, `Q` à 1,4
-incertitude. La fiche [ajustement.md](ajustement.md) dit ce que valent ces
+sort à 1,4 Hz de la vraie valeur pour 5,4 Hz annoncés (l'incertitude
+élargie, deux fois l'incertitude-type de 2,7 Hz), `Q` à 1,4
+incertitude-type. La fiche [ajustement.md](ajustement.md) dit ce que valent ces
 incertitudes, ce qui se passe quand on ne les donne pas, et ce qu'il advient
 quand `PARAM_INIT` est loin.
 
@@ -346,9 +347,9 @@ fréquence ajustée qu'on garde. Les **cinq premières périodes** sont
 mesurée **deux fois** : une première fois avec des calibres larges, pour
 connaître le gain, une seconde avec l'amplitude et les calibres adaptés,
 pour la précision. Et le nombre de points tient dans la **mémoire**, que
-les deux voies et la sortie se partagent : `Sysam.n_max(2, 1)` ; l'ancien
-script prenait 262 144 points par voie, et dépassait la mémoire dès que
-`choix_echantillonnage` en demandait plus de 87 000, vers 870 Hz.
+les deux voies et la sortie se partagent : `Sysam.n_max(2, 1)`. Prendre 262 144 points par voie
+dépasserait la mémoire dès que `choix_echantillonnage` en demande plus de
+87 000, vers 870 Hz.
 
 `choix_echantillonnage` rend une période multiple de 0,2 µs, la seule
 cadence des sorties ; la classe `Sysam` refuserait une autre période avec

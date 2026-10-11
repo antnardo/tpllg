@@ -4,6 +4,45 @@ Toutes les modifications notables de `tpllg` sont consignées ici. Le format
 suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; les versions
 sont calendaires, `année.mois.numéro`.
 
+## [Non publié]
+
+### Modifié — incompatible
+
+- **`incertitudes(liste)` rend toujours l'incertitude-type** `delta = s/√N`.
+  Ses arguments `sigma` et `advanced` sont retirés et lèvent `TypeError`,
+  qui dit quoi écrire à la place : ils rendaient une incertitude déjà
+  élargie, que `formater` aurait élargie une seconde fois. L'élargissement
+  se fait au seul endroit d'écriture, `formater(m, delta, k=…)` : `k=2` par
+  défaut, `k=student_coef(2, N)` pour l'intervalle de Student à 95 %,
+  `k=student_coef(1, N)` à 68 %. `incertitudes(L, sigma=2, advanced=True)`
+  s'écrit donc `formater(m, delta, k=student_coef(2, len(L)))`.
+- **`Point.show(…, k=2)`** trace la moyenne ± `k` écarts-types, `2u` par
+  défaut, comme `formater` écrit ; `k=1` redonne l'ancien tracé.
+
+- **Derrière un « ± », l'incertitude élargie** : `formater` et
+  `resume_parametres` écrivent « valeur ± 2u », `u` étant l'incertitude-type
+  qu'on leur donne (facteur d'élargissement `k = 2`, environ 95 % pour une
+  loi normale), au lieu de « valeur ± u ». L'arrondi à deux chiffres
+  significatifs porte sur l'incertitude écrite : `formater(1993.489, 1.875,
+  "Hz")` donne `1993.5 ± 3.8 Hz`, et non plus `1993.5 ± 1.9 Hz`. Les calculs
+  ne changent pas : `curvefit`, `incertitudes`, `Point.u`… rendent toujours
+  des incertitudes-types. La légende de `tracer_bode`, qui passe par
+  `resume_parametres`, suit.
+- Les exemples écrivent leurs résultats à `2u` (bande de la droite ajustée,
+  `m ± 2 delta`) et tracent les **barres d'erreur et les bandes
+  d'incertitude des mesures à ± 2u**, légende à l'appui ; Student est donné
+  à 68 % et à 95 % côte à côte. Ce qui reste à `± u` ou à un écart-type — la
+  dispersion des mesures `m ± s`, les tangentes au contour χ² + 1, la
+  largeur de la loi du χ² réduit, la construction de la variance effective
+  sur un point — le dit dans sa légende. Fiches, sorties et figures
+  refaites.
+
+### Ajouté
+
+- `formater(…, k=2)` et `resume_parametres(…, k=2)` : le facteur
+  d'élargissement ; `k=1` écrit l'incertitude-type, comme avant ; un
+  coefficient de Student s'y donne aussi. Un `k` nul ou négatif est refusé.
+
 ## [2026.10.3] - 2026-10-10
 
 ### Corrigé
@@ -63,8 +102,7 @@ Sans alias ni avertissement — aucun script vivant ne s'en servait :
 
 ## [2026.10.1] - 2026-10-10
 
-Les actions de l'audit du 10 octobre 2026 (section « tpllg »), et la
-rétrocompatibilité avec 2026.9 que la 2026.10.0 avait rompue : tout ce qui
+La rétrocompatibilité avec 2026.9 que la 2026.10.0 avait rompue : tout ce qui
 s'écrivait avant s'écrit encore, avec un avertissement.
 
 ### Ajouté
@@ -118,7 +156,7 @@ s'écrivait avant s'écrit encore, avec un avertissement.
   [10⁻³, 10⁵[, avec une puissance de dix commune à la valeur et à
   l'incertitude : `(6.6260 ± 0.0010) × 10⁻³⁴`, là où elle écrivait quarante
   zéros ; `formater(1234567.0, 5432.0)` donne `(1.2346 ± 0.0054) × 10⁶`.
-- Huit exemples venus de `pyphysique`, qui n'utilisent que `tpllg` :
+- Huit exemples, qui n'utilisent que `tpllg` :
   `regression_lineaire.py`, `ajustement_incertitudes_x_y.py`,
   `importer_donnees.py` (et `exemples/donnees/mesures.csv`),
   `boussole_champ_terrestre.py`, `frequence_defilement_franges.py`,
@@ -172,8 +210,7 @@ s'écrivait avant s'écrit encore, avec un avertissement.
 ## [2026.10.0] - 2026-10-08
 
 Une relecture complète du paquet, de ses tests et de ses exemples, faite le
-8 octobre 2026, et l'intégration de `traitementsignal` et de ce que
-l'analyse de données de l'oral CCS avait de générique.
+8 octobre 2026.
 
 ### Ajouté
 
@@ -181,7 +218,7 @@ l'analyse de données de l'oral CCS avait de générique.
   `spectre_carre`, `spectre_triangle`, `spectre_dent_de_scie`), les filtres
   usuels (`passe_bas_1`, `passe_haut_1`, `passe_bas_2`, `passe_haut_2`,
   `passe_bande`, `coupe_bande`), le filtrage par le calcul et la valeur
-  efficace ; il remplace le module `traitementsignal`.
+  efficace.
 - `ajustement.regression_york` : la droite quand x et y sont incertains,
   solution exacte de York (2004), qui remplace `scipy.odr`, retiré de
   SciPy 1.19.
@@ -286,17 +323,11 @@ l'analyse de données de l'oral CCS avait de générique.
   courte ; Regressi lu en UTF-8 seulement et sans virgule décimale.
   `readcsv(Path)` : `TypeError` ; un fichier à une colonne : `csv.Error` ;
   le point-virgule pris pour la virgule sans en-tête.
-- `traitementsignal`, en passant dans `harmoniques` : les fabriques de
-  filtres plantaient, `Veff` comptait la moyenne pour moitié, le filtrage
-  perdait le signe de H(0), un spectre en entiers plantait,
-  `spectre_to_func` modifiait la liste de l'appelant, `fourier` n'était
-  juste que pour une seconde de signal.
 - Exemples : PDF vides de `Bode.py`, `METHODE='fit'`, `CALIBRE` en liste dans
   `Acquisition.py`, spectre tracé jusqu'à fe, une seule voie dans
   `acquisition_simple.py`, `essai_EA0.txt` écrasé par `lecture_fichiers.py`,
   décrément et extremums dans le bruit de `regime_libre.py`, tolérance prise
-  pour un écart-type, « 95 % » pour 95,45 %, et les incohérences relevées
-  par l'audit.
+  pour un écart-type, « 95 % » pour 95,45 %.
 - Documentation : le nombre de tests, l'affirmation que le code évitait les
   f-strings, `python_requires >=3.7`, une image manquante, des coquilles.
 

@@ -48,25 +48,35 @@ def student_coef(sigma, n):
     return stats.t(n - 1).isf(gamma)
 
 
-def incertitudes(liste, sigma=1, advanced=False):
+def incertitudes(liste, *anciens, **anciens_nommes):
     """Une série de mesures répétées : rend (m, delta, s), la moyenne,
-    l'incertitude sur la moyenne et l'écart-type de la série.
+    l'incertitude-type sur la moyenne et l'écart-type de la série.
 
     s est l'estimateur à N - 1 de l'écart-type (sa variance s² est sans
     biais ; s lui-même sous-estime un peu l'écart-type quand N est petit).
-    delta = k s/√N, avec k = sigma (la loi normale : sigma = 1 pour une
-    incertitude-type, à 68 %, sigma = 2 pour 95 %) ; avec advanced=True,
-    k est le coefficient de Student au même niveau, plus grand quand les
-    mesures sont peu nombreuses parce que s est alors mal connu.
+    delta = s/√N est toujours une incertitude-TYPE : l'élargir se fait au seul
+    endroit où l'on écrit le résultat, formater(m, delta, k=…) — k = 2 par
+    défaut, ou le coefficient de Student, k = student_coef(2, N) pour 95 % ou
+    student_coef(1, N) pour 68 %, plus grand quand les mesures sont peu
+    nombreuses parce que s est alors mal connu.
+
+    Les anciens arguments sigma et advanced, qui rendaient une incertitude
+    déjà élargie, sont refusés (TypeError) : formater l'aurait élargie une
+    seconde fois.
 
     source : https://fr.wikipedia.org/wiki/Loi_de_Student#Application_:_intervalle_de_confiance_associ%C3%A9_%C3%A0_l%E2%80%99esp%C3%A9rance_d%E2%80%99une_variable_de_loi_normale_de_variance_inconnue
     """
+    if anciens or anciens_nommes:
+        raise TypeError(
+            "incertitudes(liste) ne prend plus sigma ni advanced : elle rend toujours l'incertitude-type "
+            "delta = s/√N, et l'élargissement se fait à l'écriture, formater(m, delta, k=2), ou "
+            "k=student_coef(2, len(liste)) pour l'intervalle de Student à 95 %"
+        )
     mesures = np.asarray(liste, dtype=float)
     n = mesures.size
     if n < 2:
         raise ValueError("incertitudes : il faut au moins deux mesures")
     m = mesures.mean()
     s = mesures.std(ddof=1)
-    k = student_coef(sigma, n) if advanced else sigma
-    delta = k * s / np.sqrt(n)
+    delta = s / np.sqrt(n)
     return m, delta, s

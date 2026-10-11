@@ -28,16 +28,14 @@ du résultat. Les incertitudes que rend un ajustement sont dans
 ```python
 from tpllg.incertitudes import incertitudes
 
-m, delta, s = incertitudes(liste, sigma=1, advanced=False)
+m, delta, s = incertitudes(liste)
 ```
 
 | Argument | Sens |
 | --- | --- |
 | `liste` | les mesures, au moins deux |
-| `sigma` | le niveau de confiance, en nombre d'écarts-types de la loi normale : 1 pour 68,27 %, 2 pour 95,45 % ; `delta` est multipliée par `sigma` |
-| `advanced` | `True` pour multiplier l'incertitude par le coefficient de Student au même niveau plutôt que par `sigma`, ce qui compte quand les mesures sont peu nombreuses |
 
-Retour : la **moyenne** `m`, l'**incertitude** `delta` sur cette moyenne, et
+Retour : la **moyenne** `m`, l'**incertitude-type** `delta` sur cette moyenne, et
 l'**écart-type estimé** `s` de la série. Ce sont les trois estimateurs d'une
 incertitude de **type A**, sur `N` mesures indépendantes `x_i` :
 
@@ -58,40 +56,48 @@ delta = s / np.sqrt(len(mesures))
 
 La division par `N - 1` rend sans biais la **variance** `s²` ; `s`
 lui-même sous-estime un peu l'écart-type quand `N` est petit (de 6 % pour
-cinq mesures), ce que le coefficient de Student prend en compte. Avec
-`sigma=2`, `delta` est doublée, l'incertitude élargie à 95 % de la loi
-normale (la version précédente ignorait `sigma` sans `advanced`) ; avec
-`advanced`, `delta` est multipliée par le coefficient de Student au niveau
-`sigma` (section suivante).
+cinq mesures), ce que le coefficient de Student prend en compte.
+
+`delta` est **toujours une incertitude-type** : on l'élargit au seul endroit
+où l'on écrit le résultat, `formater(m, delta, k=…)`. `k = 2` par défaut,
+environ 95 % pour une loi normale ; le coefficient de Student est un autre
+facteur d'élargissement, `k=student_coef(2, N)` à 95 % ou
+`k=student_coef(1, N)` à 68 % (section suivante). Les arguments `sigma` et
+`advanced` de la version précédente, qui rendaient une `delta` déjà élargie
+que `formater` aurait élargie une seconde fois, sont refusés
+(`TypeError`, qui dit quoi écrire à la place).
 
 ```python
 import numpy as np
 from tpllg.ajustement import formater, resume_parametres
-from tpllg.incertitudes import incertitudes
+from tpllg.incertitudes import incertitudes, student_coef
 
 mesures = [9.78, 9.81, 9.85, 9.79, 9.83]  # g, en m/s², cinq fois
 m, delta, s = incertitudes(mesures)
 print(m, delta, s)
-print(formater(m, delta, "m/s²"))
-m2, delta2, s2 = incertitudes(mesures, sigma=2)
-print(formater(m2, delta2, "m/s²"), "à 95 %, loi normale")
-m3, delta3, s3 = incertitudes(mesures, sigma=2, advanced=True)
-print(formater(m3, delta3, "m/s²"), "à 95 %, avec Student")
+print(formater(m, delta, "m/s²"))  # ± 2 delta, l'incertitude élargie (k = 2)
+N = len(mesures)
+print(formater(m, delta, "m/s²", k=student_coef(1, N)), "à 68 %, avec Student")
+print(formater(m, delta, "m/s²", k=student_coef(2, N)), "à 95 %, avec Student")
 print(resume_parametres(("g",), [m], [delta], ("m/s²",)))
 ```
 
 ```text
 9.812 0.012806248474865799 0.028635642126552934
-9.812 ± 0.013 m/s²
-9.812 ± 0.026 m/s² à 95 %, loi normale
+9.812 ± 0.026 m/s²
+9.812 ± 0.015 m/s² à 68 %, avec Student
 9.812 ± 0.037 m/s² à 95 %, avec Student
-g = 9.812 ± 0.013 m/s²
+g = 9.812 ± 0.026 m/s²
 ```
 
 `s` est la dispersion d'**une** mesure ; `delta` est ce qu'on gagne à en
-faire `N`, et c'est `delta` qu'on écrit derrière le `±`. Deux fonctions de
-`tpllg.ajustement` mettent en forme, avec deux chiffres significatifs sur
-l'incertitude et la valeur arrondie au même rang : `formater` pour une
+faire `N`, l'incertitude-type sur la moyenne, et c'est l'incertitude
+élargie `2 delta` (facteur d'élargissement `k = 2`, environ 95 %) qu'on
+écrit derrière le `±` : la première et la dernière ligne ci-dessus. Les deux
+autres élargissent la même `delta` par le coefficient de Student, à 68 % et
+à 95 %. Deux fonctions de
+`tpllg.ajustement` mettent en forme, l'incertitude élargie `k × delta` à
+deux chiffres significatifs et la valeur arrondie au même rang : `formater` pour une
 grandeur, `resume_parametres` pour plusieurs grandeurs nommées, une ligne
 chacune — c'est la même mise en forme, la seconde appelle la première
 (voir [ajustement.md](ajustement.md#présenter-un-résultat)).
@@ -99,27 +105,27 @@ chacune — c'est la même mise en forme, la seconde appelle la première
 `exemples/incertitudes_serie.py` trace les trois estimateurs sur deux
 séries : les cinq mesures ci-dessus, puis cinquante de même dispersion — les
 cinq mêmes et quarante-cinq autres, simulées. D'abord sur l'histogramme des
-mesures, où `m ± s` et `m ± delta` sont deux bandes verticales autour de la
-moyenne :
+mesures, où `m ± s`, la dispersion des mesures, et `m ± 2 delta`, le
+résultat, sont deux bandes verticales autour de la moyenne :
 
-![L'histogramme de cinq mesures puis de cinquante, la loi normale de mêmes moyenne et écart-type, la moyenne en trait, m ± s en bande orange et m ± delta en bande rouge](images/incertitudes_serie_histogramme.png)
+![L'histogramme de cinq mesures puis de cinquante, la loi normale de mêmes moyenne et écart-type, la moyenne en trait, m ± s en bande orange et m ± 2 delta en bande rouge](images/incertitudes_serie_histogramme.png)
 
 Puis sur les mesures dans l'ordre où elles ont été faites, les mêmes bandes
 à l'horizontale :
 
-![Les mesures en fonction de leur numéro, cinq puis cinquante, la moyenne en trait horizontal, m ± s en bande orange et m ± delta en bande rouge](images/incertitudes_serie_indices.png)
+![Les mesures en fonction de leur numéro, cinq puis cinquante, la moyenne en trait horizontal, m ± s en bande orange et m ± 2 delta en bande rouge](images/incertitudes_serie_indices.png)
 
 ```text
-5 mesures  : m = 9.8120  s = 0.0286  delta = 0.0128  soit g = 9.812 ± 0.013 m/s²
-50 mesures : m = 9.8102  s = 0.0257  delta = 0.0036  soit g = 9.8102 ± 0.0036 m/s²
+5 mesures  : m = 9.8120  s = 0.0286  delta = 0.0128  soit g = 9.812 ± 0.026 m/s² (± 2 delta)
+50 mesures : m = 9.8102  s = 0.0257  delta = 0.0036  soit g = 9.8102 ± 0.0073 m/s² (± 2 delta)
 ```
 
 De cinq à cinquante mesures, la bande `m ± s` garde sa largeur, aux
 fluctuations près : c'est là que tombe une mesure, deux fois sur trois si la
-loi est normale, et en faire davantage n'y change rien. La bande `m ± delta`
-rétrécit, de 0,013 à 0,004 m/s² : elle ne dit pas où tombent les mesures —
-sur les cinquante, neuf seulement y sont — mais où est la moyenne, et c'est
-elle le résultat.
+loi est normale, et en faire davantage n'y change rien. La bande
+`m ± 2 delta` rétrécit, de ± 0,026 à ± 0,007 m/s² : elle ne dit pas où
+tombent les mesures — sur les cinquante, neuf seulement y sont — mais où est
+la moyenne, et c'est elle le résultat.
 
 ## Le coefficient de Student
 
@@ -130,8 +136,9 @@ t = student_coef(sigma, n)
 ```
 
 La règle : une incertitude de **type A**, estimée sur `N` mesures répétées,
-s'écrit `delta = t × s/sqrt(N)`, où `t` est le coefficient de Student au
-niveau de confiance voulu, à `k = N - 1` degrés de liberté. Le coefficient
+s'écrit `t × delta = t × s/sqrt(N)`, où `t` est le coefficient de Student
+au niveau de confiance voulu, à `N - 1` degrés de liberté : c'est le facteur
+d'élargissement qu'on donne à `formater`, `k=t`. Le coefficient
 ne corrige pas `s` — l'écart-type de la série reste `np.std(mesures,
 ddof=1)` — il élargit l'intervalle de confiance sur la **moyenne**, parce que
 `s` est lui-même estimé sur ces mêmes `N` mesures, et d'autant moins bien
@@ -157,8 +164,19 @@ niveaux, avec les valeurs du tableau :
 ![Le coefficient de Student en fonction du nombre de mesures, de 2 à 100, à 68 % et à 95 % : deux courbes qui descendent vers 1 et 2, leurs valeurs pour la loi normale](images/incertitudes_student.png)
 
 Sur les cinq mesures de `g` ci-dessus, à 95,45 % : `t = 2.87`, et
-`delta = 2.87 × 0.0286/sqrt(5) = 0.037 m/s²`, ce que `incertitudes(mesures,
-sigma=2, advanced=True)` rend. Deux mesures ne disent presque rien de
+`2.87 × 0.0286/sqrt(5) = 0.037 m/s²`, ce que
+`formater(m, delta, k=student_coef(2, 5))` écrit ; à 68,27 %, `t = 1.14` et
+0,015 m/s². `exemples/loi_student_incertitudes.py` met les deux côte à côte
+sur trente tirages normaux :
+
+```text
+30 mesures : écart-type 0.956, incertitude-type sur la moyenne 0.175
+moyenne 0.15 ± 0.18 (68 %, Student, t = 1.018)
+moyenne 0.15 ± 0.36 (95 %, Student, t = 2.090)
+```
+
+`t` est le facteur d'élargissement : on le donne à `formater` à la place de
+`k = 2`, jamais en plus. Deux mesures ne disent presque rien de
 l'écart-type : à 95,45 % le facteur est 14. À partir d'une dizaine de mesures,
 la correction est de quelques pour cent à 68 %, et l'on peut s'en passer en
 incertitude-type.
@@ -201,7 +219,7 @@ N = 100000
 x = rng.normal(1.0, 0.05, N)
 y = rng.normal(2.0, 0.09, N)
 q = x * y**2
-print(q.mean(), "±", q.std(ddof=1))
+print(q.mean(), "±", 2 * q.std(ddof=1))  # l'incertitude élargie, 2u
 ```
 
 `Point` fait exactement cela, en gardant le tirage avec la grandeur pour que
@@ -234,14 +252,15 @@ avec `ddof=1`.
 | `X.tirage` | le tableau des tirages, pour un histogramme ou des quantiles |
 | `X.quantiles(niveau=0.6827)` | l'intervalle `(bas, haut)` qui contient `niveau` des tirages, autant de chaque côté ; à 68,27 % c'est l'équivalent de ± un écart-type |
 | `X.intervalle_le_plus_court(niveau=0.95)` | le plus court des intervalles qui contiennent `niveau` des tirages (GUM-S1) |
-| `X.show(ax=None, largeur=5, nbins=1000)` | l'histogramme des tirages, la moyenne, ± l'écart-type, et la loi normale de mêmes moyenne et écart-type, dans le repère `ax` ou une figure neuve |
+| `X.show(ax=None, largeur=5, nbins=1000, k=2)` | l'histogramme des tirages, la moyenne, ± `k` écarts-types — `2u`, l'incertitude élargie que `formater` écrit, par défaut —, et la loi normale de mêmes moyenne et écart-type, dans le repère `ax` ou une figure neuve |
 
 Pour retrouver les mêmes tirages d'une exécution à l'autre,
 `fixer_graine(0)` en tête de script (un entier quelconque) ;
 `np.random.seed` n'a pas d'effet sur `tpllg.montecarlo`, qui a son propre
 générateur.
 
-`g` par un pendule, `L = 1,000 ± 0,002 m`, `T = 2,007 ± 0,010 s` :
+`g` par un pendule, `L = 1,000 m` et `T = 2,007 s`, d'incertitudes-types
+0,002 m et 0,010 s, et `formater` qui écrit l'incertitude élargie `2u` :
 
 ```python
 import matplotlib.pyplot as plt
@@ -260,17 +279,17 @@ for ax, point in zip(axes, (L, T, g)):
 ```
 
 ```text
-9.80 ± 0.10 m/s² (100000 tirages)
+9.80 ± 0.20 m/s² (100000 tirages)
 ```
 
-![Les histogrammes des cent mille tirages de L, de T et de g, chacun avec sa moyenne, ± son écart-type et la loi normale de mêmes paramètres : ce que show() trace](images/montecarlo_g.png)
+![Les histogrammes des cent mille tirages de L, de T et de g, chacun avec sa moyenne, ± deux écarts-types (2u) et la loi normale de mêmes paramètres : ce que show() trace](images/montecarlo_g.png)
 
 Deux gaussiennes en entrée, le calcul refait sur chaque tirage, et
 l'histogramme du résultat. `g.show()` seul trace le sien dans une figure
 neuve.
 
 La formule de propagation linéaire, `u_g/g = sqrt((u_L/L)² + (2 u_T/T)²)`,
-donne `9.80 ± 0.10 m/s²` : ici les incertitudes relatives sont petites et
+donne `9.80 ± 0.20 m/s²` : ici les incertitudes relatives sont petites et
 les deux méthodes coïncident, ce qui est la règle. Monte-Carlo apporte
 quelque chose quand elles ne sont plus petites, ou que la fonction n'est pas
 dérivable, ou qu'on ne veut pas dériver. Cent mille tirages coûtent
@@ -343,12 +362,13 @@ print(
 ```
 
 ```text
-0.512 ± 0.098 ; médiane 0.500 ; 68 % des tirages entre 0.419 et 0.604
+0.51 ± 0.20 ; médiane 0.500 ; 68 % des tirages entre 0.419 et 0.604
 à 95 % : de 0.356 à 0.739 (2,5 % de chaque côté), ou de 0.336 à 0.706 (le plus court)
 ```
 
 La moyenne est décalée de 0,500 à 0,512, la loi est plus longue à droite
-(1/b s'envole quand b est petit), et la formule linéaire donnait ±0,090. À
+(1/b s'envole quand b est petit), et la formule linéaire donnait ±0,18 (à
+`k = 2` aussi). À
 30 % d'incertitude sur `b`, l'écart-type des tirages n'a plus de sens du
 tout : des tirages de `b` passent près de zéro, quelques quotients énormes
 le font exploser, alors que les quantiles restent raisonnables. Dans ce
@@ -386,9 +406,8 @@ mesurer parfaitement. Les indices somment à 1 quand les effets s'ajoutent,
 à moins quand les grandeurs interagissent. L'estimateur « pick-freeze »
 tire deux jeux indépendants et, pour chaque grandeur, recalcule le résultat
 avec cette grandeur gardée et les autres retirées : la covariance des deux
-résultats, rapportée à la variance, est l'indice. Repris de `mc_sobol.py`
-(dataanalysis), dont l'exemple, `y = x1 x2` avec `x1 = 3,1 ± 0,05` et
-`x2 = 6,8 ± 0,05` en lois plates, donne 83 % et 17 % : la grandeur la plus
+résultats, rapportée à la variance, est l'indice. L'exemple classique, `y = x1 x2` avec `x1 = 3,1 ± 0,05` et
+`x2 = 6,8 ± 0,05` en lois plates de ces demi-largeurs, donne 83 % et 17 % : la grandeur la plus
 petite pèse le plus, son incertitude relative étant la plus grande.
 
 ## Une droite sur tous les tirages, sans boucle
@@ -430,9 +449,9 @@ Face à `regression_york` et à `curvefit` avec la variance effective, sur
 dix points de `y = 2x + 1` bruités à 0,2 en `x` et 0,5 en `y` :
 
 ```text
-Monte-Carlo : a = 2.098 ± 0.065  b = 0.25 ± 0.39  (100000 tirages en 0.11 s)
-York        : a = 2.098 ± 0.065  b = 0.25 ± 0.39
-curvefit    : a = 2.091 ± 0.065  b = 0.28 ± 0.39  chi2 réduit = 0.97
+Monte-Carlo : a = 2.10 ± 0.13  b = 0.25 ± 0.77  (100000 tirages en 0.13 s)
+York        : a = 2.10 ± 0.13  b = 0.25 ± 0.78
+curvefit    : a = 2.09 ± 0.13  b = 0.28 ± 0.77  chi2 réduit = 0.97
 ```
 
 Les trois méthodes s'accordent : le Monte-Carlo retrouve, par la dispersion
@@ -488,7 +507,7 @@ print("A =", formater(A.val, A.u), " tau =", formater(tau.val, tau.u, "s"))
 ```
 
 ```text
-A = 2.013 ± 0.020  tau = 1.488 ± 0.022 s  (2000 tirages en 0.1 s)
+A = 2.013 ± 0.040  tau = 1.488 ± 0.044 s  (2000 tirages en 0.1 s)
 ```
 
 ![Les douze mesures et cent exponentielles ajustées, une par tirage, presque confondues ; l'histogramme des deux mille valeurs de A ; celui des deux mille valeurs de tau](images/montecarlo_modele.png)
@@ -521,12 +540,12 @@ print(f"part de la variance de R due à U : {100 * part_U:.0f} %, à I : {100 * 
 ```
 
 ```text
-228.7 ± 1.9 Ω ; u(U) = 16.9 mV, u(I) = 156 µA
+228.7 ± 3.7 Ω ; u(U) = 16.9 mV, u(I) = 156 µA
 part de la variance de R due à U : 18 %, à I : 82 %
 ```
 
 En prenant les tolérances pour des écarts-types gaussiens, on annonçait
-±3,2 Ω. Et c'est l'ampèremètre qu'il faut améliorer : il fait plus des
+±6,4 Ω. Et c'est l'ampèremètre qu'il faut améliorer : il fait plus des
 quatre cinquièmes de la variance.
 
 Et l'incertitude d'une fonction non dérivable, la valeur absolue d'une
@@ -538,12 +557,13 @@ print(formater(d.val, d.u), f" médiane {np.median(d.tirage):.3f}")
 ```
 
 ```text
-0.059 ± 0.044  médiane 0.050
+0.059 ± 0.088  médiane 0.050
 ```
 
 Ici la formule linéaire ne s'applique pas, la valeur moyenne des tirages
 n'est pas `|1,02 − 1,00| = 0,02`, et seul le tirage dit à quoi s'attendre :
-une différence nulle à ±0,07 près a une valeur absolue autour de 0,05.
+une différence nulle, d'incertitude-type 0,07, a une valeur absolue
+autour de 0,05.
 
 ![Les histogrammes de U et de I, deux lois plates ; celui de R, un trapèze aux bords arrondis ; celui de la valeur absolue de la différence, une loi repliée sur zéro que la loi normale de mêmes moyenne et écart-type ne décrit pas, avec la médiane à 0,050 et la valeur 0,02 calculée sans incertitudes](images/montecarlo_cas.png)
 

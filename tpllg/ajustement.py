@@ -12,8 +12,9 @@ Ajustements de courbes : outils génériques autour de scipy.optimize.curve_fit.
 - Ajustement : ce que rendent ces trois fonctions, qui se dépaquette en
   (pfit, err, chi2) ;
 - ecarts_types : les incertitudes-types tirées de la matrice de covariance ;
-- formater, resume_parametres : « valeur ± incertitude », arrondies comme il
-  faut (deux chiffres significatifs sur l'incertitude) ;
+- formater, resume_parametres : « valeur ± incertitude élargie », 2u par
+  défaut (k = 2, environ 95 %), arrondies comme il faut (deux chiffres
+  significatifs sur l'incertitude écrite) ;
 - residus_complexes : l'écart des mesures au modèle, module et phase.
 
 @author: a. marchand
@@ -446,14 +447,17 @@ def _arrondis(valeur, sigma):
     return f"{valeur:.{decimales}f}", f"{sigma:.{decimales}f}", valeur
 
 
-def formater(valeur, sigma=None, unite=""):
-    """« 1993.5 ± 1.9 Hz » : l'incertitude à deux chiffres significatifs, la
-    valeur arrondie au même rang. Sans incertitude (None ou 0), quatre
+def formater(valeur, sigma=None, unite="", k=2):
+    """« 1993.5 ± 3.8 Hz » : la valeur et son incertitude élargie k·sigma,
+    `sigma` étant l'incertitude-type et `k` le facteur d'élargissement — 2 par
+    défaut, soit environ 95 % pour une loi normale ; k=1 écrit l'incertitude-
+    type elle-même. L'incertitude écrite a deux chiffres significatifs, la
+    valeur est arrondie au même rang. Sans incertitude (None ou 0), quatre
     chiffres ; une incertitude infinie ou indéfinie s'écrit telle quelle.
 
     Hors de [10⁻³, 10⁵[, la notation scientifique, avec une puissance de dix
     commune à la valeur et à l'incertitude, celle de la valeur :
-    « (6.6260 ± 0.0010) × 10⁻³⁴ J s ». Pour une valeur nulle, la puissance
+    « (6.6260 ± 0.0020) × 10⁻³⁴ J s ». Pour une valeur nulle, la puissance
     est celle de l'incertitude."""
     unite = f" {unite}" if unite else ""
     valeur = float(valeur)
@@ -462,10 +466,13 @@ def formater(valeur, sigma=None, unite=""):
         if exposant is None:
             return f"{valeur:.4g}{unite}"
         return f"{valeur / 10**exposant:.4g} × {_puissance(exposant)}{unite}"
+    if not k > 0:
+        raise ValueError(f"facteur d'élargissement : strictement positif ({k})")
     if not np.isfinite(sigma):
         return f"{valeur:.4g} ± {sigma}{unite}"
     if sigma < 0:
         raise ValueError(f"incertitude négative : {sigma}")
+    sigma = k * float(sigma)
     exposant = _exposant(valeur if valeur != 0 else sigma)
     if exposant is None:
         v, s, _ = _arrondis(valeur, sigma)
@@ -477,9 +484,10 @@ def formater(valeur, sigma=None, unite=""):
     return f"({v} ± {s}) × {_puissance(exposant)}{unite}"
 
 
-def resume_parametres(noms, pfit, err=None, unites=None):
+def resume_parametres(noms, pfit, err=None, unites=None, k=2):
     """Une ligne par paramètre, « nom = valeur ± incertitude unité », par
-    formater. `err` : les incertitudes-types, une par paramètre (le `err` de
+    formater : l'incertitude écrite est l'incertitude élargie k·u, 2u par
+    défaut. `err` : les incertitudes-types, une par paramètre (le `err` de
     curvefit), ou la matrice de covariance que rend scipy.optimize.curve_fit,
     dont on prend la racine de la diagonale ; sans, les valeurs seules."""
     if err is None:
@@ -493,7 +501,7 @@ def resume_parametres(noms, pfit, err=None, unites=None):
             f"{len(noms)} noms, {len(pfit)} valeurs, {len(sigmas)} incertitudes, {len(unites)} unités : "
             "il en faut autant de chaque"
         )
-    return "\n".join(f"{nom} = {formater(v, s, u)}" for nom, v, s, u in zip(noms, pfit, sigmas, unites))
+    return "\n".join(f"{nom} = {formater(v, s, u, k)}" for nom, v, s, u in zip(noms, pfit, sigmas, unites))
 
 
 def residus_complexes(complex_func, x, norm, phase, pfit):

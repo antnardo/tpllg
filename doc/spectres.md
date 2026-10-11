@@ -288,12 +288,12 @@ print(resume_parametres(("H0", "fc"), pfit, pcov, unites=("", "Hz")))
 résolution 10.0 Hz, fondamental à 200 Hz, 20.0 périodes acquises
 13 harmoniques détectées sur l'entrée, 9 sur la sortie
 9 points de gain, de 200 à 3400 Hz
-H0 = 0.9995 ± 0.0012
-fc = 511.2 ± 1.1 Hz
+H0 = 0.9995 ± 0.0025
+fc = 511.2 ± 2.3 Hz
 ```
 
 Neuf points de gain en une acquisition, et la fréquence de coupure à
-1 Hz. Les limites de la méthode se lisent dans les comptes : les
+2 Hz près (l'incertitude élargie). Les limites de la méthode se lisent dans les comptes : les
 harmoniques d'un créneau décroissent en `1/n`, la sortie d'un passe-bas les
 atténue encore, et au-delà de la dix-septième (3,4 kHz) l'amplitude de
 sortie passe sous le seuil de 20 mV. On n'a donc que les basses fréquences

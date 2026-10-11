@@ -75,7 +75,8 @@ for colonne, (titre, p) in enumerate(
     ecarts = (y - droite(x, *p)) / sigma_y
     haut.plot(x_fin, droite(x_fin, *p), color="tab:orange", label="le modèle")
     haut.vlines(x, droite(x, *p), y, color="tab:red", linewidth=2, label="les écarts")
-    haut.errorbar(x, y, yerr=sigma_y, fmt="o", color="tab:blue", markersize=4, capsize=3, label="les mesures")
+    barres = {"fmt": "o", "color": "tab:blue", "markersize": 4, "capsize": 3}
+    haut.errorbar(x, y, yerr=2 * sigma_y, label="les mesures, ± 2 sigma", **barres)  # k = 2
     haut.set_title(f"{titre} : chi2 = {np.sum(ecarts**2):.1f}", fontsize=10)
     haut.set_ylabel("y")
     haut.legend(fontsize=8, loc="upper left")
@@ -100,9 +101,11 @@ for valeur in (pfit[0] - err[0], pfit[0] + err[0]):
     ax.axvline(valeur, color="tab:red", linestyle="--", linewidth=1)
 for valeur in (pfit[1] - err[1], pfit[1] + err[1]):
     ax.axhline(valeur, color="tab:red", linestyle="--", linewidth=1)
-ax.plot(
-    [], [], color="tab:red", linestyle="--", linewidth=1, label="a ± {:.3f} et b ± {:.3f}".format(*tuple(err))
+# une propriété du contour : ce sont les incertitudes-types u, pas l'incertitude élargie 2u de formater
+tangentes = (
+    "a ± u(a) et b ± u(b), tangentes au contour +1 :\nu(a) = {:.3f}, u(b) = {:.3f}, incertitudes-types"
 )
+ax.plot([], [], color="tab:red", linestyle="--", linewidth=1, label=tangentes.format(*tuple(err)))
 ax.set_xlabel("a")
 ax.set_ylabel("b")
 ax.legend(fontsize=9, loc="upper right")

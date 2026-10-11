@@ -8,7 +8,7 @@ tous de la même façon, les moyennes de leurs paquets diffèrent, par le seul
 hasard de la répartition des copies. Le script estime par Monte-Carlo, en
 fonction du nombre de copies par correcteur, la dispersion de ces moyennes
 (écart-type des moyennes des correcteurs, et écart absolu moyen à la moyenne
-générale), avec son incertitude à 68 %.
+générale), avec son incertitude élargie (± 2u, environ 95 %).
 
 Deux distributions des notes, simulées, sont comparées :
 
@@ -125,7 +125,7 @@ for nom, p in distributions.items():
     for j, n_corr in enumerate(CORRECTEURS):
         e, u = resultats["std"][j], resultats["u_std"][j]
         (ligne,) = ax.plot(COPIES, e, label=f"{n_corr} correcteurs, {nom}, moyenne {moyenne:.1f}")
-        ax.fill_between(COPIES, e - u, e + u, color=ligne.get_color(), alpha=0.2)
+        ax.fill_between(COPIES, e - 2 * u, e + 2 * u, color=ligne.get_color(), alpha=0.2)  # ± 2u
         ax.plot(COPIES, resultats["abs"][j], "--", color=ligne.get_color())
         print(
             f"{nom} : écart-type des moyennes de {e[0]:.2f} ({COPIES[0]} copies) à {e[-1]:.2f} ({COPIES[-1]})"
@@ -135,6 +135,6 @@ ax.grid()
 ax.set_ylim(bottom=0)
 ax.set_xlim(0, COPIES.max())
 ax.set_xlabel("nombre de copies corrigées par correcteur")
-ax.set_ylabel("écart-type des moyennes (± écart-type) ;\nen tirets : écart absolu moyen")
+ax.set_ylabel("écart-type des moyennes (bande : ± 2u) ;\nen tirets : écart absolu moyen")
 fig.tight_layout()
 plt.show()

@@ -216,7 +216,18 @@ class TestShow:
     def test_trace_une_densite(self):
         _, ax, n, bins, _ = Point(3.0, 0.5, N=50000).show()
         assert (n * np.diff(bins)).sum() == pytest.approx(1, abs=1e-3)  # une densité, sur ± 5 écarts-types
-        assert len(ax.get_lines()) == 4  # moyenne, ± écart-type, loi normale
+        assert len(ax.get_lines()) == 4  # moyenne, ± 2u, loi normale
+
+    @pytest.mark.parametrize("k", [1, 2])
+    def test_traits_a_k_incertitudes_types(self, k):
+        p = Point(3.0, 0.5, N=50000)
+        _, ax, *_ = p.show(k=k)
+        bas, haut = ax.get_lines()[1].get_xdata()[0], ax.get_lines()[2].get_xdata()[0]
+        assert (bas, haut) == pytest.approx((p.val - k * p.u, p.val + k * p.u))
+
+    def test_k_nul_refuse(self):
+        with pytest.raises(ValueError, match="élargissement"):
+            Point(3.0, 0.5, N=1000).show(k=0)
 
     def test_dans_un_repere_donne_rend_sa_figure(self):
         f1, ax1 = plt.subplots()

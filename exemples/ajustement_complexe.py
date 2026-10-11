@@ -146,10 +146,11 @@ ajustements = (
     ("avec 3 % et 3°", pinc, einc, "tab:green", "--"),
 )
 fig, axes = plt.subplots(1, 3, figsize=(14, 4.4))
-barres = {"fmt": "o", "markersize": 3, "capsize": 2, "color": "tab:blue", "label": "les mesures"}
-axes[0].errorbar(f, H, yerr=u_H, **barres)
-axes[1].errorbar(f, H, yerr=u_H, **barres)
-axes[2].errorbar(f, phase_mesures, yerr=np.degrees(u_phi), **barres)
+# les barres : ± 2u, l'incertitude élargie (k = 2)
+barres = {"fmt": "o", "markersize": 3, "capsize": 2, "color": "tab:blue", "label": "les mesures, ± 2u"}
+axes[0].errorbar(f, H, yerr=2 * u_H, **barres)
+axes[1].errorbar(f, H, yerr=2 * u_H, **barres)
+axes[2].errorbar(f, phase_mesures, yerr=2 * np.degrees(u_phi), **barres)
 for nom, p, e, couleur, trait in ajustements:
     legende = f"{nom} : " + resume_parametres(NOMS, p, e, UNITES).replace("\n", ", ")
     axes[0].plot(f_fin, abs(passe_bande(f_fin, *p)), trait, color=couleur, label=legende)

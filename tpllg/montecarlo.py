@@ -178,9 +178,12 @@ class Point:
     def __repr__(self):
         return f"Point({self.val:g}, {self.u:g}, N={self.N})"
 
-    def show(self, ax=None, largeur=5, nbins=1000):
-        """L'histogramme des tirages, la moyenne, ± l'écart-type, et la loi
+    def show(self, ax=None, largeur=5, nbins=1000, k=2):
+        """L'histogramme des tirages, la moyenne, ± k fois l'écart-type — 2u,
+        l'incertitude élargie que formater écrit, par défaut —, et la loi
         normale de même moyenne et écart-type. Rend (fig, ax, n, bins, patches)."""
+        if not k > 0:
+            raise ValueError(f"facteur d'élargissement : strictement positif ({k})")
         if ax is None:
             fig, ax = plt.subplots()
         else:
@@ -190,8 +193,9 @@ class Point:
         n, _, patches = ax.hist(self.tirage, bins=bins, density=True)
         haut = max(n) * 1.1
         ax.plot([self.val, self.val], [0, haut], "--", label=f"moyenne={self.val:.2e}")
-        trait = ax.plot([self.val - self.u] * 2, [0, haut], "--", label=f"écart-type={self.u:.2e}")
-        ax.plot([self.val + self.u] * 2, [0, haut], "--", color=trait[0].get_color())
+        elargie = k * self.u
+        trait = ax.plot([self.val - elargie] * 2, [0, haut], "--", label=f"± {k:g}u, u={self.u:.2e}")
+        ax.plot([self.val + elargie] * 2, [0, haut], "--", color=trait[0].get_color())
         x = np.linspace(x1, x2, 500)
         ax.plot(
             x,

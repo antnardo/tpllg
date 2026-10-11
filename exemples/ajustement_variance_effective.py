@@ -113,23 +113,23 @@ ax.plot(t_fin, modele(t_fin, *pfit), color="tab:orange", label="le modèle ajust
 ax.errorbar(
     t,
     u,
-    yerr=sigma_effectif,
+    yerr=2 * sigma_effectif,
     fmt="none",
     ecolor="tab:red",
     elinewidth=4,
     alpha=0.5,
-    label="± sigma effectif : ce que chaque point pèse",
+    label="± 2 sigma effectif : ce que chaque point pèse",
 )
 ax.errorbar(
     t,
     u,
-    xerr=sigma_t,
-    yerr=sigma_u,
+    xerr=2 * sigma_t,
+    yerr=2 * sigma_u,
     fmt="o",
     color="tab:blue",
     markersize=4,
     capsize=2,
-    label="les mesures, ± sigma_t et ± sigma_u",
+    label="les mesures, ± 2 sigma_t et ± 2 sigma_u (k = 2)",
 )
 ax.set_title("raide à gauche, plate à droite : la barre effective suit", fontsize=10)
 ax.set_xlabel("t (s)")

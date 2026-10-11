@@ -1,7 +1,8 @@
 """
 Une série de mesures répétées : la moyenne m, l'écart-type s de la série et
 l'incertitude-type delta = s/sqrt(N) sur la moyenne, lus sur l'histogramme
-des mesures, puis sur les mesures dans l'ordre où elles ont été faites.
+des mesures, puis sur les mesures dans l'ordre où elles ont été faites. Le
+résultat s'écrit m ± 2 delta, l'incertitude élargie (k = 2, environ 95 %).
 Voir doc/incertitudes.md.
 
 Deux séries côte à côte, cinq mesures puis cinquante de même dispersion :
@@ -24,11 +25,13 @@ series = (("5 mesures", mesures), ("50 mesures", np.concatenate([mesures, suite]
 
 
 def reperes(ax, m, s, delta, vertical):
-    """La moyenne en trait, m ± s et m ± delta en deux bandes colorées :
-    verticales sur un histogramme, horizontales sur les mesures dans l'ordre."""
+    """La moyenne en trait, m ± s (la dispersion) et m ± 2 delta (le résultat,
+    à k = 2) en deux bandes colorées : verticales sur un histogramme,
+    horizontales sur les mesures dans l'ordre."""
     trait, bande = (ax.axvline, ax.axvspan) if vertical else (ax.axhline, ax.axhspan)
     bande(m - s, m + s, color="tab:orange", alpha=0.3, zorder=0, label="m ± s : la dispersion d'une mesure")
-    bande(m - delta, m + delta, color="tab:red", alpha=0.5, zorder=0, label="m ± delta : le résultat")
+    bas, haut = m - 2 * delta, m + 2 * delta  # l'incertitude élargie, k = 2
+    bande(bas, haut, color="tab:red", alpha=0.5, zorder=0, label="m ± 2 delta : le résultat")
     trait(m, color="darkred", label="m : la moyenne")
 
 
@@ -45,7 +48,8 @@ def legende_commune(fig, ax):
 
 for nom, serie in series:
     m, delta, s = incertitudes(serie)
-    print(f"{nom:10s} : m = {m:.4f}  s = {s:.4f}  delta = {delta:.4f}  soit g = {formater(m, delta, 'm/s²')}")
+    resultat = formater(m, delta, "m/s²")  # m ± 2 delta
+    print(f"{nom:10s} : m = {m:.4f}  s = {s:.4f}  delta = {delta:.4f}  soit g = {resultat} (± 2 delta)")
 
 # 1. l'histogramme des mesures : une classe par valeur lisible, centrée sur elle
 classes = np.arange(9.705, 9.925, PAS)

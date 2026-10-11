@@ -47,7 +47,10 @@ for colonne, (titre, module, phase) in enumerate(cas):
     print("  résidus de la phase, en ° :", " ".join(f"{r:+.0f}" for r in res_phi))
     haut, bas = axes[0, colonne], axes[1, colonne]
     for ax, residus, demi in ((haut, 100 * res_H, 3), (bas, res_phi, 3)):
-        ax.axhspan(-demi, demi, color="tab:orange", alpha=0.25, label="l'incertitude de mesure")
+        # ± 2u, l'incertitude élargie de mesure (k = 2)
+        ax.axhspan(
+            -2 * demi, 2 * demi, color="tab:orange", alpha=0.25, label="± 2u : l'incertitude de mesure"
+        )
         ax.axhline(0, color="tab:orange")
         ax.semilogx(f, residus, "o", color="tab:blue", markersize=4)
     haut.set_title(titre, fontsize=10)

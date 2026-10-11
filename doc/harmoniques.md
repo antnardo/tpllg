@@ -5,8 +5,7 @@ harmoniques, le fait passer par le calcul dans un filtre linéaire, et en
 donne la valeur efficace. C'est le chemin inverse de
 [spectres.md](spectres.md), qui part d'un signal mesuré : ici rien n'est
 mesuré, tout se calcule, ce qui sert à préparer un TP de filtrage, un
-exercice, ou à simuler l'acquisition qu'un script exploitera. Le module
-reprend `traitementsignal` (2014-2019), corrigé.
+exercice, ou à simuler l'acquisition qu'un script exploitera.
 
 ## Sommaire
 
@@ -15,7 +14,6 @@ reprend `traitementsignal` (2014-2019), corrigé.
 - [Les filtres](#les-filtres)
 - [Filtrer et lire la valeur efficace](#filtrer-et-lire-la-valeur-efficace)
 - [Cas complet : synthèse, filtrage, analyseur de spectre](#cas-complet--synthèse-filtrage-analyseur-de-spectre)
-- [Depuis traitementsignal](#depuis-traitementsignal)
 
 ## Le signal
 
@@ -171,24 +169,3 @@ veff = [creneau.filtre(passe_bande(f0, 50)).Veff for f0 in accords]
 `exemples/spectre_harmoniques.py` se sert du même module pour simuler
 l'acquisition d'un créneau et de sa sortie par un passe-bas, que le script
 analyse ensuite comme une vraie mesure ([spectres.md](spectres.md)).
-
-## Depuis traitementsignal
-
-| `traitementsignal` | `tpllg` |
-| --- | --- |
-| `filtrage.Signal(moyenne=, f0=, spectre=, amplitude=, nmax=)` | `harmoniques.Signal(...)`, mêmes arguments, `moyenne` facultative |
-| `filtrage.spectre_carre` | `harmoniques.spectre_carre` |
-| `filtrage.passebande(f0, Q, H0)`, `passebas_ordre1`, `passebas_ordre2`, `passehaut_ordre1`, `passehaut_ordre2` | `passe_bande`, `passe_bas_1`, `passe_bas_2`, `passe_haut_1`, `passe_haut_2`, avec `H0=1` par défaut |
-| `filtrage.filtre_passebande(f, f0, Q, H0)` et les autres | `passe_bande(f0, Q, H0)(f)` |
-| `signal.set_harmoniques(nmax)` | un nouveau `Signal(..., nmax=…)` |
-| `fourier.spectre_to_func(amplitudes, phases)` puis `func(f0, t)` | `Signal.depuis_coefficients(f0, amplitudes, phases)` puis `signal(t)` |
-| `fourier.fourier(t, s)` | `tpllg.fft.calcule_DFT(t, s)` |
-
-Ce qui était faux et ne l'est plus : les cinq fabriques de filtres
-plantaient (`make_filtre` appelé en positionnel) ; `Veff` comptait la
-moyenne pour la moitié de son carré (1,58 au lieu de 2,12 pour
-`2 + cos`) ; le filtrage multipliait la moyenne par `|H(0)|`, perdant le
-signe d'un inverseur ; un spectre en entiers levait `UFuncTypeError` ;
-`spectre_to_func` modifiait la liste de phases qu'on lui passait ; et
-`fourier` normalisait par `2 dt`, juste pour une seconde de signal
-seulement — `calcule_DFT` normalise par `2/N`.

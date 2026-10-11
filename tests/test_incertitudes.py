@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from scipy import stats
 
+from tpllg.ajustement import formater
 from tpllg.incertitudes import incertitudes, loi_normale, loi_normale_cumulee, student_coef
 
 MESURES = [9.78, 9.81, 9.85, 9.79, 9.83]
@@ -17,14 +18,20 @@ class TestIncertitudes:
         assert m == pytest.approx(9.812) and s == pytest.approx(np.std(MESURES, ddof=1))
         assert delta == pytest.approx(s / np.sqrt(5))
 
-    def test_sigma_sans_student_multiplie_l_incertitude(self):
-        """sigma était ignoré sans advanced : incertitudes(L, sigma=2) rendait l'incertitude à 68 %."""
-        _, delta, s = incertitudes(MESURES, sigma=2)
-        assert delta == pytest.approx(2 * s / np.sqrt(5))
+    @pytest.mark.parametrize(
+        ("args", "kwargs"), [((), {"sigma": 2}), ((), {"advanced": True}), ((2,), {}), ((2, True), {})]
+    )
+    def test_sigma_et_advanced_refuses(self, args, kwargs):
+        """Ils rendaient une incertitude déjà élargie, que formater aurait élargie une seconde fois."""
+        with pytest.raises(TypeError, match="incertitude-type"):
+            incertitudes(MESURES, *args, **kwargs)
 
-    def test_avec_student(self):
-        _, delta, s = incertitudes(MESURES, sigma=2, advanced=True)
-        assert delta == pytest.approx(student_coef(2, 5) * s / np.sqrt(5))
+    def test_student_par_le_facteur_d_elargissement(self):
+        """L'intervalle de Student à 95 % : k = student_coef(2, N) à l'écriture, sur l'incertitude-type."""
+        m, delta, _ = incertitudes(MESURES)
+        k = student_coef(2, len(MESURES))
+        assert formater(m, delta, "m/s²", k=k) == "9.812 ± 0.037 m/s²"
+        assert formater(m, delta, "m/s²", k=student_coef(1, len(MESURES))) == "9.812 ± 0.015 m/s²"
 
     def test_une_mesure_ne_suffit_pas(self):
         with pytest.raises(ValueError, match="deux mesures"):

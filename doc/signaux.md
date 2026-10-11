@@ -368,11 +368,11 @@ pseudo-fréquence (pic de la FFT) : 2000 Hz
 offset : 0.018 V, écart-type en fin de fenêtre 25 mV
 8 extremums au-dessus de 0.25 V, le premier à -1.39 V
 amortissement : alpha = 972 1/s, décrément delta = 0.486, Q ≈ pi/delta = 6.47
-A = -1.5897 ± 0.0021 V
-f0 = 1994.87 ± 0.29 Hz
-Q = 6.277 ± 0.012
-t0 = 0.00488163 ± 0.00000010 s
-v_off = 0.01940 ± 0.00034 V
+A = -1.5897 ± 0.0042 V
+f0 = 1994.87 ± 0.59 Hz
+Q = 6.277 ± 0.023
+t0 = 0.00488163 ± 0.00000021 s
+v_off = 0.01940 ± 0.00069 V
 résidus : écart-type 10.2 mV
 ```
 
@@ -383,7 +383,8 @@ dans le bruit, donnaient `Q ≈ 7,2`.) L'écart-type « en fin de fenêtre »
 surestime le bruit, l'oscillation n'y est pas tout à fait éteinte : le seuil
 n'en est que plus prudent. L'instant du front `t0` est un **paramètre
 ajusté** et non une donnée : l'interpolation le donne à une fraction de
-point, l'ajustement à un dixième de microseconde, et c'est ce qui rend la
+point, l'ajustement à deux dixièmes de microseconde (l'incertitude
+élargie), et c'est ce qui rend la
 méthode indifférente au déclenchement, matériel ou non. Et l'écart-type des
 résidus, 10 mV, est celui du bruit mis dans la simulation : le modèle
 explique tout ce qui n'est pas du bruit. Sur une vraie mesure, des résidus

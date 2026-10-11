@@ -35,11 +35,11 @@ sigma_y = 0.15
 
 cas = (
     ("sans incertitudes", {}, {}),
-    ("incertitudes sur y", {"datayerrors": sigma_y}, {"yerr": sigma_y}),
+    ("incertitudes sur y", {"datayerrors": sigma_y}, {"yerr": 2 * sigma_y}),  # les barres à ± 2u
     (
         "incertitudes sur x et y",
         {"datayerrors": sigma_y, "dataxerrors": sigma_x, "function_derivate": modele_derivee},
-        {"xerr": sigma_x, "yerr": sigma_y},
+        {"xerr": 2 * sigma_x, "yerr": 2 * sigma_y},
     ),
 )
 x_fin = np.linspace(0, 2, 100)
@@ -53,19 +53,28 @@ for colonne, (titre, incertitudes, barres) in enumerate(cas):
     suite = f"chi2 réduit = {chi2:.2f}" if incertitudes else "chi2 réduit : sans objet"
     print(f"{titre:24s}", resume, "  " + suite)
     haut, bas = axes[0, colonne], axes[1, colonne]
-    haut.errorbar(x, y, fmt="o", markersize=4, capsize=2, label="les mesures", **barres)
+    haut.errorbar(
+        x,
+        y,
+        fmt="o",
+        markersize=4,
+        capsize=2,
+        label="les mesures, ± 2u" if barres else "les mesures",
+        **barres,
+    )
     haut.plot(x_fin, modele(x_fin, *pfit), color="tab:orange", label="la droite ajustée")
     haut.set_title(f"{titre}\n{resume}\n{suite}", fontsize=10)
     haut.legend(fontsize=8, loc="upper left")
     # la même chose une fois la droite retranchée : la bande devient visible
+    # l'incertitude élargie sur la droite, 2u (k = 2, environ 95 %), comme ce qu'écrit resume_parametres
     u = bande(x_fin, x, err)
     bas.fill_between(
         x_fin,
-        -u,
-        u,
+        -2 * u,
+        2 * u,
         color="tab:orange",
         alpha=0.35,
-        label="où la droite peut passer, à ± une incertitude-type",
+        label="où la droite peut passer : ± 2u (k = 2, environ 95 %)",
     )
     bas.axhline(0, color="tab:orange")
     bas.errorbar(x, y - modele(x, *pfit), fmt="o", markersize=4, capsize=2, **barres)
@@ -73,7 +82,7 @@ for colonne, (titre, incertitudes, barres) in enumerate(cas):
     bas.legend(fontsize=8, loc="upper left")
 axes[0, 0].set_ylabel("y")
 axes[1, 0].set_ylabel("y - (a x + b)")
-axes[1, 0].set_ylim(-0.36, 0.36)
+axes[1, 0].set_ylim(-0.36, 0.46)  # de la place pour la légende au-dessus de la bande
 fig.tight_layout()
 plt.savefig("ajustement_droite.pdf")
 

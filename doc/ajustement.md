@@ -49,12 +49,13 @@ sont corrélés, ce qu'on regarde rarement mais qui compte pour propager.
 
 Dans le plan des deux paramètres, le chi2 est une vallée. Son fond est
 `pfit`, et sa largeur donne les incertitudes : le contour où le chi2 dépasse
-son minimum de 1 touche les droites `a ± 0.083` et `b ± 0.095`, les
-incertitudes-types que l'ajustement rend. La vallée est en biais — une pente
+son minimum de 1 touche les droites `a ± u(a)` et `b ± u(b)`, où
+`u(a) = 0.083` et `u(b) = 0.095` sont les incertitudes-types que
+l'ajustement rend — `formater` en écrit le double, l'incertitude élargie. La vallée est en biais — une pente
 plus forte se rattrape par une ordonnée à l'origine plus basse — et c'est ce
 que disent les termes croisés de `pcov`.
 
-![Le chi2 de la droite dans le plan (a, b) : des ellipses allongées en biais autour du minimum, les contours à +1, +4 et +9, et les droites a ± 0,083 et b ± 0,095 tangentes au contour +1](images/ajustement_chi2_vallee.png)
+![Le chi2 de la droite dans le plan (a, b) : des ellipses allongées en biais autour du minimum, les contours à +1, +4 et +9, et les droites a ± u(a) et b ± u(b), u(a) = 0,083 et u(b) = 0,095, tangentes au contour +1](images/ajustement_chi2_vallee.png)
 
 Et le chemin que `curve_fit` y suit depuis `p0`. Pour la droite la vallée est
 une cuvette parabolique, et un pas suffit d'où qu'on parte ; pour une
@@ -148,15 +149,16 @@ barre effective est longue là où la courbe est raide, et se réduit à
 ![À gauche, un point du modèle, sa tangente, la barre horizontale ± sigma_t et les trois barres verticales qu'on en tire : |f'| sigma_t, sigma_u et leur somme quadratique. À droite, les dix mesures avec leurs barres en t et en u, et la barre effective de chacune, longue à gauche et courte à droite](images/ajustement_variance_effective.png)
 
 ```text
-incertitudes sur u seules   A = 1.917 ± 0.041 V   tau = 1.536 ± 0.045 s   chi2 réduit = 30.44
-incertitudes sur t et sur u A = 2.02 ± 0.11 V   tau = 1.442 ± 0.063 s   chi2 réduit = 1.52
+incertitudes sur u seules   A = 1.917 ± 0.082 V   tau = 1.536 ± 0.091 s   chi2 réduit = 30.44
+incertitudes sur t et sur u A = 2.02 ± 0.22 V   tau = 1.44 ± 0.13 s   chi2 réduit = 1.52
 ```
 
 Les mesures ont été tirées autour de `A = 2 V` et `tau = 1,5 s`. En oubliant
-l'incertitude sur le temps, l'ajustement annonce `A = 1,917 ± 0,041 V`, à
-deux incertitudes-types de la vraie valeur, et un χ² réduit de 30 qui dit
-que les écarts ne sont pas expliqués ; avec elle, `2,02 ± 0,11 V`, à un
-cinquième d'incertitude, et un χ² réduit de 1,5. Les premiers points, là où
+l'incertitude sur le temps, l'ajustement annonce `A = 1,917 ± 0,082 V`, à
+deux incertitudes-types de la vraie valeur, juste hors de l'intervalle
+écrit, et un χ² réduit de 30 qui dit que les écarts ne sont pas
+expliqués ; avec elle, `2,02 ± 0,22 V`, à un cinquième d'incertitude-type,
+et un χ² réduit de 1,5. Les premiers points, là où
 la courbe est raide, ne méritaient pas le poids que `sigma_u` seule leur
 donnait.
 
@@ -169,10 +171,10 @@ montre ce second cas, `sigma_x` croissant comme `x + 1` et `sigma_y` comme
 `x² + 1` :
 
 ```text
-sans incertitudes        a = 2.29 ± 0.28   b = -1.37 ± 0.34   chi2 réduit : sans objet
-incertitudes sur y       a = 1.93 ± 0.18   b = -1.13 ± 0.12   chi2 réduit = 1.35
-incertitudes sur x et y  a = 1.96 ± 0.20   b = -1.14 ± 0.15   chi2 réduit = 0.99
-régression de York       a = 2.01 ± 0.21   b = -1.17 ± 0.15   chi2 réduit = 0.99
+sans incertitudes        a = 2.29 ± 0.56   b = -1.37 ± 0.68   chi2 réduit : sans objet
+incertitudes sur y       a = 1.93 ± 0.35   b = -1.13 ± 0.25   chi2 réduit = 1.35
+incertitudes sur x et y  a = 1.96 ± 0.41   b = -1.14 ± 0.30   chi2 réduit = 0.99
+régression de York       a = 2.01 ± 0.42   b = -1.17 ± 0.31   chi2 réduit = 0.99
 ```
 
 ![Dix points aux barres d'incertitude croissantes et quatre droites : sans incertitudes, tirée par les points imprécis ; avec celles de y, de x et y, et la régression de York, proches de la droite vraie](images/ajustement_bruit_variable.png)
@@ -232,21 +234,22 @@ print(
 ```
 
 ```text
-sans incertitudes       a = 2.010 ± 0.038   b = -1.006 ± 0.044
-incertitudes sur y      a = 2.010 ± 0.083   b = -1.006 ± 0.095   chi2 réduit = 0.21
-incertitudes sur x et y a = 2.010 ± 0.099   b = -1.01 ± 0.11   chi2 réduit = 0.14
+sans incertitudes       a = 2.010 ± 0.076   b = -1.006 ± 0.087
+incertitudes sur y      a = 2.01 ± 0.17   b = -1.01 ± 0.19 chi2 réduit = 0.21
+incertitudes sur x et y a = 2.01 ± 0.20   b = -1.01 ± 0.23 chi2 réduit = 0.14
 ```
 
-Mêmes paramètres trois fois, comme annoncé. Sans incertitudes, l'ajustement
-annonce ±0,038 sur la pente parce que les points sont bien alignés ; avec
-les incertitudes déclarées, ±0,083, et un χ² réduit de 0,21 qui dit que les
+Mêmes paramètres trois fois, comme annoncé (l'arrondi suit l'incertitude
+écrite, l'incertitude élargie `2u`). Sans incertitudes, l'ajustement
+annonce ±0,076 sur la pente parce que les points sont bien alignés ; avec
+les incertitudes déclarées, ±0,17, et un χ² réduit de 0,21 qui dit que les
 points sont **plus** alignés que les incertitudes ne le laissaient attendre :
 les 0,15 V annoncés sont surestimés d'un facteur deux environ.
 
 `exemples/ajustement_droite.py` refait ces trois ajustements et les trace.
 En haut, la même droite trois fois ; en bas, une fois la droite retranchée,
-la bande où elle peut passer à ± une incertitude-type : c'est elle qui
-change d'un ajustement à l'autre.
+la bande où elle peut passer, à ± 2u (l'incertitude élargie, `k = 2`) :
+c'est elle qui change d'un ajustement à l'autre.
 
 ![Trois colonnes, sans incertitudes, avec celles de y, avec celles de x et de y : en haut les dix points et la même droite, en bas les écarts à la droite et la bande d'incertitude de la droite, de plus en plus large](images/ajustement_droite.png)
 
@@ -274,17 +277,18 @@ for sigma in (0.02, 0.005, 0.08):
 ```
 
 ```text
-sigma = 0.02 a = 1.998 ± 0.014   tau = 1.500 ± 0.017   chi2 réduit = 1.41
-sigma = 0.005 a = 1.9983 ± 0.0036   tau = 1.5000 ± 0.0042   chi2 réduit = 22.54
-sigma = 0.08 a = 1.998 ± 0.057   tau = 1.500 ± 0.067   chi2 réduit = 0.09
+sigma = 0.02 a = 1.998 ± 0.029   tau = 1.500 ± 0.034 chi2 réduit = 1.41
+sigma = 0.005 a = 1.9983 ± 0.0071   tau = 1.5000 ± 0.0084 chi2 réduit = 22.54
+sigma = 0.08 a = 2.00 ± 0.11   tau = 1.50 ± 0.13 chi2 réduit = 0.09
 ```
 
 `exemples/ajustement_chi2_reduit.py` trace les trois cas. Ce sont les
-résidus, en bas, qui disent si la barre est à la bonne taille : à 0,02 V,
-douze barres sur vingt coupent le zéro, ce qu'on attend d'une
-incertitude-type (68 %) ; à 0,005 V, quatre ; à 0,08 V, toutes, et de loin.
+résidus, en bas, qui disent si la barre est à la bonne taille. Les barres
+sont à ± 2 sigma, l'incertitude élargie : à 0,02 V, dix-neuf barres sur
+vingt coupent le zéro, ce qu'on attend à 95 % ; à 0,005 V, sept ; à 0,08 V,
+toutes, et de loin.
 
-![Les vingt points et l'exponentielle ajustée, trois fois, avec des barres de 0,02, 0,005 et 0,08 V ; dessous, les résidus avec les mêmes barres : justes, trop courtes, trop longues](images/ajustement_chi2_reduit_sigma.png)
+![Les vingt points et l'exponentielle ajustée, trois fois, avec des barres de ± 2 sigma, sigma valant 0,02, 0,005 et 0,08 V ; dessous, les résidus avec les mêmes barres : justes, trop courtes, trop longues](images/ajustement_chi2_reduit_sigma.png)
 
 | χ² réduit | Ce qu'il dit |
 | --- | --- |
@@ -295,15 +299,15 @@ incertitude-type (68 %) ; à 0,005 V, quatre ; à 0,08 V, toutes, et de loin.
 Le même jeu de points ajusté par une droite, un modèle faux :
 
 ```text
-a = -0.3378 ± 0.0029   b = 1.4468 ± 0.0086   chi2 réduit = 136.4
+a = -0.3378 ± 0.0059   b = 1.447 ± 0.017   chi2 réduit = 136.4
 ```
 
 Un χ² réduit de 136 pour des incertitudes justes, c'est le modèle qui est
-faux, et les ±0,003 annoncés ne veulent rien dire : ils décrivent la
+faux, et les ±0,006 annoncés ne veulent rien dire : ils décrivent la
 précision avec laquelle on a trouvé la meilleure droite, pas la distance de
 cette droite aux mesures. C'est le cas où l'on regarde les résidus.
 
-![Les vingt points de l'exponentielle et la droite ajustée, qui passe au travers ; dessous, les résidus en arc, positifs aux deux bouts et négatifs au milieu, à dix barres d'incertitude du zéro](images/ajustement_chi2_reduit_modele.png)
+![Les vingt points de l'exponentielle et la droite ajustée, qui passe au travers ; dessous, les résidus en arc, positifs aux deux bouts et négatifs au milieu, à plus de dix barres d'incertitude du zéro](images/ajustement_chi2_reduit_modele.png)
 
 Les résidus dessinent un arc, positifs aux deux bouts et négatifs au milieu :
 ce n'est pas du bruit, c'est la courbure que la droite n'a pas.
@@ -354,19 +358,19 @@ l'ordonnée 5,4799 de la publication, et les incertitudes de `scipy.odr`.
 variables, au Monte-Carlo de la même droite et à la variance effective :
 
 ```text
-régression de York                   a = -1.717 ± 0.037   b = -0.410 ± 0.022
-Monte-Carlo, York sur chaque tirage  a = -1.717 ± 0.038   b = -0.410 ± 0.022
-variance effective (curvefit)        a = -1.708 ± 0.037   b = -0.409 ± 0.022
-Monte-Carlo sans pondération         a = -1.636 ± 0.050   b = -0.417 ± 0.027
+régression de York                   a = -1.717 ± 0.074   b = -0.410 ± 0.044
+Monte-Carlo, York sur chaque tirage  a = -1.717 ± 0.075   b = -0.410 ± 0.044
+variance effective (curvefit)        a = -1.708 ± 0.074   b = -0.409 ± 0.044
+Monte-Carlo sans pondération         a = -1.64 ± 0.10     b = -0.417 ± 0.054
 chi2 réduit de York : 0.78
 ```
 
 ![À gauche, vingt points aux barres d'incertitude très inégales et les quatre droites ; à droite, les histogrammes des pentes des tirages, pondérés par York et non pondérés, décalés l'un de l'autre](images/regression_york.png)
 
-La dernière ligne est le Monte-Carlo d'un ancien script qui comparait
-`scipy.odr` et des tirages ajustés par `np.polyfit` : sans pondération, un
+La dernière ligne ajuste chaque tirage par `np.polyfit`, sans
+pondération : un
 point très incertain pèse autant qu'un point précis, et la pente sort à
-deux incertitudes de la bonne. Un Monte-Carlo ne dispense pas de pondérer.
+plus de deux incertitudes-types de la bonne. Un Monte-Carlo ne dispense pas de pondérer.
 
 ## curve_fit_complex, module et phase ensemble
 
@@ -450,9 +454,9 @@ print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
 ```
 
 ```text
-H0 = -5.121 ± 0.098
-f0 = 1989.7 ± 2.9 Hz
-Q = 6.49 ± 0.14
+H0 = -5.12 ± 0.20
+f0 = 1989.7 ± 5.8 Hz
+Q = 6.49 ± 0.28
 ```
 
 Dans le plan complexe, les mesures d'un passe-bande sont sur un cercle qui
@@ -477,9 +481,9 @@ print(f"chi2 réduit = {chi2:.2f}")
 ```
 
 ```text
-H0 = -5.080 ± 0.072
-f0 = 1993.2 ± 2.7 Hz
-Q = 6.42 ± 0.11
+H0 = -5.08 ± 0.14
+f0 = 1993.2 ± 5.4 Hz
+Q = 6.42 ± 0.22
 chi2 réduit = 1.25
 ```
 
@@ -598,18 +602,18 @@ systématique (une phase lue avec le mauvais signe), un point faux. Pour un
 ajustement réel, on calcule `y - modele(x, *pfit)` de la même façon.
 
 `exemples/ajustement_residus.py` trace les deux cas. À gauche, les résidus
-ci-dessus, avec la bande de l'incertitude de mesure. À droite, le même modèle
-ajusté sur des mesures simulées où l'amplificateur coupe à 50 kHz, ce que le
-modèle ignore : jusqu'à 5 kHz rien ne se voit, puis la phase décroche, de
+ci-dessus, avec la bande ± 2u de l'incertitude élargie de mesure. À
+droite, le même modèle ajusté sur des mesures simulées où l'amplificateur
+coupe à 50 kHz, ce que le modèle ignore : jusqu'à 5 kHz rien ne se voit, puis la phase décroche, de
 −10° à −22°, quand le bruit de mesure n'est que de 3°.
 
-![Les résidus du module et de la phase en fonction de la fréquence, avec la bande ± 3 % et ± 3° : à gauche répartis au hasard autour de zéro, à droite la phase qui décroche au-dessus de 5 kHz](images/ajustement_residus.png)
+![Les résidus du module et de la phase en fonction de la fréquence, avec la bande ± 6 % et ± 6°, deux fois les 3 % et 3° de la mesure : à gauche répartis au hasard autour de zéro, à droite la phase qui décroche au-dessus de 5 kHz](images/ajustement_residus.png)
 
 L'ajustement, lui, ne signale rien. Sur ces mesures simulées autour de
 `H0 = -5`, `f0 = 1994,6 Hz` et `Q = 6,27`, il rend :
 
 ```text
-H0 = -5.08 ± 0.22   f0 = 1982.3 ± 6.5 Hz   Q = 6.50 ± 0.32
+H0 = -5.08 ± 0.43   f0 = 1982 ± 13 Hz   Q = 6.50 ± 0.64
 ```
 
 des valeurs plausibles, à moins de deux incertitudes-types des vraies : rien,
@@ -621,37 +625,48 @@ disent.
 ```python
 from tpllg.ajustement import formater, resume_parametres
 
-texte = formater(valeur, sigma=None, unite="")
-texte = resume_parametres(noms, pfit, err=None, unites=None)
+texte = formater(valeur, sigma=None, unite="", k=2)
+texte = resume_parametres(noms, pfit, err=None, unites=None, k=2)
 ```
 
-`formater` écrit « valeur ± incertitude unité » avec **deux chiffres
-significatifs sur l'incertitude** et la valeur arrondie au même rang, la
-règle des comptes rendus de TP — y compris quand l'arrondi change de
-décade : 0,0996 donne 0,10, pas 0,100. Sans incertitude, ou avec une
+`sigma` est l'**incertitude-type** `u`, celle que rendent les ajustements et
+`incertitudes` ; `formater` écrit derrière le `±` l'**incertitude élargie**
+`k × u`, avec le facteur d'élargissement `k = 2` par défaut, soit environ
+95 % pour une loi normale. `k=1` écrit l'incertitude-type elle-même ;
+`k=student_coef(2, N)` élargit par le coefficient de Student d'une série de
+`N` mesures (voir
+[incertitudes.md](incertitudes.md#le-coefficient-de-student)). `k` doit
+être strictement positif.
+
+`formater` écrit donc « valeur ± incertitude élargie unité » avec **deux
+chiffres significatifs sur l'incertitude écrite** et la valeur arrondie au
+même rang, la règle des comptes rendus de TP — y compris quand l'arrondi
+change de décade : une incertitude écrite de 0,0996 donne 0,10, pas 0,100. Sans incertitude, ou avec une
 incertitude nulle, quatre chiffres significatifs ; une incertitude infinie
 ou indéfinie s'écrit telle quelle, une incertitude négative est refusée.
 
 Hors de `[10⁻³, 10⁵[`, la **notation scientifique**, avec une puissance de
 dix commune à la valeur et à l'incertitude, celle de la valeur (celle de
-l'incertitude si la valeur est nulle) : `(6.6260 ± 0.0010) × 10⁻³⁴`, et
+l'incertitude si la valeur est nulle) : `(6.6260 ± 0.0020) × 10⁻³⁴`, et
 non quarante zéros. La puissance s'écrit en exposants Unicode, lisibles
 dans une console comme dans une légende matplotlib.
 
 ```python
 >>> formater(1993.489, 1.875, "Hz")
+'1993.5 ± 3.8 Hz'
+>>> formater(1993.489, 1.875, "Hz", k=1)
 '1993.5 ± 1.9 Hz'
 >>> formater(6.609, 0.156)
-'6.61 ± 0.16'
+'6.61 ± 0.31'
 >>> formater(0.001234, 0.000047, "s")
-'0.001234 ± 0.000047 s'
+'0.001234 ± 0.000094 s'
 >>> formater(0.000123456, 0.0000047, "s")
-'(1.235 ± 0.047) × 10⁻⁴ s'
+'(1.235 ± 0.094) × 10⁻⁴ s'
 >>> formater(1234567.0, 5432.0, "Hz")
-'(1.2346 ± 0.0054) × 10⁶ Hz'
+'(1.235 ± 0.011) × 10⁶ Hz'
 >>> formater(6.626e-34, 1e-37, "J s")
-'(6.6260 ± 0.0010) × 10⁻³⁴ J s'
->>> formater(1.0, 0.0996)
+'(6.6260 ± 0.0020) × 10⁻³⁴ J s'
+>>> formater(1.0, 0.0498)
 '1.00 ± 0.10'
 >>> formater(2.5, None, "V")
 '2.5 V'
@@ -662,7 +677,7 @@ dans une console comme dans une légende matplotlib.
 ```
 
 `resume_parametres` fait une ligne par paramètre, « nom = valeur ±
-incertitude unité », par `formater` : une seule mise en forme, `formater`
+incertitude élargie unité », par `formater` et avec le même `k` : une seule mise en forme, `formater`
 pour une grandeur, `resume_parametres` pour plusieurs, nommées. `err` est ce
 que `curvefit` et `curve_fit_complex` rendent, une incertitude-type par
 paramètre ; la matrice de covariance de `scipy.optimize.curve_fit` est
@@ -673,10 +688,13 @@ sont refusées, au lieu d'être tronquées en silence.
 
 ```python
 >>> print(resume_parametres(("H0", "f0", "Q"), pfit, err, unites=("", "Hz", "")))
-H0 = -5.121 ± 0.098
-f0 = 1989.7 ± 2.9 Hz
-Q = 6.49 ± 0.14
+H0 = -5.12 ± 0.20
+f0 = 1989.7 ± 5.8 Hz
+Q = 6.49 ± 0.28
 >>> print(resume_parametres(("a", "b"), pfit, pcov))       # pcov de scipy.optimize.curve_fit
+a = 2.01 ± 0.17
+b = -1.01 ± 0.19
+>>> print(resume_parametres(("a", "b"), pfit, pcov, k=1))  # les incertitudes-types
 a = 2.010 ± 0.083
 b = -1.006 ± 0.095
 ```
@@ -717,15 +735,15 @@ simulée, constante de temps 8,3 ms et bruit de 5 mV :
 
 ```text
 valeurs de départ : U0 = 2.049 V   tau = 0.00854 s   u_inf = 0.0535 V
-U0 = 2.04790 ± 0.00036 V
-tau = 0.0082936 ± 0.0000028 s
-u_inf = 0.04028 ± 0.00012 V
+U0 = 2.04790 ± 0.00073 V
+tau = 0.0082936 ± 0.0000055 s
+u_inf = 0.04028 ± 0.00024 V
 chi2 réduit = 1.00
 ```
 
-![La décharge acquise, cinq mille points, le modèle aux valeurs de départ en tirets et l'ajustement ; dessous, les résidus en millivolts, répartis au hasard dans et autour de la bande ± 5 mV](images/ajustement_decharge.png)
+![La décharge acquise, cinq mille points, le modèle aux valeurs de départ en tirets et l'ajustement ; dessous, les résidus en millivolts, répartis au hasard, pour l'essentiel dans la bande ± 10 mV, deux fois le bruit de 5 mV](images/ajustement_decharge.png)
 
-Cinq mille points donnent `tau` à 3 µs près. Le χ² réduit de 1 dit que les
+Cinq mille points donnent `tau` à 6 µs près (l'incertitude élargie). Le χ² réduit de 1 dit que les
 5 mV annoncés sont bien ceux des écarts, et les résidus ne montrent aucune
 tendance.
 
@@ -759,10 +777,10 @@ petit χ².
 ```text
 valeurs de départ : A = 1.5 V   f = 50 Hz   phi = 0 rad   offset = 0.2386 V
 tel que l'ajustement le rend : A = -1.5 V   f = 52.3 Hz   phi = -2.442 rad   offset = 0.2001 V
-A = 1.49992 ± 0.00016 V
-f = 52.30006 ± 0.00029 Hz
-phi = 0.70007 ± 0.00021 rad
-offset = 0.20014 ± 0.00011 V
+A = 1.49992 ± 0.00032 V
+f = 52.30006 ± 0.00058 Hz
+phi = 0.70007 ± 0.00043 rad
+offset = 0.20014 ± 0.00022 V
 chi2 réduit = 0.99
 en partant de f = 62 Hz : A = 0.3181 V   f = 59.43 Hz   phi = -0.5924 rad   offset = 0.2361 V   chi2 réduit = 43081
 ```
@@ -807,8 +825,8 @@ non_lineaire = curvefit(pendule, t, theta, depart, datayerrors=0.02, verbose=Fal
 ```
 
 ```text
-une sinusoïde            : w = 4.72840 ± 0.00023 rad/s   theta0 = 2.0539 ± 0.0016 rad   chi2 réduit = 5.05
-theta'' = -w0² sin theta : w0 = 6.2843 ± 0.0031 rad/s   theta0 = 2.0004 ± 0.0015 rad   chi2 réduit = 1.03
+une sinusoïde            : w = 4.72840 ± 0.00046 rad/s   theta0 = 2.0539 ± 0.0033 rad   chi2 réduit = 5.05
+theta'' = -w0² sin theta : w0 = 6.2843 ± 0.0062 rad/s   theta0 = 2.0004 ± 0.0030 rad   chi2 réduit = 1.03
 ```
 
 ![Le pendule aux grands angles : les mesures, le modèle non linéaire ajusté et une sinusoïde ajustée ; dessous, les résidus de chacun, au hasard pour le premier, ondulants pour la sinusoïde](images/ajustement_equadiff.png)

@@ -67,7 +67,13 @@ haut.plot(
 )
 haut.set_ylabel("u (V)")
 haut.legend(fontsize=9)
-bas.axhspan(-1e3 * BRUIT, 1e3 * BRUIT, color="tab:orange", alpha=0.25, label="± l'incertitude sur la tension")
+bas.axhspan(
+    -2e3 * BRUIT,
+    2e3 * BRUIT,
+    color="tab:orange",
+    alpha=0.25,
+    label="± 2u : l'incertitude élargie sur la tension",
+)
 bas.plot(1e3 * t, 1e3 * (u - decharge(t, *pfit)), ".", markersize=1, color="tab:blue")
 bas.axhline(0, color="tab:orange")
 bas.set_xlabel("t (ms)")

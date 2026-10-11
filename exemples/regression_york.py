@@ -7,8 +7,8 @@ variance effective (curvefit). Voir doc/ajustement.md.
 Les vingt mesures sont celles d'un script de D. Jurine qui comparait un
 Monte-Carlo, des moindres carrés pondérés et scipy.odr. Son Monte-Carlo
 ajustait chaque tirage sans pondération (np.polyfit) : il donnait une pente
-de -1,64 ± 0,05 au lieu de -1,72 ± 0,04, parce qu'un point très incertain y
-pèse autant qu'un point précis. Le script refait ce calcul pour le montrer.
+de -1,64 ± 0,10 au lieu de -1,717 ± 0,074 (incertitudes élargies, 2u), parce
+qu'un point très incertain y pèse autant qu'un point précis. Le script refait ce calcul pour le montrer.
 """
 
 import matplotlib.pyplot as plt
@@ -53,7 +53,8 @@ for nom, (a, b), (u_a, u_b) in resultats:
 print(f"chi2 réduit de York : {york.chi2:.2f}")
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
-ax1.errorbar(x, y, xerr=u_x, yerr=u_y, fmt="o", markersize=3, capsize=2, color="k", label="les mesures")
+barres = {"fmt": "o", "markersize": 3, "capsize": 2, "color": "k"}
+ax1.errorbar(x, y, xerr=2 * u_x, yerr=2 * u_y, label="les mesures, ± 2u", **barres)  # k = 2
 x_fin = np.linspace(-1, 0.8, 50)
 for (nom, (a, b), _), trait in zip(resultats, ("-", ":", "--", "-")):
     ax1.plot(x_fin, droite(x_fin, a, b), trait, label=nom)

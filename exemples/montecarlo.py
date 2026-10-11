@@ -21,7 +21,7 @@ rng = np.random.default_rng(0)  # et les mêmes mesures simulées
 
 def histogrammes(axes, points, noms, nbins=200):
     """L'histogramme de chaque Point dans son repère, par sa méthode show :
-    les tirages, la moyenne, ± l'écart-type, la loi normale de mêmes paramètres."""
+    les tirages, la moyenne, ± 2u (deux écarts-types), la loi normale de mêmes paramètres."""
     for ax, point, nom in zip(axes, points, noms):
         point.show(ax, nbins=nbins)
         ax.set_xlabel(nom)
@@ -29,7 +29,8 @@ def histogrammes(axes, points, noms, nbins=200):
         ax.legend(fontsize=8)
 
 
-# 1. g par un pendule : L = 1,000 ± 0,002 m, T = 2,007 ± 0,010 s
+# 1. g par un pendule : L = 1,000 m et T = 2,007 s, d'incertitudes-types 0,002 m et 0,010 s
+#    (formater écrit ensuite l'incertitude élargie 2u)
 L = Point(1.000, 0.002)
 T = Point(2.007, 0.010)
 g = 4 * np.pi**2 * L / T**2
@@ -99,7 +100,7 @@ print(
     f" chi2 réduit = {chi2:.2f}",
 )
 plt.figure()
-plt.errorbar(x_mes, y_mes, xerr=0.2, yerr=0.5, fmt="o", label="mesures")
+plt.errorbar(x_mes, y_mes, xerr=2 * 0.2, yerr=2 * 0.5, fmt="o", label="mesures, ± 2u")
 plt.plot(x, pa.val * x + pb.val, label="Monte-Carlo")
 plt.plot(x, pfit[0] * x + pfit[1], "--", label="curvefit")
 plt.legend()
@@ -110,7 +111,7 @@ fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
 for k in range(100):
     axes[0].plot(x, pa.tirage[k] * x + pb.tirage[k], color="tab:orange", alpha=0.15)
 axes[0].plot([], [], color="tab:orange", label="100 droites, une par tirage")
-axes[0].errorbar(x_mes, y_mes, xerr=0.2, yerr=0.5, fmt="o", markersize=4, label="mesures")
+axes[0].errorbar(x_mes, y_mes, xerr=2 * 0.2, yerr=2 * 0.5, fmt="o", markersize=4, label="mesures, ± 2u")
 axes[0].plot(serie.x_tirages[0], serie.y_tirages[0], "k+", label="un tirage des mesures")
 axes[0].plot(x, pa.tirage[0] * x + pb.tirage[0], "k", linewidth=0.8, label="sa droite")
 axes[0].set_xlabel("x")
@@ -143,7 +144,7 @@ t_fin = np.linspace(0, 5, 200)
 for k in range(100):
     axes[0].plot(t_fin, exponentielle(t_fin, pA.tirage[k], ptau.tirage[k]), color="tab:orange", alpha=0.15)
 axes[0].plot([], [], color="tab:orange", label="100 ajustements, un par tirage")
-axes[0].errorbar(t, u, xerr=0.01, yerr=0.02, fmt="o", markersize=4, label="mesures")
+axes[0].errorbar(t, u, xerr=2 * 0.01, yerr=2 * 0.02, fmt="o", markersize=4, label="mesures, ± 2u")
 axes[0].set_xlabel("t (s)")
 axes[0].set_ylabel("u (V)")
 axes[0].legend(fontsize=8)
