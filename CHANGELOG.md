@@ -4,7 +4,7 @@ Toutes les modifications notables de `tpllg` sont consignées ici. Le format
 suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; les versions
 sont calendaires, `année.mois.numéro`.
 
-## [Non publié]
+## [2026.10.4] - 2026-10-13
 
 ### Modifié — incompatible
 
