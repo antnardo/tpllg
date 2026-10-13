@@ -42,6 +42,14 @@ sont calendaires, `année.mois.numéro`.
 - `formater(…, k=2)` et `resume_parametres(…, k=2)` : le facteur
   d'élargissement ; `k=1` écrit l'incertitude-type, comme avant ; un
   coefficient de Student s'y donne aussi. Un `k` nul ou négatif est refusé.
+- `formater(…, style=…, nom="x")` : les trois écritures du GUM (JCGM 100:2008,
+  7.2.2 et 7.2.4). `style="±"` (défaut) : `1993.5 ± 3.8 Hz`, l'incertitude
+  élargie `k·u` ; `style="u"` : `x = 1993.5 Hz ; u(x) = 1.9 Hz`,
+  l'incertitude-type ; `style="U"` : `x = 1993.5 Hz ; U(x) = 3.8 Hz`, l'élargie
+  en deux égalités. Chaque style arrondit sur l'incertitude qu'il écrit, avec
+  la même puissance de dix pour les deux nombres
+  (`h = 6.6260 × 10⁻³⁴ J s ; U(h) = 0.0020 × 10⁻³⁴ J s`) et l'unité sur chacun.
+  Un style inconnu est refusé.
 
 ## [2026.10.3] - 2026-10-10
 

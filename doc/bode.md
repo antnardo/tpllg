@@ -43,7 +43,8 @@ logarithmique : le module en haut, la phase en bas, en degrés et
 **continue** (section suivante). Les mesures sont des points ; si `modele`
 et `pfit` sont donnés, la courbe ajustée s'ajoute, calculée sur deux mille
 fréquences entre la plus basse et la plus haute mesurées, et la légende du
-gain porte les paramètres, mis en forme par `resume_parametres`. La figure
+gain porte les paramètres, mis en forme par `resume_parametres`,
+l'incertitude élargie `2u` derrière chaque « ± ». La figure
 est rendue et reste ouverte : `plt.show()` l'affiche, et l'on peut retoucher
 `fig.axes` avant.
 

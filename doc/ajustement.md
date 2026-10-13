@@ -51,7 +51,8 @@ Dans le plan des deux paramètres, le chi2 est une vallée. Son fond est
 `pfit`, et sa largeur donne les incertitudes : le contour où le chi2 dépasse
 son minimum de 1 touche les droites `a ± u(a)` et `b ± u(b)`, où
 `u(a) = 0.083` et `u(b) = 0.095` sont les incertitudes-types que
-l'ajustement rend — `formater` en écrit le double, l'incertitude élargie. La vallée est en biais — une pente
+l'ajustement rend ; derrière « ± », `formater` écrit l'incertitude élargie
+U = 2u. La vallée est en biais — une pente
 plus forte se rattrape par une ordonnée à l'origine plus basse — et c'est ce
 que disent les termes croisés de `pcov`.
 
@@ -625,7 +626,7 @@ disent.
 ```python
 from tpllg.ajustement import formater, resume_parametres
 
-texte = formater(valeur, sigma=None, unite="", k=2)
+texte = formater(valeur, sigma=None, unite="", k=2, style="±", nom="x")
 texte = resume_parametres(noms, pfit, err=None, unites=None, k=2)
 ```
 
@@ -651,6 +652,16 @@ l'incertitude si la valeur est nulle) : `(6.6260 ± 0.0020) × 10⁻³⁴`, et
 non quarante zéros. La puissance s'écrit en exposants Unicode, lisibles
 dans une console comme dans une légende matplotlib.
 
+`style` choisit entre les **trois écritures** du GUM (JCGM 100:2008) :
+`"±"`, par défaut, « valeur ± U unité », l'incertitude élargie, que le GUM
+réserve au « ± » (7.2.4) ; `"u"`, deux égalités séparées par « ; »,
+`f = 1993.5 Hz ; u(f) = 1.9 Hz`, l'**incertitude-type** elle-même, « with
+u_c = » (7.2.2), que `k` ne touche pas ; `"U"`, les mêmes deux égalités avec
+l'incertitude élargie, `f = 1993.5 Hz ; U(f) = 3.8 Hz`. La grandeur des
+deux derniers est nommée par `nom` (`"x"` par défaut). Chaque style arrondit
+sur l'incertitude qu'il écrit, avec la même puissance de dix pour les deux
+nombres et l'unité répétée sur chacun. Un autre `style` est refusé.
+
 ```python
 >>> formater(1993.489, 1.875, "Hz")
 '1993.5 ± 3.8 Hz'
@@ -674,10 +685,19 @@ dans une console comme dans une légende matplotlib.
 '6.626 × 10⁻³⁴ J s'
 >>> formater(2.5, float("inf"), "V")
 '2.5 ± inf V'
+>>> formater(1993.489, 1.875, "Hz", style="u", nom="f")
+'f = 1993.5 Hz ; u(f) = 1.9 Hz'
+>>> formater(1993.489, 1.875, "Hz", style="U", nom="f")
+'f = 1993.5 Hz ; U(f) = 3.8 Hz'
+>>> formater(6.626e-34, 1e-37, "J s", style="U", nom="h")
+'h = 6.6260 × 10⁻³⁴ J s ; U(h) = 0.0020 × 10⁻³⁴ J s'
+>>> formater(2.5, None, "V", style="u", nom="U")
+'U = 2.5 V'
 ```
 
 `resume_parametres` fait une ligne par paramètre, « nom = valeur ±
-incertitude élargie unité », par `formater` et avec le même `k` : une seule mise en forme, `formater`
+incertitude élargie unité », par `formater` et avec le même `k`, toujours
+en « ± » : une seule mise en forme, `formater`
 pour une grandeur, `resume_parametres` pour plusieurs, nommées. `err` est ce
 que `curvefit` et `curve_fit_complex` rendent, une incertitude-type par
 paramètre ; la matrice de covariance de `scipy.optimize.curve_fit` est

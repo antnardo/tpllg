@@ -213,13 +213,13 @@ l'autre est dans [CHANGELOG.md](CHANGELOG.md).
 | --- | --- |
 | [doc/centrale.md](doc/centrale.md) | la Sysam SP5 : voies, calibres, modes de conversion, mémoire partagée, échantillonnage, acquisition, déclenchement sur une voie, sorties analogiques, enregistrement, le simulateur, les pannes courantes |
 | [doc/ajustement.md](doc/ajustement.md) | ce que fait `curve_fit` ; `curvefit` avec les incertitudes sur y, sur x et y, le χ² réduit ; la régression de York ; `curve_fit_complex` pour un module et une phase ; présenter un résultat ; choisir les valeurs de départ ; lire les résidus ; un modèle solution d'une équation différentielle |
-| [doc/incertitudes.md](doc/incertitudes.md) | une série de mesures, l'écart-type, l'incertitude de la moyenne, le coefficient de Student ; la propagation par Monte-Carlo : `Point`, les lois uniforme et triangulaire d'une tolérance, l'intervalle le plus court, les indices de Sobol, la droite ajustée sur tous les tirages sans boucle, un modèle quelconque ajusté par tirages |
+| [doc/incertitudes.md](doc/incertitudes.md) | une série de mesures, l'écart-type, l'incertitude de la moyenne, le coefficient de Student, les deux écritures d'un résultat, « ± » et « u(x) = » ; la propagation par Monte-Carlo : `Point`, les lois uniforme et triangulaire d'une tolérance, l'intervalle le plus court, les indices de Sobol, la droite ajustée sur tous les tirages sans boucle, un modèle quelconque ajusté par tirages |
 | [doc/signaux.md](doc/signaux.md) | repérer les fronts d'un créneau, découper une fenêtre, estimer une fréquence, les extremums et le taux d'amortissement d'une oscillation amortie ; le régime libre d'un filtre après un front, ajusté |
 | [doc/bode.md](doc/bode.md) | tracer un diagramme de Bode, mesures et modèle, avec une phase continue ; la chaîne complète mesures, ajustement, figure ; la fonction de transfert mesurée par détection synchrone ; le Bode automatique par la centrale |
 | [doc/spectres.md](doc/spectres.md) | le spectre d'un signal, brut ou fenêtré, et ses phases ; relever les harmoniques ; mesurer une fonction de transfert sur les harmoniques d'un créneau |
 | [doc/harmoniques.md](doc/harmoniques.md) | un signal périodique par ses harmoniques : synthèse, filtrage par le calcul, valeur efficace, analyseur de spectre |
 | [doc/fichiers.md](doc/fichiers.md) | lire un CSV de tableur, un export Latis Pro ou Regressi, tous rendus de la même façon ; écrire un CSV ; relire ce que `sauvegarder` écrit |
-| [doc/tests.md](doc/tests.md) | ce que vérifient les 339 tests |
+| [doc/tests.md](doc/tests.md) | ce que vérifient les 353 tests |
 
 ## Les modules
 
@@ -228,7 +228,7 @@ l'autre est dans [CHANGELOG.md](CHANGELOG.md).
 | `tpllg.sysam` | `Sysam`, la classe de pycanum avec un `with`, des calibres simples, des temps en secondes et des acquisitions qui rendent directement temps et tensions ; `n_max`, `te_min`, `get_calibre` pour rester dans les limites ; se rabat sur le simulateur sans pycanum (règles de pycanum 4.x) |
 | `tpllg.sysam_factice` | le simulateur : même interface, mêmes formes de données, mêmes refus que la centrale, sans matériel |
 | `tpllg.acquisition` | `acquerir(voies, calibre, te, nbpoints, trigger=…)` en une ligne, déclenchement compris ; `sauvegarder` et `charger`, un fichier par voie |
-| `tpllg.ajustement` | `curvefit` (incertitudes sur y, ou sur x et y par la variance effective, χ² réduit), `curve_fit_complex` (module et phase ajustés ensemble, en radians, refusés au-delà de 2π), `regression_york` (une droite, x et y incertains), `Ajustement` (le résultat), `ecarts_types`, `formater` (valeur ± incertitude élargie 2u, deux chiffres sur l'incertitude écrite, notation scientifique hors de [10⁻³, 10⁵[), `resume_parametres`, `residus_complexes` |
+| `tpllg.ajustement` | `curvefit` (incertitudes sur y, ou sur x et y par la variance effective, χ² réduit), `curve_fit_complex` (module et phase ajustés ensemble, en radians, refusés au-delà de 2π), `regression_york` (une droite, x et y incertains), `Ajustement` (le résultat), `ecarts_types`, `formater` (valeur ± incertitude élargie 2u, ou `x = valeur ; u(x) = 2u` avec `style="u"`, deux chiffres sur l'incertitude écrite, notation scientifique hors de [10⁻³, 10⁵[), `resume_parametres`, `residus_complexes` |
 | `tpllg.incertitudes` | `incertitudes` (moyenne, incertitude-type de la moyenne, écart-type estimé), `student_coef`, `loi_normale`, `loi_normale_cumulee` |
 | `tpllg.montecarlo` | `Point` (lois `normale`, `uniforme`, `triangulaire`, `arcsinus`), `SerieLineaire`, `ajuster_modele`, `indices_sobol`, `fixer_graine` : la propagation des incertitudes par tirages, la droite sans boucle |
 | `tpllg.signaux` | `fronts_montants`, `fronts_descendants`, `front_utile`, `fenetre`, `frequence_pic`, `extremums`, `taux_amortissement`, tous en `(t, v)` |

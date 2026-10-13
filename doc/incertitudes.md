@@ -76,26 +76,49 @@ mesures = [9.78, 9.81, 9.85, 9.79, 9.83]  # g, en m/s², cinq fois
 m, delta, s = incertitudes(mesures)
 print(m, delta, s)
 print(formater(m, delta, "m/s²"))  # ± 2 delta, l'incertitude élargie (k = 2)
+print(formater(m, delta, "m/s²", style="u", nom="g"))  # l'incertitude-type, en deux égalités
+print(formater(m, delta, "m/s²", style="U", nom="g"))  # l'élargie, en deux égalités
 N = len(mesures)
 print(formater(m, delta, "m/s²", k=student_coef(1, N)), "à 68 %, avec Student")
 print(formater(m, delta, "m/s²", k=student_coef(2, N)), "à 95 %, avec Student")
+print(formater(m, delta, "m/s²", k=student_coef(2, N), style="U", nom="g"), "à 95 %, avec Student")
 print(resume_parametres(("g",), [m], [delta], ("m/s²",)))
 ```
 
 ```text
 9.812 0.012806248474865799 0.028635642126552934
 9.812 ± 0.026 m/s²
+g = 9.812 m/s² ; u(g) = 0.013 m/s²
+g = 9.812 m/s² ; U(g) = 0.026 m/s²
 9.812 ± 0.015 m/s² à 68 %, avec Student
 9.812 ± 0.037 m/s² à 95 %, avec Student
+g = 9.812 m/s² ; U(g) = 0.037 m/s² à 95 %, avec Student
 g = 9.812 ± 0.026 m/s²
 ```
 
 `s` est la dispersion d'**une** mesure ; `delta` est ce qu'on gagne à en
 faire `N`, l'incertitude-type sur la moyenne, et c'est l'incertitude
 élargie `2 delta` (facteur d'élargissement `k = 2`, environ 95 %) qu'on
-écrit derrière le `±` : la première et la dernière ligne ci-dessus. Les deux
-autres élargissent la même `delta` par le coefficient de Student, à 68 % et
-à 95 %. Deux fonctions de
+écrit derrière « ± » : les deuxième, quatrième et dernière lignes ci-dessus.
+Les lignes « Student » élargissent la même `delta` par le coefficient de
+Student, à 68 % et à 95 %.
+
+Le même résultat a **trois écritures**, celles du GUM (JCGM 100:2008,
+7.2.2 et 7.2.4), au choix par `style` :
+
+| `formater(m, delta, "m/s²", …)` | Écriture | Incertitude écrite |
+| --- | --- | --- |
+| `style="±"`, par défaut | `9.812 ± 0.026 m/s²` | élargie U = k·delta (7.2.4) |
+| `style="u", nom="g"` | `g = 9.812 m/s² ; u(g) = 0.013 m/s²` | type, delta (7.2.2, « with u_c = ») |
+| `style="U", nom="g"` | `g = 9.812 m/s² ; U(g) = 0.026 m/s²` | élargie U = k·delta |
+
+Le GUM réserve le « ± » à l'incertitude élargie et déconseille de l'employer
+pour l'incertitude-type, que l'on écrit « u(x) = » ou entre parenthèses ;
+`formater` suit cette règle. Chaque style arrondit sur l'incertitude qu'il
+écrit, à deux chiffres significatifs, la valeur au même rang, avec la même
+puissance de dix pour les deux nombres hors de `[10⁻³, 10⁵[`
+(`h = 6.6260 × 10⁻³⁴ J s ; U(h) = 0.0020 × 10⁻³⁴ J s`), et l'unité répétée
+sur chaque nombre, puisque ce sont deux égalités. Deux fonctions de
 `tpllg.ajustement` mettent en forme, l'incertitude élargie `k × delta` à
 deux chiffres significatifs et la valeur arrondie au même rang : `formater` pour une
 grandeur, `resume_parametres` pour plusieurs grandeurs nommées, une ligne
@@ -165,8 +188,9 @@ niveaux, avec les valeurs du tableau :
 
 Sur les cinq mesures de `g` ci-dessus, à 95,45 % : `t = 2.87`, et
 `2.87 × 0.0286/sqrt(5) = 0.037 m/s²`, ce que
-`formater(m, delta, k=student_coef(2, 5))` écrit ; à 68,27 %, `t = 1.14` et
-0,015 m/s². `exemples/loi_student_incertitudes.py` met les deux côte à côte
+`formater(m, delta, k=student_coef(2, 5))` écrit, `9.812 ± 0.037 m/s²` ou
+`g = 9.812 m/s² ; u(g) = 0.037 m/s²` en `style="u"` ; à 68,27 %, `t = 1.14`
+et 0,015 m/s². `exemples/loi_student_incertitudes.py` met les deux côte à côte
 sur trente tirages normaux :
 
 ```text
@@ -534,13 +558,15 @@ uniformes, et la part de chacun dans l'incertitude :
 U = Point.uniforme(4.87, 0.5 * 0.01 * 4.87 + 0.005)
 I = Point.uniforme(0.0213, 0.008 * 0.0213 + 0.0001)
 R = U / I
-print(formater(R.val, R.u, "Ω"), f"; u(U) = {U.u * 1e3:.1f} mV, u(I) = {I.u * 1e6:.0f} µA")
+print(formater(R.val, R.u, "Ω", style="U", nom="R"))
+print(formater(U.val, U.u, "V", style="u", nom="U"), ";", formater(I.val, I.u, "A", style="u", nom="I"))
 part_U, part_I = indices_sobol(lambda u, i: u / i, [U, I])
 print(f"part de la variance de R due à U : {100 * part_U:.0f} %, à I : {100 * part_I:.0f} %")
 ```
 
 ```text
-228.7 ± 3.7 Ω ; u(U) = 16.9 mV, u(I) = 156 µA
+R = 228.7 Ω ; U(R) = 3.7 Ω
+U = 4.870 V ; u(U) = 0.017 V ; I = 0.02130 A ; u(I) = 0.00016 A
 part de la variance de R due à U : 18 %, à I : 82 %
 ```
 
