@@ -101,9 +101,10 @@ for valeur in (pfit[0] - err[0], pfit[0] + err[0]):
     ax.axvline(valeur, color="tab:red", linestyle="--", linewidth=1)
 for valeur in (pfit[1] - err[1], pfit[1] + err[1]):
     ax.axhline(valeur, color="tab:red", linestyle="--", linewidth=1)
-# une propriété du contour : ce sont les incertitudes-types u, pas l'incertitude élargie 2u de formater
+# une propriété du contour : ce sont les incertitudes-types u (GUM), pas l'incertitude
+# élargie U = 2u qu'écrit formater derrière « ± »
 tangentes = (
-    "a ± u(a) et b ± u(b), tangentes au contour +1 :\nu(a) = {:.3f}, u(b) = {:.3f}, incertitudes-types"
+    "tangentes au contour +1 : a ± u(a) et b ± u(b),\nu(a) = {:.3f}, u(b) = {:.3f} (incertitudes-types)"
 )
 ax.plot([], [], color="tab:red", linestyle="--", linewidth=1, label=tangentes.format(*tuple(err)))
 ax.set_xlabel("a")

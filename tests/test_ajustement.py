@@ -376,9 +376,56 @@ class TestFormater:
     def test_k_quelconque(self):
         assert formater(10.0, 0.1, k=3) == "10.00 ± 0.30"
 
-    def test_incertitude_negative_refusee(self):
+    @pytest.mark.parametrize(
+        ("valeur", "sigma", "unite", "nom", "texte_u", "texte_U"),
+        [
+            (1993.489, 1.875, "Hz", "f", "f = 1993.5 Hz ; u(f) = 1.9 Hz", "f = 1993.5 Hz ; U(f) = 3.8 Hz"),
+            (-5.0823, 0.0631, "", "H0", "H0 = -5.082 ; u(H0) = 0.063", "H0 = -5.08 ; U(H0) = 0.13"),
+            (1.0, 0.0498, "", "x", "x = 1.000 ; u(x) = 0.050", "x = 1.00 ; U(x) = 0.10"),
+            (12345.6, 234.0, "", "x", "x = 12350 ; u(x) = 230", "x = 12350 ; U(x) = 470"),
+            (
+                6.626e-34,
+                1e-37,
+                "J s",
+                "h",
+                "h = 6.6260 × 10⁻³⁴ J s ; u(h) = 0.0010 × 10⁻³⁴ J s",
+                "h = 6.6260 × 10⁻³⁴ J s ; U(h) = 0.0020 × 10⁻³⁴ J s",
+            ),
+            (
+                9.99999e5,
+                1000.0,
+                "",
+                "f",
+                "f = 1.0000 × 10⁶ ; u(f) = 0.0010 × 10⁶",
+                "f = 1.0000 × 10⁶ ; U(f) = 0.0020 × 10⁶",
+            ),
+            (0.0, 1e-5, "", "x", "x = 0.0 × 10⁻⁵ ; u(x) = 1.0 × 10⁻⁵", "x = 0.0 × 10⁻⁵ ; U(x) = 2.0 × 10⁻⁵"),
+            (2.5, None, "V", "U", "U = 2.5 V", "U = 2.5 V"),
+            (6.626e-34, None, "J s", "h", "h = 6.626 × 10⁻³⁴ J s", "h = 6.626 × 10⁻³⁴ J s"),
+            (2.5, math.inf, "V", "U", "U = 2.5 V ; u(U) = inf V", "U = 2.5 V ; U(U) = inf V"),
+        ],
+    )
+    def test_styles_u_et_U_comme_le_gum(self, valeur, sigma, unite, nom, texte_u, texte_U):
+        """« x = valeur ; u(x) = incertitude-type » (GUM 7.2.2) et « x = valeur ;
+        U(x) = incertitude élargie » (7.2.4) : chacun arrondi sur l'incertitude qu'il
+        écrit, la même puissance de dix pour les deux nombres, l'unité sur chacun."""
+        assert formater(valeur, sigma, unite, style="u", nom=nom) == texte_u
+        assert formater(valeur, sigma, unite, style="U", nom=nom) == texte_U
+
+    def test_style_U_elargit_par_k_et_style_u_l_ignore(self):
+        assert formater(1993.489, 1.875, "Hz", style="U") == "x = 1993.5 Hz ; U(x) = 3.8 Hz"
+        assert formater(1993.489, 1.875, "Hz", k=1, style="U") == "x = 1993.5 Hz ; U(x) = 1.9 Hz"
+        assert formater(1993.489, 1.875, "Hz", k=3, style="u") == "x = 1993.5 Hz ; u(x) = 1.9 Hz"
+        assert formater(1993.489, 1.875, "Hz", k=3) == "1993.5 ± 5.6 Hz"
+
+    def test_style_inconnu_refuse(self):
+        with pytest.raises(ValueError, match="style"):
+            formater(1.0, 0.1, style="pm")
+
+    @pytest.mark.parametrize("style", ["±", "u", "U"])
+    def test_incertitude_negative_refusee(self, style):
         with pytest.raises(ValueError, match="négative"):
-            formater(1.0, -0.1)
+            formater(1.0, -0.1, style=style)
 
     @pytest.mark.parametrize("k", [0, -2])
     def test_facteur_nul_ou_negatif_refuse(self, k):

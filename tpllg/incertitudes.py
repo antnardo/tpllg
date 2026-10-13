@@ -58,7 +58,8 @@ def incertitudes(liste, *anciens, **anciens_nommes):
     endroit où l'on écrit le résultat, formater(m, delta, k=…) — k = 2 par
     défaut, ou le coefficient de Student, k = student_coef(2, N) pour 95 % ou
     student_coef(1, N) pour 68 %, plus grand quand les mesures sont peu
-    nombreuses parce que s est alors mal connu.
+    nombreuses parce que s est alors mal connu. « 9.812 ± 0.026 m/s² », ou
+    « g = 9.812 m/s² ; u(g) = 0.026 m/s² » avec style="u", nom="g".
 
     Les anciens arguments sigma et advanced, qui rendaient une incertitude
     déjà élargie, sont refusés (TypeError) : formater l'aurait élargie une

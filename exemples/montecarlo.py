@@ -158,7 +158,8 @@ plt.savefig("montecarlo_modele.pdf")
 U = Point.uniforme(4.87, 0.5 * 0.01 * 4.87 + 0.005)
 I = Point.uniforme(0.0213, 0.008 * 0.0213 + 0.0001)  # noqa: E741 — I, l'intensité
 R = U / I
-print("R =", formater(R.val, R.u, "Ω"), f"; u(U) = {U.u * 1e3:.1f} mV, u(I) = {I.u * 1e6:.0f} µA")
+print(formater(R.val, R.u, "Ω", style="U", nom="R"))
+print(formater(U.val, U.u, "V", style="u", nom="U"), ";", formater(I.val, I.u, "A", style="u", nom="I"))
 # quel multimètre pèse le plus ? la part de la variance de R due à chacun (indices de Sobol)
 part_U, part_I = indices_sobol(lambda u, i: u / i, [U, I])
 print(f"part de la variance de R due à U : {100 * part_U:.0f} %, à I : {100 * part_I:.0f} %")

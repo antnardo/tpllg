@@ -33,6 +33,13 @@ class TestIncertitudes:
         assert formater(m, delta, "m/s²", k=k) == "9.812 ± 0.037 m/s²"
         assert formater(m, delta, "m/s²", k=student_coef(1, len(MESURES))) == "9.812 ± 0.015 m/s²"
 
+    def test_student_dans_l_ecriture_U(self):
+        """Les écritures « U(g) = k delta » et « u(g) = delta », avec le même k de Student."""
+        m, delta, _ = incertitudes(MESURES)
+        k = student_coef(2, len(MESURES))
+        assert formater(m, delta, "m/s²", k=k, style="U", nom="g") == "g = 9.812 m/s² ; U(g) = 0.037 m/s²"
+        assert formater(m, delta, "m/s²", k=k, style="u", nom="g") == "g = 9.812 m/s² ; u(g) = 0.013 m/s²"
+
     def test_une_mesure_ne_suffit_pas(self):
         with pytest.raises(ValueError, match="deux mesures"):
             incertitudes([9.81])

@@ -14,7 +14,8 @@ Ajustements de courbes : outils génériques autour de scipy.optimize.curve_fit.
 - ecarts_types : les incertitudes-types tirées de la matrice de covariance ;
 - formater, resume_parametres : « valeur ± incertitude élargie », 2u par
   défaut (k = 2, environ 95 %), arrondies comme il faut (deux chiffres
-  significatifs sur l'incertitude écrite) ;
+  significatifs sur l'incertitude écrite) ; formater écrit aussi
+  « x = valeur ; u(x) = incertitude élargie » (style="u") ;
 - residus_complexes : l'écart des mesures au modèle, module et phase.
 
 @author: a. marchand
@@ -439,7 +440,7 @@ def _puissance(exposant):
 
 def _arrondis(valeur, sigma):
     """La valeur et l'incertitude arrondies au rang du second chiffre
-    significatif de l'incertitude, en texte, et le nombre de décimales."""
+    significatif de l'incertitude, en texte, et la valeur arrondie."""
     sigma = float(f"{sigma:.2g}")  # deux chiffres : 0.0996 devient 0.10, pas 0.100
     decimales = 1 - math.floor(math.log10(sigma))  # négatif au-delà de 100
     valeur, sigma = round(valeur, decimales), round(sigma, decimales)
@@ -447,41 +448,83 @@ def _arrondis(valeur, sigma):
     return f"{valeur:.{decimales}f}", f"{sigma:.{decimales}f}", valeur
 
 
-def formater(valeur, sigma=None, unite="", k=2):
-    """« 1993.5 ± 3.8 Hz » : la valeur et son incertitude élargie k·sigma,
-    `sigma` étant l'incertitude-type et `k` le facteur d'élargissement — 2 par
-    défaut, soit environ 95 % pour une loi normale ; k=1 écrit l'incertitude-
-    type elle-même. L'incertitude écrite a deux chiffres significatifs, la
-    valeur est arrondie au même rang. Sans incertitude (None ou 0), quatre
-    chiffres ; une incertitude infinie ou indéfinie s'écrit telle quelle.
-
-    Hors de [10⁻³, 10⁵[, la notation scientifique, avec une puissance de dix
-    commune à la valeur et à l'incertitude, celle de la valeur :
-    « (6.6260 ± 0.0020) × 10⁻³⁴ J s ». Pour une valeur nulle, la puissance
-    est celle de l'incertitude."""
-    unite = f" {unite}" if unite else ""
-    valeur = float(valeur)
-    if sigma is None or sigma == 0:
-        exposant = _exposant(valeur)
-        if exposant is None:
-            return f"{valeur:.4g}{unite}"
-        return f"{valeur / 10**exposant:.4g} × {_puissance(exposant)}{unite}"
-    if not k > 0:
-        raise ValueError(f"facteur d'élargissement : strictement positif ({k})")
-    if not np.isfinite(sigma):
-        return f"{valeur:.4g} ± {sigma}{unite}"
-    if sigma < 0:
-        raise ValueError(f"incertitude négative : {sigma}")
-    sigma = k * float(sigma)
+def _mantisses(valeur, sigma):
+    """La valeur et son incertitude déjà élargie, en texte, arrondies au rang
+    du second chiffre significatif de l'incertitude, et le facteur « × 10ⁿ »
+    commun aux deux — vide dans [10⁻³, 10⁵[, où l'on écrit les nombres tels
+    quels."""
     exposant = _exposant(valeur if valeur != 0 else sigma)
     if exposant is None:
         v, s, _ = _arrondis(valeur, sigma)
-        return f"{v} ± {s}{unite}"
+        return v, s, ""
     v, s, arrondie = _arrondis(valeur / 10**exposant, sigma / 10**exposant)
     if abs(arrondie) >= 10:  # 9.9999 arrondi à 10.00 : une décade de plus
         exposant += 1
         v, s, _ = _arrondis(valeur / 10**exposant, sigma / 10**exposant)
-    return f"({v} ± {s}) × {_puissance(exposant)}{unite}"
+    return v, s, f" × {_puissance(exposant)}"
+
+
+def _valeur_seule(valeur):
+    """Sans incertitude : quatre chiffres significatifs, et le facteur
+    « × 10ⁿ » hors de [10⁻³, 10⁵[."""
+    exposant = _exposant(valeur)
+    if exposant is None:
+        return f"{valeur:.4g}", ""
+    return f"{valeur / 10**exposant:.4g}", f" × {_puissance(exposant)}"
+
+
+_STYLES = ("±", "u", "U")
+
+
+def formater(valeur, sigma=None, unite="", k=2, style="±", nom="x"):
+    """« 1993.5 ± 3.8 Hz », « x = 1993.5 Hz ; u(x) = 1.9 Hz » ou
+    « x = 1993.5 Hz ; U(x) = 3.8 Hz » : la valeur et son incertitude, écrites
+    comme le GUM (JCGM 100:2008, 7.2.2 et 7.2.4). `sigma` est l'incertitude-type
+    u ; `k` le facteur d'élargissement — 2 par défaut, soit environ 95 % pour une
+    loi normale, ou student_coef(2, N) pour N mesures — et U = k·sigma
+    l'incertitude élargie. L'incertitude écrite a deux chiffres significatifs,
+    la valeur est arrondie au même rang. Sans incertitude (None ou 0), quatre
+    chiffres ; une incertitude infinie ou indéfinie s'écrit telle quelle.
+
+    `style` choisit l'écriture :
+    - « ± » : « valeur ± U unité », l'incertitude élargie, comme le GUM le
+      réserve au « ± » (7.2.4) ;
+    - « u » : deux égalités, « x = valeur unité ; u(x) = sigma unité »,
+      l'incertitude-type elle-même (7.2.2, « with u_c = »), `k` sans effet ;
+    - « U » : « x = valeur unité ; U(x) = k·sigma unité », l'incertitude élargie
+      en deux égalités.
+    `nom` (« x » par défaut) nomme la grandeur des deux derniers styles.
+
+    Hors de [10⁻³, 10⁵[, la notation scientifique, avec une puissance de dix
+    commune à la valeur et à l'incertitude, celle de la valeur :
+    « (6.6260 ± 0.0020) × 10⁻³⁴ J s », ou « h = 6.6260 × 10⁻³⁴ J s ;
+    u(h) = 0.0010 × 10⁻³⁴ J s ». Pour une valeur nulle, la puissance est
+    celle de l'incertitude."""
+    if style not in _STYLES:
+        raise ValueError(f"style : « ± », « u » ou « U », pas {style!r}")
+    unite = f" {unite}" if unite else ""
+    valeur = float(valeur)
+    if sigma is None or sigma == 0:
+        v, facteur = _valeur_seule(valeur)
+        s = None
+    else:
+        if not k > 0:
+            raise ValueError(f"facteur d'élargissement : strictement positif ({k})")
+        if not np.isfinite(sigma):
+            v, s, facteur = f"{valeur:.4g}", f"{sigma}", ""
+        elif sigma < 0:
+            raise ValueError(f"incertitude négative : {sigma}")
+        else:
+            ecrite = float(sigma) if style == "u" else k * float(sigma)
+            v, s, facteur = _mantisses(valeur, ecrite)
+    if style in ("u", "U"):
+        texte = f"{nom} = {v}{facteur}{unite}"
+        return texte if s is None else f"{texte} ; {style}({nom}) = {s}{facteur}{unite}"
+    if s is None:
+        return f"{v}{facteur}{unite}"
+    if facteur:
+        return f"({v} ± {s}){facteur}{unite}"
+    return f"{v} ± {s}{unite}"
 
 
 def resume_parametres(noms, pfit, err=None, unites=None, k=2):
