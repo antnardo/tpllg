@@ -58,6 +58,20 @@ où il tiendrait sur vingt niveaux. À l'inverse un signal qui dépasse le
 calibre est **écrêté** à sa valeur, sans erreur ni avertissement : la seule
 façon de le voir est de regarder le tracé.
 
+### Le pilote, et le Python qu'il faut
+
+pycanum pilote la carte par `SP5.dll`, que le pilote d'Eurosmart installe.
+Eurosmart ayant cessé son activité, le pilote, sa notice et son kit de
+programmation sont conservés dans le dépôt
+[sysam-sp5](https://github.com/antnardo/sysam-sp5), avec un script,
+`verifier.py`, qui dit si un poste peut piloter la carte.
+
+`SP5.dll` est une DLL **32 bits**, et il n'en existe pas d'autre. pycanum 4
+la charge dans le processus Python : il lui faut un **Python 32 bits**, de 3.5
+à 3.9. pycanum 5 la fait charger par son serveur `sysamhttp.exe`, lui-même
+32 bits : Python peut alors être 64 bits, mais le poste doit avoir le
+*Visual C++ Redistributable x86*.
+
 ## Ouvrir la centrale
 
 ```python
@@ -257,6 +271,12 @@ Le pilote de pycanum code le seuil avec le calibre qu'il trouve à la
 position du numéro de la voie dans sa table, pas avec celui de la voie : EA1
 seule au calibre 1 V, un seuil de 0,5 V déclenchait à 0,05 V. La classe
 corrige le seuil d'autant ; elle connaît la table, qu'elle a remplie.
+
+Le pilote convertit aussi le seuil comme si le calibre 10 V allait de −10 à
++10 V, alors que le kit de programmation d'Eurosmart donne une pleine échelle
+de ±10,24 V (±5,12, ±1,024, ±0,2048 V pour les autres) : le seuil effectif
+serait 2,4 % au-dessus du seuil demandé. C'est lu dans les sources, pas
+mesuré sur la carte, et la classe ne le corrige pas.
 
 ```python
 with Sysam([0, 1], 5) as can:
@@ -559,6 +579,8 @@ with Sysam([0, 1], 5) as can:
 | Symptôme | Cause, remède |
 | --- | --- |
 | `[SYSAM] ATTENTION : pycanum absent` sur un poste qui a la carte | pycanum n'est pas installé pour ce Python : vérifier l'environnement que Spyder utilise |
+| `Erreur : SP5.dll introuvable` | le pilote n'est pas installé, ou pycanum 4 tourne sous un Python 64 bits : voir [le pilote](#le-pilote-et-le-python-quil-faut), et `verifier.py` du dépôt sysam-sp5 |
+| `Erreur : centrale sysamSP5 absente` | la DLL est là mais la carte ne répond pas : branchée, alimentée, reconnue par le Gestionnaire de périphériques ? |
 | le script se bloque à `acquerir` | un déclenchement attend un front qui ne vient pas : la voie est-elle branchée, le seuil est-il dans l'amplitude du signal ? Acquérir d'abord sans déclenchement |
 | la centrale ne répond plus après une interruption | elle est restée ouverte : redémarrer le noyau, ou toujours ouvrir dans un `with` |
 | `Erreur : voie de trigger non configuree` | la voie de déclenchement n'est pas dans la liste des voies acquises |
